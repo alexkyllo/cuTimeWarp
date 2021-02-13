@@ -6,6 +6,7 @@
 #include <cmath>
 #include <iostream>
 #include <limits>
+#include <cblas.h>
 
 /** Take the softmin of 3 elements
  * @param a The first element
@@ -68,30 +69,113 @@ template <class T> T softdtw(T *a, T *b, T *w, int m, int n, T gamma)
     return path_cost;
 }
 
-template <class T> T dot(T *x, T *y, int n)
+template <class T> void gemm_blas(T *A, T *B, T *C, long m, long k, long n, T alpha);
+
+/** Double Matrix-matrix multiply
+    @param A The first input matrix
+    @param X The second input matrix
+    @param B The output matrix
+    @param m The number of rows in A
+    @param k The number of columns in A and rows in B
+    @param n The number of columns in B
+*/
+template <> void gemm_blas<double>(double *A, double *B, double *C, long m, long k, long n, double alpha)
 {
-    T result = 0;
-    for (int i = 0; i < n; i++)
-    {
-        result += x[i] * y[i];
-    }
-    return result;
+    cblas_dgemm(CblasRowMajor, // Row-major striding
+                CblasNoTrans,  // Do not transpose A
+                CblasTrans,    // Transpose B
+                m,             // Rows in A
+                n,             // Columns in B
+                k,             // Columns in A
+                alpha,           // Alpha (scalar used to scale A*B)
+                A,             // Input Matrix A
+                k,             // LDA stride of matrix A
+                B,             // INput Matrix B
+                n,             // LDA stride of matrix B
+                0.0,           // Beta (scalar used to scale matrix C)
+                C,             // Result Matrix C
+                n);            // LDA stride of matrix C
 }
+
+/** Float Matrix-matrix multiply
+    @param A The first input matrix
+    @param X The second input matrix
+    @param B The output matrix
+    @param m The number of rows in A
+    @param k The number of columns in A and rows in B
+    @param n The number of columns in B
+*/
+template <> void gemm_blas<float>(float *A, float *B, float *C, long m, long k, long n, float alpha)
+{
+    cblas_sgemm(CblasRowMajor, // Row-major striding
+                CblasNoTrans,  // Do not transpose A
+                CblasTrans,    // Transpose B
+                m,             // Rows in A
+                n,             // Columns in B
+                k,             // Columns in A
+                alpha,           // Alpha (scalar used to scale A*B)
+                A,             // Input Matrix A
+                k,             // LDA stride of matrix A
+                B,             // Input Matrix B
+                n,             // LDA stride of matrix B
+                0.0,           // Beta (scalar used to scale matrix C)
+                C,             // Result Matrix C
+                n);            // LDA stride of matrix C
+}
+
 
 /** Compute pairwise squared Euclidean distances between X and Y
  *  where each are multivariate time series with k features.
  *  @param X a matrix where rows are time steps and columns are variables
  *  @param Y a matrix where rows are time steps and columns are variables
+ *  @param D The resulting distance matrix of size m x n
  *  @param m Number of rows in X
  *  @param n Number of rows in Y
  *  @param k Number of columns in X and Y
  */
-template <class T> T sq_euclidean_distance(T *X, T *Y, int m, int n, int k)
+template <class T> T sq_euclidean_distance(T *X, T *Y, T *D, int m, int n, int k)
 {
     // TODO
-    // Need to implement matrix multiplication for this
+    // Need to implement matrix multiplication and transpose for this
     // dist(x, y) = dot(x, x) - 2 * dot(x, y) + dot(y, y)
+    T *XX = new T[m];
+    T *YY = new T[n];
+    T *XY = new T[m * n];
 
+    // square the elements of X and then row-wise sum them
+    for (int i = 0; i < m; i++)
+    {
+        for (int j = 0; j < k; j++)
+        {
+            T x = X[i * k + j];
+            XX[i] += x * x;
+        }
+    }
+
+    // square the elements of Y and then row-wise sum them
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < k; j++)
+        {
+            T y = Y[i * k + j];
+            YY[i] += y * y;
+        }
+    }
+
+    // compute 2*X*YT
+    gemm_blas<T>(X, Y, XY, m, k, n, 2.0);
+
+    for (int i = 0; i < m; i++)
+    {
+        for (int j = 0; j < k; j++ )
+        {
+            D[i * n + j] = XX[i] + YY[j] - (2 * XY[i * n + j]);
+        }
+    }
+
+    delete[] XX;
+    delete[] YY;
+    delete[] XY;
 }
 
 

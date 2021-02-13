@@ -13,7 +13,7 @@ bin/dtw_cpu: dtw_cpu.cpp
 	$(CC) $(CFLAGS) $^ -o $@
 
 bin/softdtw_cpu: softdtw_cpu.cpp
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CFLAGS) $^ -o $@ -lblas
 
 
 bin/timewarp: timewarp.cu
