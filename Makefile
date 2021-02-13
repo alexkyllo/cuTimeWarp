@@ -7,11 +7,16 @@ NVCC_FLAGS = -g -G -Xcompiler -Wall
 
 $(shell mkdir -p bin/)
 
-bin/timewarp_cpu: timewarp.cpp
+default: bin/dtw_cpu bin/timewarp bin/softdtw_cpu
+
+bin/dtw_cpu: timewarp.cpp
 	$(CC) $(CFLAGS) $^ -o $@
 
 bin/timewarp: timewarp.cu
 	$(NVCC) $(NVCC_FLAGS) $^ -o $@
+
+bin/softdtw_cpu: softdtw.cpp
+	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
 	rm -rf bin/
