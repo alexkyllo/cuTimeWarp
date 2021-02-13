@@ -68,6 +68,39 @@ template <class T> T softdtw(T *a, T *b, T *w, int m, int n, T gamma)
     return path_cost;
 }
 
+template <class T> T dot(T *x, T *y, int n)
+{
+    T result = 0;
+    for (int i = 0; i < n; i++)
+    {
+        result += x[i] * y[i];
+    }
+    return result;
+}
+
+/** Compute pairwise squared Euclidean distances between X and Y
+ *  where each are multivariate time series with k features.
+ *  @param X a matrix where rows are time steps and columns are variables
+ *  @param Y a matrix where rows are time steps and columns are variables
+ *  @param m Number of rows in X
+ *  @param n Number of rows in Y
+ *  @param k Number of columns in X and Y
+ */
+template <class T> T sq_euclidean_distance(T *X, T *Y, int m, int n, int k)
+{
+    // TODO
+    // Need
+    // dist(x, y) = dot(x, x) - 2 * dot(x, y) + dot(y, y)
+
+}
+
+
+
+template <class T> void softdtw_grad(T *D, T *R, T *E, T gamma)
+{
+    // TODO
+}
+
 int main()
 {
     // test values
