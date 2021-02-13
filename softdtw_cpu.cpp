@@ -89,7 +89,7 @@ template <class T> T dot(T *x, T *y, int n)
 template <class T> T sq_euclidean_distance(T *X, T *Y, int m, int n, int k)
 {
     // TODO
-    // Need
+    // Need to implement matrix multiplication for this
     // dist(x, y) = dot(x, x) - 2 * dot(x, y) + dot(y, y)
 
 }
