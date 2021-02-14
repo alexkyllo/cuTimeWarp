@@ -24,3 +24,9 @@ TODO:
 - [ ] Implement soft DTW barycenter estimation in CUDA
 - [ ] Implement optimizations for soft DTW in CUDA
 - [ ] Run benchmark experiments
+
+Dataset candidates for benchmarking:
+
+- [Urban Sound 8K](https://www.kaggle.com/chrisfilo/urbansound8k)
+  10-class classification task on 8732 samples of about 4 seconds of audio each
+- [Smartphone and Smart Watch Activity](https://archive.ics.uci.edu/ml/datasets/WISDM+Smartphone+and+Smartwatch+Activity+and+Biometrics+Dataset+)
