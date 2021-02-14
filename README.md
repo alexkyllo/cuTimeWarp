@@ -29,4 +29,8 @@ Dataset candidates for benchmarking:
 
 - [Urban Sound 8K](https://www.kaggle.com/chrisfilo/urbansound8k)
   10-class classification task on 8732 samples of about 4 seconds of audio each
-- [Smartphone and Smart Watch Activity](https://archive.ics.uci.edu/ml/datasets/WISDM+Smartphone+and+Smartwatch+Activity+and+Biometrics+Dataset+)
+- [Speech Recognition Challenge](https://www.kaggle.com/c/tensorflow-speech-recognition-challenge/data)
+- [Smartphone and Smart Watch
+  Activity](https://archive.ics.uci.edu/ml/datasets/WISDM+Smartphone+and+Smartwatch+Activity+and+Biometrics+Dataset+)
+  (or another one of the UCR labeled human activity recognition
+  datasets)
