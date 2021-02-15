@@ -5,8 +5,8 @@
  */
 #ifndef SOFT_DTW_CPU_H
 #define SOFT_DTW_CPU_H
-#include <cmath>
 #include <cblas.h>
+#include <cmath>
 #include <iostream>
 #include <limits>
 
@@ -79,7 +79,7 @@ void gemm_blas<float>(float *A, float *B, float *C, long m, long k, long n,
  *  @param k Number of columns in X and Y
  */
 template <class T>
-T sq_euclidean_distance(T *X, T *Y, T *D, int m, int n, int k)
+void sq_euclidean_distance(T *X, T *Y, T *D, int m, int n, int k)
 {
     T *XX = new T[m]{0};
     T *YY = new T[n]{0};
@@ -142,7 +142,7 @@ template <class T> T softmin(T a, T b, T c, T gamma)
     return -gamma * (log(sum) + max_of);
 }
 
-/**
+/** Soft DTW on two input time series
  * @param a The first series array
  * @param b The second series array
  * @param w An m+1 x n+1 array that will be filled with the alignment values.
@@ -183,12 +183,49 @@ template <class T> T softdtw(T *a, T *b, T *w, int m, int n, T gamma)
     return path_cost;
 }
 
+/** Soft DTW on pairwise Euclidean distance matrix for multivariate time series
+ * @param D The pairwise squared Euclidean distance array of two time series
+ * @param R An m+1 x n+1 array that will be filled with the alignment values.
+ * @param m Length of first time series
+ * @param n Length of second time series
+ * @param gamma SoftDTW smoothing parameter
+ */
+template <class T> T softdtw(T *D, T *R, int m, int n, T gamma)
+{
+    // Create an m*n matrix for the warp path
+    // and initialize it to infinite distances
+    m++;
+    n++;
+    for (int i = 0; i < m; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            // this doesn't work for int type. Only float and double
+            R[i * n + j] = std::numeric_limits<T>::infinity();
+        }
+    }
+    R[0] = 0.0;
 
+    // Iterate over each cell of the matrix to compute
+    // lowest cost path through the preceding neighbor cells
+    for (int i = 1; i < m; i++)
+    {
+        for (int j = 1; j < n; j++)
+        {
+            T cost = D[(i - 1) * n + j - 1];
+            double prev_min = softmin<T>(D[(i - 1) * n + j], D[i * n + j - 1],
+                                         D[(i - 1) * n + j - 1], gamma);
+            R[i * n + j] = cost + prev_min;
+        }
+    }
+    // Return the total cost of the warp path
+    T path_cost = R[m * n - 1];
+    return path_cost;
+}
 
 template <class T> void softdtw_grad(T *D, T *R, T *E, T gamma)
 {
     // TODO
 }
-
 
 #endif

@@ -3,7 +3,7 @@
 #include <cmath>
 #include <iostream>
 
-bool is_close(float a, float b, float tol=0.0001)
+bool is_close(float a, float b, float tol = 0.0001)
 {
     return std::abs(a - b) < tol;
 }
@@ -22,21 +22,17 @@ TEST_CASE("CBLAS_SGEMM")
                 m,             // Rows in A
                 n,             // Columns in B
                 k,             // Columns in A
-                2.0,         // Alpha (scalar used to scale A*B)
+                2.0,           // Alpha (scalar used to scale A*B)
                 X,             // Input Matrix A
                 k,             // LDA stride of matrix A
                 Y,             // Input Matrix B
                 k,             // LDA stride of matrix B
                 0.0,           // Beta (scalar used to scale matrix C)
-                XY,             // Result Matrix C
+                XY,            // Result Matrix C
                 n);            // LDA stride of matrix C
-    float *XYE = new float[12] {
-         13.4,  26.6,  36.2,
-         29.8,  60.6,  84.2,
-         46.2,  94.6, 132.2,
-         62.6, 128.6, 180.2
-    };
-    for (int i = 0; i < (m*n); i++)
+    float *XYE = new float[12]{13.4, 26.6, 36.2,  29.8, 60.6,  84.2,
+                               46.2, 94.6, 132.2, 62.6, 128.6, 180.2};
+    for (int i = 0; i < (m * n); i++)
     {
         REQUIRE(is_close(XY[i], XYE[i]));
     }
@@ -82,5 +78,20 @@ TEST_CASE("soft dtw")
     float *b = new float[n]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0};
     float *w = new float[(m + 1) * (n + 1)]{0.0};
     float cost = softdtw<float>(a, b, w, m, n, 0.1);
+    REQUIRE(is_close(2.80539, cost));
+    delete a;
+    delete b;
+    delete w;
+}
+
+TEST_CASE("soft dtw for distance matrix (1d ts)")
+{
+    int m = 5;
+    int n = 8;
+    float *a = new float[m]{1.0, 2.0, 3.0, 3.0, 5.0};
+    float *b = new float[n]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0};
+    float *D = new float[(m + 1) * (n + 1)]{0.0};
+    sq_euclidean_distance(a, b, D, m, n, 1);
+    float cost = softdtw<float>(a, b, D, m, n, 0.1);
     REQUIRE(is_close(2.80539, cost));
 }
