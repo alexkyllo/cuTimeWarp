@@ -156,9 +156,9 @@ template <class T> T softdtw(T *a, T *b, T *w, ulong m, ulong n, T gamma)
     // and initialize it to infinite distances
     m++;
     n++;
-    for (int i = 0; i < m; i++)
+    for (ulong i = 0; i < m; i++)
     {
-        for (int j = 0; j < n; j++)
+        for (ulong j = 0; j < n; j++)
         {
             // this doesn't work for int type. Only float and double
             w[i * n + j] = std::numeric_limits<T>::infinity();
@@ -168,9 +168,9 @@ template <class T> T softdtw(T *a, T *b, T *w, ulong m, ulong n, T gamma)
 
     // Iterate over each cell of the matrix to compute
     // lowest cost path through the preceding neighbor cells
-    for (int i = 1; i < m; i++)
+    for (ulong i = 1; i < m; i++)
     {
-        for (int j = 1; j < n; j++)
+        for (ulong j = 1; j < n; j++)
         {
             T cost = std::abs(a[i - 1] - b[j - 1]);
             double prev_min = softmin<T>(w[(i - 1) * n + j], w[i * n + j - 1],
@@ -183,20 +183,12 @@ template <class T> T softdtw(T *a, T *b, T *w, ulong m, ulong n, T gamma)
     return path_cost;
 }
 
-/** Soft DTW on pairwise Euclidean distance matrix for multivariate time series
- * @param D The pairwise squared Euclidean distance array of two time series
- * @param R An m+1 x n+1 array that will be filled with the alignment values.
- * @param m Length of first time series
- * @param n Length of second time series
- * @param gamma SoftDTW smoothing parameter
- */
-template <class T> T softdtw(T *D, T *R, ulong m, ulong n, T gamma)
+template <class T> T softdtw2(T *D, T *R, ulong m, ulong n, T gamma)
 {
-    // TODO: not working correctly, fix failing test
-    m++;
-    n++;
     // Create an m*n matrix for the warp path
     // and initialize it to infinite distances
+    m++;
+    n++;
     for (ulong i = 0; i < m; i++)
     {
         R[i * n] = std::numeric_limits<T>::infinity();
@@ -214,13 +206,53 @@ template <class T> T softdtw(T *D, T *R, ulong m, ulong n, T gamma)
         for (ulong j = 1; j < n; j++)
         {
             T cost = D[(i - 1) * n + j - 1];
-            double prev_min = softmin<T>(D[(i - 1) * n + j], D[i * n + j - 1],
-                                         D[(i - 1) * n + j - 1], gamma);
+            double prev_min = softmin<T>(R[(i - 1) * n + j], R[i * n + j - 1],
+                                         R[(i - 1) * n + j - 1], gamma);
             R[i * n + j] = cost + prev_min;
         }
     }
     // Return the total cost of the warp path
     T path_cost = R[m * n - 1];
+    return path_cost;
+}
+
+/** Soft DTW on pairwise Euclidean distance matrix for multivariate time series
+ * @param D The pairwise squared Euclidean distance array of two time series
+ * @param R An m+1 x n+1 array that will be filled with the alignment values.
+ * @param m Length of first time series
+ * @param n Length of second time series
+ * @param gamma SoftDTW smoothing parameter
+ */
+template <class T> T softdtw(T *D, T *R, ulong m, ulong n, T gamma)
+{
+    // TODO: not working correctly, fix failing test
+    // Create an m*n matrix for the warp path
+    // and initialize it to infinite distances
+    for (ulong i = 0; i <= m; i++)
+    {
+        R[i * (n + 1)] = std::numeric_limits<T>::infinity();
+    }
+    for (ulong j = 0; j <= n; j++)
+    {
+        R[j] = std::numeric_limits<T>::infinity();
+    }
+    R[0] = 0.0;
+
+    // Iterate over each cell of the matrix to compute
+    // lowest cost path through the preceding neighbor cells
+    for (ulong i = 1; i <= m; i++)
+    {
+        for (ulong j = 1; j <= n; j++)
+        {
+            T cost = D[(i - 1) * (n + 1) + j - 1];
+            double prev_min =
+                softmin<T>(R[(i - 1) * (n + 1) + j], R[i * (n + 1) + j - 1],
+                           R[(i - 1) * (n + 1) + j - 1], gamma);
+            R[i * (n + 1) + j] = cost + prev_min;
+        }
+    }
+    // Return the total cost of the warp path
+    T path_cost = R[(m + 1) * (n + 1) - 1];
     return path_cost;
 }
 
