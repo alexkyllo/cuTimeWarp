@@ -138,26 +138,17 @@ TEST_CASE("soft dtw for distance matrix (1d ts)")
     double *D = new double[m * n]{0};
     sq_euclidean_distance<double>(a, b, D, m, n, k);
 
-    double *R = new double[(m + 1) * (n + 1)]{0.0};
+    double *R = new double[(m + 2) * (n + 2)]{0.0};
     double cost = softdtw<double>(D, R, m, n, gamma);
-    for (int i = 0; i <= m; i++)
-    {
-        for (int j = 0; j <= n; j++)
-        {
-            std::cout << R[i * (n + 1) + j] << " ";
-        }
-        std::cout << "\n";
-    }
     /*
 R expected:
-[[ 0.  inf  inf  inf  inf  inf  inf  inf  inf  0.]
- [ inf  0.  1.  2.  3. 4.  5.  6.  15.  0.]
- [ inf  1. -9.07957e-006 -1.36193e-005 -1.36195e-005 -1.36195e-005 -1.36195e-005
--1.36195e-005  3.99999e+000  0.] [inf  5.  0.999986  0.930672  0.930667 0.930667
-0.930667  0.930667 0.999977  0.]
- [inf  9.  2. 1.89012  1.86135  1.86135  1.86135 1.86135 1.89011  0.]
- [inf  25.  11.  10.8614  10.8054 10.7920  10.7920 10.7920  28.0538  0.]
- [ 0.  0.  0.  0.  0.  0.  0.  0.  0.  0.]]
+[0. inf     inf     inf     inf     inf     inf     inf       inf          inf]
+[inf  0.      1.      2.      3.      4.      5.      6.       15.         inf]
+[inf  1.     -0.     -0.     -0.     -0.     -0.     -0.        4.         inf]
+[inf  5.      1.      0.9307  0.9307  0.9307  0.9307  0.9307    1.         inf]
+[inf  9.      2.      1.8901  1.8614  1.8613  1.8613  1.8613    1.8901     inf]
+[inf 25.     11.     10.8614 10.8054 10.792  10.792  10.792     2.8054     inf]
+[inf inf     inf     inf     inf     inf     inf     inf           inf     inf]
     */
     std::cout << "cost: " << cost << "\n";
     REQUIRE(is_close(2.80539, cost));
@@ -167,17 +158,40 @@ R expected:
     delete[] R;
 }
 
-// TEST_CASE("soft dtw gradient")
-// {
-//     int m = 5;
-//     int n = 8;
-//     float gamma = 0.1;
-//     float *a = new float[m]{1.0, 2.0, 3.0, 3.0, 5.0};
-//     float *b = new float[n]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0};
-//     float *D = new float[(m + 1) * (n + 1)]{0.0};
-//     float *R = new float[(m + 1) * (n + 1)]{0.0};
-//     float *E = new float[(m + 2) * (n + 2)]{0.0};
-//     sq_euclidean_distance(a, b, D, m, n, 1);
-//     softdtw<float>(a, b, D, m, n, 0.1);
-//     softdtw_grad(D, R, E, m, n, gamma);
-// }
+TEST_CASE("soft dtw gradient")
+{
+    int m = 5;
+    int n = 8;
+    float gamma = 0.1;
+    float *a = new float[m]{1.0, 2.0, 3.0, 3.0, 5.0};
+    float *b = new float[n]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0};
+    float *D = new float[m * n]{0.0};
+    float *R = new float[(m + 2) * (n + 2)]{0.0};
+    float *E = new float[(m + 2) * (n + 2)]{0.0};
+    sq_euclidean_distance(a, b, D, m, n, 1);
+    softdtw<float>(D, R, m, n, gamma);
+    softdtw_grad(D, R, E, m, n, gamma);
+    std::cout << "E:\n";
+    for (int i = 0; i < m; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            std::cout << E[i * (n + 2) + j] << " ";
+        }
+        std::cout << "\n";
+    }
+    REQUIRE(is_close(E[0], 1.0));
+    REQUIRE(is_close(E[1], 0.0001));
+    /* Expected gradient:
+array([[[1.    , 0.0001, 0.    , 0.    , 0.    , 0.    , 0.    , 0.    ],
+        [0.    , 1.    , 1.    , 1.    , 1.    , 0.8571, 0.4285, 0.    ],
+        [0.    , 0.    , 0.    , 0.    , 0.    , 0.2857, 0.5714, 0.1429],
+        [0.    , 0.    , 0.    , 0.    , 0.    , 0.    , 0.5714, 0.4286],
+        [0.    , 0.    , 0.    , 0.    , 0.    , 0.    , 0.    , 1.    ]]])
+     */
+    delete[] a;
+    delete[] b;
+    delete[] D;
+    delete[] R;
+    delete[] E;
+}

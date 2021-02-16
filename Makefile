@@ -1,6 +1,6 @@
 CC = g++
 CFLAGS = -std=c++11 -Wall -Wextra --pedantic-errors \
--g -fsanitize=address -fsanitize=leak -fsanitize=undefined -fno-sanitize-recover
+#-g -fsanitize=address -fsanitize=leak -fsanitize=undefined -fno-sanitize-recover
 LDFLAGS = -lblas
 NVCC = nvcc
 NVCC_FLAGS = -g -G -Xcompiler -Wall
@@ -33,7 +33,7 @@ test_softdtw_cpu: bin/test_soft_dtw_cpu
 	./$<
 
 bin/test_soft_dtw_cpu: test/test_soft_dtw_cpu.cpp obj/test.o src/soft_dtw_cpu.hpp
-	$(CC) -std=c++11 $< obj/test.o -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $< obj/test.o -o $@ $(LDFLAGS)
 
 ## Delete binaries
 clean:

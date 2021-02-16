@@ -86,7 +86,7 @@ void sq_euclidean_distance(T *X, T *Y, T *D, ulong m, ulong n, int k)
     T *XY = new T[m * n]{0};
 
     // compute squared euclidean norm of X
-    for (int i = 0; i < m; i++)
+    for (ulong i = 0; i < m; i++)
     {
         for (int j = 0; j < k; j++)
         {
@@ -96,7 +96,7 @@ void sq_euclidean_distance(T *X, T *Y, T *D, ulong m, ulong n, int k)
     }
 
     // compute squared euclidean norm of Y
-    for (int i = 0; i < n; i++)
+    for (ulong i = 0; i < n; i++)
     {
         for (int j = 0; j < k; j++)
         {
@@ -109,9 +109,9 @@ void sq_euclidean_distance(T *X, T *Y, T *D, ulong m, ulong n, int k)
     gemm_blas<T>(X, Y, XY, m, k, n, 2.0);
 
     // compute x^2 + y^2 - 2xy
-    for (int i = 0; i < m; i++)
+    for (ulong i = 0; i < m; i++)
     {
-        for (int j = 0; j < n; j++)
+        for (ulong j = 0; j < n; j++)
         {
             D[i * n + j] = XX[i] + YY[j] - (XY[i * n + j]);
         }
@@ -134,10 +134,7 @@ template <class T> T softmin(T a, T b, T c, T gamma)
     b /= -gamma;
     c /= -gamma;
     T max_of = std::max(std::max(a, b), c);
-    T sum = 0;
-    sum += exp(a - max_of);
-    sum += exp(b - max_of);
-    sum += exp(c - max_of);
+    T sum = exp(a - max_of) + exp(b - max_of) + exp(c - max_of);
 
     return -gamma * (log(sum) + max_of);
 }
@@ -183,118 +180,108 @@ template <class T> T softdtw(T *a, T *b, T *w, ulong m, ulong n, T gamma)
     return path_cost;
 }
 
-template <class T> T softdtw2(T *D, T *R, ulong m, ulong n, T gamma)
-{
-    // Create an m*n matrix for the warp path
-    // and initialize it to infinite distances
-    m++;
-    n++;
-    for (ulong i = 0; i < m; i++)
-    {
-        R[i * n] = std::numeric_limits<T>::infinity();
-    }
-    for (ulong j = 0; j < n; j++)
-    {
-        R[j] = std::numeric_limits<T>::infinity();
-    }
-    R[0] = 0.0;
-
-    // Iterate over each cell of the matrix to compute
-    // lowest cost path through the preceding neighbor cells
-    for (ulong i = 1; i < m; i++)
-    {
-        for (ulong j = 1; j < n; j++)
-        {
-            T cost = D[(i - 1) * n + j - 1];
-            double prev_min = softmin<T>(R[(i - 1) * n + j], R[i * n + j - 1],
-                                         R[(i - 1) * n + j - 1], gamma);
-            R[i * n + j] = cost + prev_min;
-        }
-    }
-    // Return the total cost of the warp path
-    T path_cost = R[m * n - 1];
-    return path_cost;
-}
-
-/** Soft DTW on pairwise Euclidean distance matrix for multivariate time series
+/** Soft DTW on pairwise Euclidean distance matrix for multivariate time
+ * series
  * @param D The pairwise squared Euclidean distance array of two time series
- * @param R An m+1 x n+1 array that will be filled with the alignment values.
+ * @param R An m+1 x n+1 array that will be filled with the alignment
+ * values.
  * @param m Length of first time series
  * @param n Length of second time series
  * @param gamma SoftDTW smoothing parameter
  */
 template <class T> T softdtw(T *D, T *R, ulong m, ulong n, T gamma)
 {
-    // TODO: not working correctly, fix failing test
     // Create an m*n matrix for the warp path
     // and initialize it to infinite distances
-    for (ulong i = 0; i <= m; i++)
+    for (ulong i = 0; i < m + 2; i++)
     {
-        R[i * (n + 1)] = std::numeric_limits<T>::infinity();
+        for (ulong j = 0; j < n + 2; j++)
+        {
+            R[i * (n + 2) + j] = std::numeric_limits<T>::infinity();
+        }
     }
-    for (ulong j = 0; j <= n; j++)
-    {
-        R[j] = std::numeric_limits<T>::infinity();
-    }
+
     R[0] = 0.0;
 
     // Iterate over each cell of the matrix to compute
     // lowest cost path through the preceding neighbor cells
-    for (ulong i = 1; i <= m; i++)
+    for (ulong i = 1; i < m + 1; i++)
     {
-        for (ulong j = 1; j <= n; j++)
+        for (ulong j = 1; j < n + 1; j++)
         {
-            T cost = D[(i - 1) * (n + 1) + j - 1];
-            double prev_min =
-                softmin<T>(R[(i - 1) * (n + 1) + j], R[i * (n + 1) + j - 1],
-                           R[(i - 1) * (n + 1) + j - 1], gamma);
-            R[i * (n + 1) + j] = cost + prev_min;
+            T cost = D[(i - 1) * n + j - 1];
+            T r1 = R[(i - 1) * (n + 2) + j];
+            T r2 = R[i * (n + 2) + j - 1];
+            T r3 = R[(i - 1) * (n + 2) + j - 1];
+            double prev_min = softmin<T>(r1, r2, r3, gamma);
+            R[i * (n + 2) + j] = cost + prev_min;
         }
     }
     // Return the total cost of the warp path
-    T path_cost = R[(m + 1) * (n + 1) - 1];
+    T path_cost = R[m * (n + 2) + n];
     return path_cost;
 }
 
 /** SoftDTW gradient by backpropagation
  * @param D The pairwise squared Euclidean distance array of two time series
- * @param R An m+1 x n+1 array that will be filled with the alignment values.
+ * @param R An m+1 x n+1 array that will be filled with the alignment
+ * values.
  * @param E An m+2 x n+2 array that will be filled with the gradient values.
  * @param m Length of first time series
  * @param n Length of second time series
  * @param gamma SoftDTW smoothing parameter
  */
 template <class T>
-void softdtw_grad(T *D, T *R, T *E, ulong m, ulong n, T gamma)
+void softdtw_grad(T *D_, T *R, T *E, ulong m, ulong n, T gamma)
 {
-    for (ulong i = 1; i <= m; i++)
+    // TODO: fix this, it's returning a wrong result
+    // Add an extra row and column to D
+    T *D = new T[(m + 1) * (n + 1)]{0};
+    for (ulong i = 0; i < m; i++)
     {
-        D[(i - 1) * n + n] = 0.0;
-        R[i * n + n + 1] = -std::numeric_limits<T>::infinity();
-    }
-    for (ulong i = 1; i <= n; i++)
-    {
-        D[m * n + (i - 1)] = 0.0;
-        R[(m + 1) * n + i] = -std::numeric_limits<T>::infinity();
-    }
-
-    E[(m + 1) * n + n + 1] = 1;
-    R[(m + 1) * n + n + 1] = R[m * n + n];
-    D[m * n + n] = 0;
-    for (ulong j = n; j >= 0; j--)
-    {
-        for (ulong i = m; i >= 0; i--)
+        for (ulong j = 0; j < n; j++)
         {
-            T a = exp((R[(i + 1) * n + j] - R[i * n + j] - D[i * n + (j - 1)]) /
-                      gamma);
-            T b = exp((R[i * n + (j + 1)] - R[i * n + j] - D[(i - 1) * n + j]) /
-                      gamma);
-            T c = exp((R[(i + 1) * n + j + 1] - R[i * n + j] - D[i * n + j]) /
-                      gamma);
-            E[i * n + j] = E[(i + 1) * n + j] * a + E[i * n + j + 1] * b +
-                           E[(i + 1) * n + j + 1] * c;
+            D[i * (n + 1) + j] = D_[i * n + j];
         }
     }
+
+    // D is m+1 x n+1
+    // R and E are m+2 x n+2
+    for (ulong i = 1; i < m + 1; i++)
+    {
+        D[(i - 1) * (n + 1) + n] = 0.0;
+        R[i * (n + 2) + n + 1] = -std::numeric_limits<T>::infinity();
+    }
+
+    for (ulong i = 1; i < n + 1; i++)
+    {
+        D[m * (n + 1) + (i - 1)] = 0.0;
+        R[(m + 1) * (n + 2) + i] = -std::numeric_limits<T>::infinity();
+    }
+
+    E[(m + 1) * (n + 2) + n + 1] = 1;
+    R[(m + 1) * (n + 2) + n + 1] = R[m * (n + 2) + n];
+    D[m * (n + 1) + n] = 0.0;
+    for (ulong j = n; j > 0; j--)
+    {
+        for (ulong i = m; i > 0; i--)
+        {
+            T r0 = R[i * (n + 2) + j];
+            T r1 = R[(i + 1) * (n + 2) + j];
+            T r2 = R[i * (n + 2) + (j + 1)];
+            T r3 = R[(i + 1) * (n + 2) + j + 1];
+            T d0 = D[i * (n + 1) + j];
+            T d1 = D[i * (n + 1) + (j - 1)];
+            T d2 = D[(i - 1) * n + j];
+            T a = exp((r1 - r0 - d1) / gamma);
+            T b = exp((r2 - r0 - d2) / gamma);
+            T c = exp((r3 - r0 - d0) / gamma);
+            E[i * n + j] = E[(i + 1) * (n + 2) + j] * a +
+                           E[i * (n + 2) + j + 1] * b +
+                           E[(i + 1) * (n + 2) + j + 1] * c;
+        }
+    }
+    delete[] D;
 }
 
 #endif
