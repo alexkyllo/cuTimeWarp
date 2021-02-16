@@ -36,9 +36,13 @@ TEST_CASE("CBLAS_SGEMM")
     {
         REQUIRE(is_close(XY[i], XYE[i]));
     }
+    delete[] X;
+    delete[] Y;
+    delete[] XY;
+    delete[] XYE;
 }
 
-TEST_CASE("test squared euclidean distance")
+TEST_CASE("test squared euclidean distance 2d")
 {
     int m = 4;
     int k = 2;
@@ -46,7 +50,7 @@ TEST_CASE("test squared euclidean distance")
     float *X = new float[m * k]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};
     float *Y = new float[k * n]{1.5, 2.6, 3.7, 4.8, 5.9, 6.1};
     float *D = new float[m * n]{0};
-    sq_euclidean_distance(X, Y, D, m, n, k);
+    sq_euclidean_distance<float>(X, Y, D, m, n, k);
     /**
        sklearn.metrics.pairwise.euclidean_distances(X, Y, squared=True)
 
@@ -68,30 +72,101 @@ TEST_CASE("test squared euclidean distance")
     REQUIRE(is_close(D[9], 59.41));
     REQUIRE(is_close(D[10], 21.13));
     REQUIRE(is_close(D[11], 4.82));
+    delete[] X;
+    delete[] Y;
+    delete[] D;
+}
+
+TEST_CASE("test squared euclidean distance 1d")
+{
+    int m = 5;
+    int k = 1;
+    int n = 8;
+    float *a = new float[m]{1.0, 2.0, 3.0, 3.0, 5.0};
+    float *b = new float[n]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0};
+    float *D = new float[m * n]{0};
+    sq_euclidean_distance<float>(a, b, D, m, n, k);
+    /**
+       sklearn.metrics.pairwise.euclidean_distances(X, Y, squared=True)
+
+       array([[ 0.,  1.,  1.,  1.,  1.,  1.,  1.,  9.],
+              [ 1.,  0.,  0.,  0.,  0.,  0.,  0.,  4.],
+              [ 4.,  1.,  1.,  1.,  1.,  1.,  1.,  1.],
+              [ 4.,  1.,  1.,  1.,  1.,  1.,  1.,  1.],
+              [16.,  9.,  9.,  9.,  9.,  9.,  9.,  1.]])
+    */
+
+    REQUIRE(is_close(D[0], 0.0));
+    REQUIRE(is_close(D[1], 1.0));
+    REQUIRE(is_close(D[7], 9.0));
+    REQUIRE(is_close(D[8], 1.0));
+    REQUIRE(is_close(D[15], 4.0));
+    REQUIRE(is_close(D[16], 4.0));
+    REQUIRE(is_close(D[24], 4.0));
+    REQUIRE(is_close(D[32], 16.0));
+    REQUIRE(is_close(D[33], 9.0));
+    REQUIRE(is_close(D[39], 1.0));
+
+    delete[] a;
+    delete[] b;
+    delete[] D;
 }
 
 TEST_CASE("soft dtw")
 {
     int m = 5;
     int n = 8;
+    float gamma = 0.1;
     float *a = new float[m]{1.0, 2.0, 3.0, 3.0, 5.0};
     float *b = new float[n]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0};
-    float *w = new float[(m + 1) * (n + 1)]{0.0};
-    float cost = softdtw<float>(a, b, w, m, n, 0.1);
+    float *R = new float[(m + 1) * (n + 1)]{0.0};
+    float cost = softdtw<float>(a, b, R, m, n, gamma);
     REQUIRE(is_close(2.80539, cost));
-    delete a;
-    delete b;
-    delete w;
+    delete[] a;
+    delete[] b;
+    delete[] R;
 }
 
 TEST_CASE("soft dtw for distance matrix (1d ts)")
 {
     int m = 5;
+    int k = 1;
     int n = 8;
+    float gamma = 0.1;
     float *a = new float[m]{1.0, 2.0, 3.0, 3.0, 5.0};
     float *b = new float[n]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0};
-    float *D = new float[(m + 1) * (n + 1)]{0.0};
-    sq_euclidean_distance(a, b, D, m, n, 1);
-    float cost = softdtw<float>(a, b, D, m, n, 0.1);
+    float *D = new float[m * n]{0};
+    sq_euclidean_distance<float>(a, b, D, m, n, k);
+
+    float *R = new float[(m + 1) * (n + 1)]{0.0};
+    float cost = softdtw<float>(D, R, m, n, gamma);
+    for (int i = 0; i <= m; i++)
+    {
+        for (int j = 0; j <= n; j++)
+        {
+            std::cout << R[i * n + j] << " ";
+        }
+        std::cout << "\n";
+    }
+    std::cout << "cost: " << cost << "\n";
     REQUIRE(is_close(2.80539, cost));
+    delete[] a;
+    delete[] b;
+    delete[] D;
+    delete[] R;
 }
+
+// TEST_CASE("soft dtw gradient")
+// {
+//     int m = 5;
+//     int n = 8;
+//     float gamma = 0.1;
+//     float *a = new float[m]{1.0, 2.0, 3.0, 3.0, 5.0};
+//     float *b = new float[n]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0};
+//     float *D = new float[(m + 1) * (n + 1)]{0.0};
+//     float *R = new float[(m + 1) * (n + 1)]{0.0};
+//     float *E = new float[(m + 2) * (n + 2)]{0.0};
+//     sq_euclidean_distance(a, b, D, m, n, 1);
+//     softdtw<float>(a, b, D, m, n, 0.1);
+//     softdtw_grad(D, R, E, m, n, gamma);
+// }

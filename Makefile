@@ -15,13 +15,10 @@ fmt:
 	cd src && clang-format -i *.cpp *.hpp
 
 ## Build binaries
-build: bin/dtw_cpu bin/softdtw_cpu
+build: bin/dtw_cpu
 
 bin/dtw_cpu: src/dtw_cpu.cpp
 	$(CC) $(CFLAGS) $^ -o $@
-
-bin/soft_dtw_cpu: src/soft_dtw_cpu.cpp
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 bin/timewarp: src/timewarp.cu
 	$(NVCC) $(NVCC_FLAGS) $^ -o $@
