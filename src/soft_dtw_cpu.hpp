@@ -5,13 +5,13 @@
  */
 #ifndef SOFT_DTW_CPU_H
 #define SOFT_DTW_CPU_H
-#include <cmath>
 #include <cblas.h>
+#include <cmath>
 #include <iostream>
 #include <limits>
 
 template <class T>
-void gemm_blas(T *A, T *B, T *C, long m, long k, long n, T alpha);
+void gemm_blas(T *A, T *B, T *C, ulong m, ulong k, ulong n, T alpha);
 
 /** Double Matrix-matrix multiply
     @param A The first input matrix
@@ -22,8 +22,8 @@ void gemm_blas(T *A, T *B, T *C, long m, long k, long n, T alpha);
     @param n The number of columns in B
 */
 template <>
-void gemm_blas<double>(double *A, double *B, double *C, long m, long k, long n,
-                       double alpha)
+void gemm_blas<double>(double *A, double *B, double *C, ulong m, ulong k,
+                       ulong n, double alpha)
 {
     cblas_dgemm(CblasRowMajor, // Row-major striding
                 CblasNoTrans,  // Do not transpose A
@@ -50,7 +50,7 @@ void gemm_blas<double>(double *A, double *B, double *C, long m, long k, long n,
     @param n The number of columns in B
 */
 template <>
-void gemm_blas<float>(float *A, float *B, float *C, long m, long k, long n,
+void gemm_blas<float>(float *A, float *B, float *C, ulong m, ulong k, ulong n,
                       float alpha)
 {
     cblas_sgemm(CblasRowMajor, // Row-major striding
@@ -79,14 +79,14 @@ void gemm_blas<float>(float *A, float *B, float *C, long m, long k, long n,
  *  @param k Number of columns in X and Y
  */
 template <class T>
-T sq_euclidean_distance(T *X, T *Y, T *D, int m, int n, int k)
+void sq_euclidean_distance(T *X, T *Y, T *D, ulong m, ulong n, int k)
 {
     T *XX = new T[m]{0};
     T *YY = new T[n]{0};
     T *XY = new T[m * n]{0};
 
     // compute squared euclidean norm of X
-    for (int i = 0; i < m; i++)
+    for (ulong i = 0; i < m; i++)
     {
         for (int j = 0; j < k; j++)
         {
@@ -96,7 +96,7 @@ T sq_euclidean_distance(T *X, T *Y, T *D, int m, int n, int k)
     }
 
     // compute squared euclidean norm of Y
-    for (int i = 0; i < n; i++)
+    for (ulong i = 0; i < n; i++)
     {
         for (int j = 0; j < k; j++)
         {
@@ -109,9 +109,9 @@ T sq_euclidean_distance(T *X, T *Y, T *D, int m, int n, int k)
     gemm_blas<T>(X, Y, XY, m, k, n, 2.0);
 
     // compute x^2 + y^2 - 2xy
-    for (int i = 0; i < m; i++)
+    for (ulong i = 0; i < m; i++)
     {
-        for (int j = 0; j < n; j++)
+        for (ulong j = 0; j < n; j++)
         {
             D[i * n + j] = XX[i] + YY[j] - (XY[i * n + j]);
         }
@@ -134,15 +134,12 @@ template <class T> T softmin(T a, T b, T c, T gamma)
     b /= -gamma;
     c /= -gamma;
     T max_of = std::max(std::max(a, b), c);
-    T sum = 0;
-    sum += exp(a - max_of);
-    sum += exp(b - max_of);
-    sum += exp(c - max_of);
+    T sum = exp(a - max_of) + exp(b - max_of) + exp(c - max_of);
 
     return -gamma * (log(sum) + max_of);
 }
 
-/**
+/** Soft DTW on two input time series
  * @param a The first series array
  * @param b The second series array
  * @param w An m+1 x n+1 array that will be filled with the alignment values.
@@ -150,15 +147,15 @@ template <class T> T softmin(T a, T b, T c, T gamma)
  * @param n Length of array b
  * @param gamma SoftDTW smoothing parameter
  */
-template <class T> T softdtw(T *a, T *b, T *w, int m, int n, T gamma)
+template <class T> T softdtw(T *a, T *b, T *w, ulong m, ulong n, T gamma)
 {
     // Create an m*n matrix for the warp path
     // and initialize it to infinite distances
     m++;
     n++;
-    for (int i = 0; i < m; i++)
+    for (ulong i = 0; i < m; i++)
     {
-        for (int j = 0; j < n; j++)
+        for (ulong j = 0; j < n; j++)
         {
             // this doesn't work for int type. Only float and double
             w[i * n + j] = std::numeric_limits<T>::infinity();
@@ -168,9 +165,9 @@ template <class T> T softdtw(T *a, T *b, T *w, int m, int n, T gamma)
 
     // Iterate over each cell of the matrix to compute
     // lowest cost path through the preceding neighbor cells
-    for (int i = 1; i < m; i++)
+    for (ulong i = 1; i < m; i++)
     {
-        for (int j = 1; j < n; j++)
+        for (ulong j = 1; j < n; j++)
         {
             T cost = std::abs(a[i - 1] - b[j - 1]);
             double prev_min = softmin<T>(w[(i - 1) * n + j], w[i * n + j - 1],
@@ -183,12 +180,108 @@ template <class T> T softdtw(T *a, T *b, T *w, int m, int n, T gamma)
     return path_cost;
 }
 
-
-
-template <class T> void softdtw_grad(T *D, T *R, T *E, T gamma)
+/** Soft DTW on pairwise Euclidean distance matrix for multivariate time
+ * series
+ * @param D The pairwise squared Euclidean distance array of two time series
+ * @param R An m+1 x n+1 array that will be filled with the alignment
+ * values.
+ * @param m Length of first time series
+ * @param n Length of second time series
+ * @param gamma SoftDTW smoothing parameter
+ */
+template <class T> T softdtw(T *D, T *R, ulong m, ulong n, T gamma)
 {
-    // TODO
+    // Create an m*n matrix for the warp path
+    // and initialize it to infinite distances
+    for (ulong i = 0; i < m + 2; i++)
+    {
+        for (ulong j = 0; j < n + 2; j++)
+        {
+            R[i * (n + 2) + j] = std::numeric_limits<T>::infinity();
+        }
+    }
+
+    R[0] = 0.0;
+
+    // Iterate over each cell of the matrix to compute
+    // lowest cost path through the preceding neighbor cells
+    for (ulong i = 1; i < m + 1; i++)
+    {
+        for (ulong j = 1; j < n + 1; j++)
+        {
+            T cost = D[(i - 1) * n + j - 1];
+            T r1 = R[(i - 1) * (n + 2) + j];
+            T r2 = R[i * (n + 2) + j - 1];
+            T r3 = R[(i - 1) * (n + 2) + j - 1];
+            double prev_min = softmin<T>(r1, r2, r3, gamma);
+            R[i * (n + 2) + j] = cost + prev_min;
+        }
+    }
+    // Return the total cost of the warp path
+    T path_cost = R[m * (n + 2) + n];
+    return path_cost;
 }
 
+/** SoftDTW gradient by backpropagation
+ * @param D The pairwise squared Euclidean distance array of two time series
+ * @param R An m+1 x n+1 array that will be filled with the alignment
+ * values.
+ * @param E An m+2 x n+2 array that will be filled with the gradient values.
+ * @param m Length of first time series
+ * @param n Length of second time series
+ * @param gamma SoftDTW smoothing parameter
+ */
+template <class T>
+void softdtw_grad(T *D_, T *R, T *E, ulong m, ulong n, T gamma)
+{
+    // TODO: fix this, it's returning a wrong result
+    // Add an extra row and column to D
+    T *D = new T[(m + 1) * (n + 1)]{0};
+    for (ulong i = 0; i < m; i++)
+    {
+        for (ulong j = 0; j < n; j++)
+        {
+            D[i * (n + 1) + j] = D_[i * n + j];
+        }
+    }
+
+    // D is m+1 x n+1
+    // R and E are m+2 x n+2
+    for (ulong i = 1; i < m + 1; i++)
+    {
+        D[(i - 1) * (n + 1) + n] = 0.0;
+        R[i * (n + 2) + n + 1] = -std::numeric_limits<T>::infinity();
+    }
+
+    for (ulong i = 1; i < n + 1; i++)
+    {
+        D[m * (n + 1) + (i - 1)] = 0.0;
+        R[(m + 1) * (n + 2) + i] = -std::numeric_limits<T>::infinity();
+    }
+
+    E[(m + 1) * (n + 2) + n + 1] = 1;
+    R[(m + 1) * (n + 2) + n + 1] = R[m * (n + 2) + n];
+    D[m * (n + 1) + n] = 0.0;
+    for (ulong j = n; j > 0; j--)
+    {
+        for (ulong i = m; i > 0; i--)
+        {
+            T r0 = R[i * (n + 2) + j];
+            T r1 = R[(i + 1) * (n + 2) + j];
+            T r2 = R[i * (n + 2) + (j + 1)];
+            T r3 = R[(i + 1) * (n + 2) + j + 1];
+            T d0 = D[i * (n + 1) + j];
+            T d1 = D[i * (n + 1) + (j - 1)];
+            T d2 = D[(i - 1) * n + j];
+            T a = exp((r1 - r0 - d1) / gamma);
+            T b = exp((r2 - r0 - d2) / gamma);
+            T c = exp((r3 - r0 - d0) / gamma);
+            E[i * n + j] = E[(i + 1) * (n + 2) + j] * a +
+                           E[i * (n + 2) + j + 1] * b +
+                           E[(i + 1) * (n + 2) + j + 1] * c;
+        }
+    }
+    delete[] D;
+}
 
 #endif

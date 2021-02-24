@@ -4,7 +4,8 @@
 *.ptx
 *.cubin
 *.fatbin
-/bin/
 *.lock
-/Pipfile
+Pipfile
+/bin/
+/dat/
 /obj/

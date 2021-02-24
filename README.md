@@ -13,8 +13,8 @@ Based on algorithms described in:
 
 - [x] Implement naive DTW on CPU
 - [x] Implement soft DTW on CPU
-- [ ] Choose benchmarking datasets
-- [ ] Implement pairwise squared Euclidean distance on CPU
+- [x] Choose benchmarking datasets
+- [x] Implement pairwise squared Euclidean distance on CPU
 - [ ] Implement soft DTW gradient on CPU
 - [ ] Implement soft DTW barycenter estimation on CPU
 - [ ] Implement naive DTW in CUDA
