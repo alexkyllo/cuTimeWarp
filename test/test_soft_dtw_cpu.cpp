@@ -162,26 +162,33 @@ TEST_CASE("soft dtw gradient")
 {
     int m = 5;
     int n = 8;
-    float gamma = 0.1;
-    float *a = new float[m]{1.0, 2.0, 3.0, 3.0, 5.0};
-    float *b = new float[n]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0};
-    float *D = new float[m * n]{0.0};
-    float *R = new float[(m + 2) * (n + 2)]{0.0};
-    float *E = new float[(m + 2) * (n + 2)]{0.0};
+    double gamma = 0.1;
+    double *a = new double[m]{1.0, 2.0, 3.0, 3.0, 5.0};
+    double *b = new double[n]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0};
+    double *D = new double[m * n]{0.0};
+    double *R = new double[(m + 2) * (n + 2)]{0.0};
+    double *E = new double[m * n]{0.0};
     sq_euclidean_distance(a, b, D, m, n, 1);
-    softdtw<float>(D, R, m, n, gamma);
+    softdtw<double>(D, R, m, n, gamma);
     softdtw_grad(D, R, E, m, n, gamma);
     std::cout << "E:\n";
-    for (int i = 0; i < m; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            std::cout << E[i * (n + 2) + j] << " ";
-        }
-        std::cout << "\n";
-    }
+    // for (int i = 0; i < m; i++)
+    // {
+    //     for (int j = 0; j < n; j++)
+    //     {
+    //         std::cout << E[i * n + j] << " ";
+    //     }
+    //     std::cout << "\n";
+    // }
     REQUIRE(is_close(E[0], 1.0));
     REQUIRE(is_close(E[1], 0.0001));
+    REQUIRE(is_close(E[13], 0.8571));
+    REQUIRE(is_close(E[14], 0.4285));
+    REQUIRE(is_close(E[21], 0.2857));
+    REQUIRE(is_close(E[22], 0.5714));
+    REQUIRE(is_close(E[23], 0.1429));
+    REQUIRE(is_close(E[31], 0.4286));
+    REQUIRE(is_close(E[39], 1.0));
     /* Expected gradient:
 array([[[1.    , 0.0001, 0.    , 0.    , 0.    , 0.    , 0.    , 0.    ],
         [0.    , 1.    , 1.    , 1.    , 1.    , 0.8571, 0.4285, 0.    ],

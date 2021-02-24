@@ -41,6 +41,7 @@ Based on algorithms described in:
 ## Tasks for performance testing
 
 - k-means clustering with SoftDTW barycenters
+- Nearest Barycenter Classification
 - Supervised classification gradient descent fitting with SoftDTW loss
 
 ## Performance metrics
