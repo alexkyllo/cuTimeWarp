@@ -182,6 +182,10 @@ TEST_CASE("soft dtw gradient")
     // }
     REQUIRE(is_close(E[0], 1.0));
     REQUIRE(is_close(E[1], 0.0001));
+    REQUIRE(is_close(E[13], 0.8571));
+    REQUIRE(is_close(E[14], 0.4285));
+    REQUIRE(is_close(E[21], 0.2857));
+    REQUIRE(is_close(E[22], 0.5714));
     REQUIRE(is_close(E[23], 0.1429));
     REQUIRE(is_close(E[31], 0.4286));
     REQUIRE(is_close(E[39], 1.0));
