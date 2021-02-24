@@ -234,7 +234,6 @@ template <class T> T softdtw(T *D, T *R, ulong m, ulong n, T gamma)
 template <class T>
 void softdtw_grad(T *D_, T *R, T *E, ulong m, ulong n, T gamma)
 {
-    // TODO: fix this, it's returning a wrong result
     // Add an extra row and column to D
     T *D = new T[(m + 1) * (n + 1)]{0};
     for (ulong i = 0; i < m; i++)
