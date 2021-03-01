@@ -1,4 +1,4 @@
-/** Naive CPU implmentation of DTW as a baseline and reference.
+/** Naive CPU implmentation of SoftDTW as a baseline and reference.
  * @file soft_dtw_cpu.hpp
  * @author Alex Kyllo
  * @date 2020-02-13
