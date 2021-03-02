@@ -1,9 +1,10 @@
 CC = g++
-CFLAGS = -std=c++11 -Wall -Wextra --pedantic-errors \
+CFLAGS = -std=c++11 -Wall -Wextra # --pedantic-errors \
 #-g -fsanitize=address -fsanitize=leak -fsanitize=undefined -fno-sanitize-recover
 LDFLAGS = -lblas
 NVCC = nvcc
-NVCC_FLAGS = -g -G -Xcompiler -Wall
+NVCC_FLAGS = -g -G -maxrregcount=64 -Xcompiler "$(CFLAGS)"
+CU_LDFLAGS = -lcublas -lcurand
 .PHONY = default build clean test fmt
 
 $(shell mkdir -p bin/ obj/)
@@ -27,13 +28,19 @@ obj/test.o: test/test.cpp test/catch.h
 	$(CC) -std=c++11 test/test.cpp -c -o $@
 
 ## Build and run unit tests
-test: test_softdtw_cpu
+test: test_softdtw_cpu test_softdtw_cuda
 
 test_softdtw_cpu: bin/test_soft_dtw_cpu
 	./$<
 
+test_softdtw_cuda: bin/test_soft_dtw_cuda
+	./$<
+
 bin/test_soft_dtw_cpu: test/test_soft_dtw_cpu.cpp obj/test.o src/soft_dtw_cpu.hpp
 	$(CC) $(CFLAGS) $< obj/test.o -o $@ $(LDFLAGS)
+
+bin/test_soft_dtw_cuda: test/test_soft_dtw_cuda.cpp obj/test.o src/soft_dtw.hcu
+	$(NVCC) $(NVCC_FLAGS) $< obj/test.o src/soft_dtw.cu -o $@ $(CU_LDFLAGS)
 
 ## Delete binaries
 clean:
