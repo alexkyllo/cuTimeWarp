@@ -7,24 +7,6 @@
 
 typedef unsigned int uint;
 
-#define cudaErrchk(ans)                                                        \
-    {                                                                          \
-        GPUAssert((ans), __FILE__, __LINE__);                                  \
-    }
-inline void GPUAssert(cudaError_t code, const char *file, int line,
-                      bool abort = true)
-{
-    if (code != cudaSuccess)
-    {
-        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file,
-                line);
-        if (abort)
-        {
-            exit(code);
-        }
-    }
-}
-
 /** Take the softmin of 3 elements
  * @param a The first element
  * @param b The second element
@@ -121,62 +103,48 @@ __global__ void euclid_dist(const uint m, const uint n, const float *XX,
 }
 
 /** Host function to compute the Squared Euclidean distance between two sets of
- vectors
+ *  column vectors (e.g. two multivariate time series)
  *  X and Y by using the euclidian norms, i.e. X*X + Y*Y - 2X*Y
- *  Inputs X, Y, D should be device vectors
+ *  Inputs X, Y, D should be __device__ vectors
  *  @param X A set of vectors of length (row count) m
  *  @param Y A set of vectors of length (row count) n
+ *  @param D A result array for the distance matrix of dimension (m x n)
  *  @param m The length of vectors in X
  *  @param n The length of vectors in Y
-
- *  @param YY Squared Euclidean norm of Y
- *  @param XY 2 * X * Y^T (matrix multiplication result)
- *  @param D The result euclidean distance matrix with dimensions (m x n)
+ *  @param k The number of vectors in X and Y (columns)
  */
 __host__ void sq_euclid_dist(const float *X, const float *Y, float *D,
                              const uint m, const uint n, const uint k)
 {
     // TODO: change this to work on device arrays only
-    float *dX;
-    float *dY;
-    float *dD;
     float *XX; // = new float[m]{0};
     float *YY; // = new float[n]{0};
     float *XY; // = new float[m * n]{0};
     size_t size_m = m * sizeof(float);
     size_t size_n = n * sizeof(float);
     size_t size_mn = n * size_m;
-    size_t size_mk = k * size_m;
-    size_t size_nk = k * size_n;
-    cudaMalloc(&dD, size_mn);
-    cudaMalloc(&dX, size_mk);
-    cudaMalloc(&dY, size_nk);
     cudaMalloc(&XX, size_m);
     cudaMalloc(&YY, size_n);
     cudaMalloc(&XY, size_mn);
     cudaMemset(XX, 0, size_m);
     cudaMemset(YY, 0, size_n);
     cudaMemset(XY, 0, size_mn);
-    cudaMemset(dD, 0, size_mn);
-    cudaMemcpy(dX, X, size_mk, cudaMemcpyHostToDevice);
-    cudaMemcpy(dY, Y, size_nk, cudaMemcpyHostToDevice);
+    cudaMemset(D, 0, size_mn);
 
     uint block_size = min(m, 1024);
     uint grid_size = (m + block_size - 1) / block_size;
     // compute squared euclidean norm of X
-    sq_euclid_norm<<<grid_size, block_size>>>(m, k, dX, XX);
+    sq_euclid_norm<<<grid_size, block_size>>>(m, k, X, XX);
     block_size = min(n, 1024);
     grid_size = (n + block_size - 1) / block_size;
-    sq_euclid_norm<<<block_size, grid_size>>>(n, k, dY, YY);
+    sq_euclid_norm<<<block_size, grid_size>>>(n, k, Y, YY);
 
     // // compute (2*X)*YT
-    sgemm_cublas(dX, dY, XY, m, k, n, 2.0);
+    sgemm_cublas(X, Y, XY, m, k, n, 2.0);
 
     block_size = min(m, 1024);
     grid_size = (m + block_size - 1) / block_size;
-    euclid_dist<<<block_size, grid_size>>>(m, n, XX, YY, XY, dD);
-    cudaErrchk(cudaMemcpy(D, dD, size_mn, cudaMemcpyDeviceToHost));
-    cudaFree(dD);
+    euclid_dist<<<block_size, grid_size>>>(m, n, XX, YY, XY, D);
     cudaFree(XX);
     cudaFree(YY);
     cudaFree(XY);
