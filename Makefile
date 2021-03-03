@@ -39,8 +39,9 @@ test_softdtw_cuda: bin/test_soft_dtw_cuda
 bin/test_soft_dtw_cpu: test/test_soft_dtw_cpu.cpp obj/test.o src/soft_dtw_cpu.hpp
 	$(CC) $(CFLAGS) $< obj/test.o -o $@ $(LDFLAGS)
 
-bin/test_soft_dtw_cuda: test/test_soft_dtw_cuda.cpp obj/test.o src/soft_dtw.hcu
-	$(NVCC) $(NVCC_FLAGS) $< obj/test.o src/soft_dtw.cu -o $@ $(CU_LDFLAGS)
+bin/test_soft_dtw_cuda: test/test_soft_dtw_cuda.cpp obj/test.o src/soft_dtw.hcu \
+src/soft_dtw.cu
+	$(NVCC) $(NVCC_FLAGS) $< obj/test.o src/soft_dtw.cu -o $@ $(CU_LDFLAGS) -lblas
 
 ## Delete binaries
 clean:

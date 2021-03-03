@@ -1,11 +1,30 @@
 /** CUDA implementation of Soft DTW
  *  @file soft_dtw.cu
  */
+#include <cblas.h>
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
 #include <iostream>
 
 typedef unsigned int uint;
+
+#define cudaErrchk(ans)                                                        \
+    {                                                                          \
+        GPUAssert((ans), __FILE__, __LINE__);                                  \
+    }
+inline void GPUAssert(cudaError_t code, const char *file, int line,
+                      bool abort = true)
+{
+    if (code != cudaSuccess)
+    {
+        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file,
+                line);
+        if (abort)
+        {
+            exit(code);
+        }
+    }
+}
 
 /** Take the softmin of 3n elements
  * @param a The first element
@@ -28,38 +47,70 @@ __host__ void sgemm_cublas(const float *A, const float *B, float *C,
                            const uint m, const uint k, const uint n,
                            const float alpha)
 {
+    // Doesn't work, need to get the transpositions right
     const float beta = 0.0;
     cublasHandle_t handle;
     cublasCreate(&handle);
     // call cuBLAS to multiply transposed matrices
     // (input is row-major but cublas expects column major
-    cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, m, n, k, &alpha, A, m, B, k,
+    cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, k, n, m, &alpha, A, k, B, k,
                 &beta, C, m);
+    // Transpose result matrix C to put in row major order. Requires temp array.
+    float *temp;
+    unsigned int szc = m * n * sizeof(float);
+    cudaMalloc(&temp, szc);
+    cudaMemcpy(temp, C, szc, cudaMemcpyDeviceToDevice);
+    cublasSgeam(handle, CUBLAS_OP_T, CUBLAS_OP_N, m, n, &alpha, temp, n, &beta,
+                temp, m, C, m);
     cublasDestroy(handle);
 }
 
-__global__ void sq_euclid_norm(const uint m, const uint n, const float *X,
+__global__ void sq_euclid_norm(const uint m, const uint k, const float *X,
                                float *XX)
 {
     // TODO
-    uint i = blockIdx.y * blockDim.y + threadIdx.y;
-    uint j = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < m && j < n)
+    uint i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < m)
     {
-        float x = X[i * n + j];
-        XX[i] += x * x;
+        for (uint j = 0; j < k; j++)
+        {
+            float x = X[i * k + j];
+            XX[i] += x * x;
+        }
     }
 }
 
 __global__ void euclid_dist(const uint m, const uint n, const float *XX,
                             const float *YY, const float *XY, float *D)
 {
-    uint i = blockIdx.y * blockDim.y + threadIdx.y;
-    uint j = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i < m && j < n)
+    uint i = blockIdx.x * blockDim.x + threadIdx.x;
+    if (i < m)
     {
-        D[i * n + j] = XX[i] + YY[j] - (XY[i * n + j]);
+        for (uint j = 0; j < n; j++)
+        {
+            D[i * n + j] = XX[i] + YY[j] - (XY[i * n + j]);
+            printf("XY[%d]) = %.2f\n", i * n + j, XY[i * n + j]);
+        }
     }
+}
+
+void gemm_blas(const float *A, const float *B, float *C, uint m, uint k, uint n,
+               float alpha)
+{
+    cblas_sgemm(CblasRowMajor, // Row-major striding
+                CblasNoTrans,  // Do not transpose A
+                CblasTrans,    // Transpose B
+                m,             // Rows in A
+                n,             // Columns in B
+                k,             // Columns in A
+                alpha,         // Alpha (scalar used to scale A*B)
+                A,             // Input Matrix A
+                k,             // LDA stride of matrix A
+                B,             // Input Matrix B
+                k,             // LDA stride of matrix B
+                0.0,           // Beta (scalar used to scale matrix C)
+                C,             // Result Matrix C
+                n);            // LDA stride of matrix C
 }
 
 __host__ void sq_euclid_dist(const float *X, const float *Y, float *D,
@@ -68,41 +119,50 @@ __host__ void sq_euclid_dist(const float *X, const float *Y, float *D,
     // TODO: This needs testing
     float *dX;
     float *dY;
+    float *dD;
     float *XX; // = new float[m]{0};
     float *YY; // = new float[n]{0};
     float *XY; // = new float[m * n]{0};
-    cudaMalloc(&dX, m * sizeof(float));
-    cudaMalloc(&dY, n * sizeof(float));
-    cudaMalloc(&XX, m * sizeof(float));
-    cudaMalloc(&YY, n * sizeof(float));
-    cudaMalloc(&XY, m * n * sizeof(float));
-    cudaMemset(XX, 0, m * sizeof(float));
-    cudaMemset(YY, 0, n * sizeof(float));
-    cudaMemset(XY, 0, m * n * sizeof(float));
+    size_t size_m = m * sizeof(float);
+    size_t size_n = n * sizeof(float);
+    size_t size_mn = n * size_m;
+    size_t size_mk = k * size_m;
+    size_t size_nk = k * size_n;
+    cudaMalloc(&dD, size_mn);
+    cudaMalloc(&dX, size_mk);
+    cudaMalloc(&dY, size_nk);
+    cudaMalloc(&XX, size_m);
+    cudaMalloc(&YY, size_n);
+    cudaMalloc(&XY, size_mn);
+    cudaMemset(XX, 0, size_m);
+    cudaMemset(YY, 0, size_n);
+    cudaMemset(XY, 0, size_mn);
+    cudaMemset(dD, 0, size_mn);
+    cudaMemcpy(dX, X, size_mk, cudaMemcpyHostToDevice);
+    cudaMemcpy(dY, Y, size_nk, cudaMemcpyHostToDevice);
 
     uint block_size = min(m, 1024);
     uint grid_size = (m + block_size - 1) / block_size;
     // compute squared euclidean norm of X
-    sq_euclid_norm<<<grid_size, block_size>>>(m, k, X, XX);
+    sq_euclid_norm<<<grid_size, block_size>>>(m, k, dX, XX);
+    block_size = min(n, 1024);
+    grid_size = (n + block_size - 1) / block_size;
+    sq_euclid_norm<<<block_size, grid_size>>>(n, k, dY, YY);
+
+    // // compute (2*X)*YT
+    // // gemm_blas<T>(X, Y, XY, m, k, n, 2.0);
+    // sgemm_cublas(dX, dY, XY, m, k, n, 2.0);
+    // workaround for now, doing the matrix multiplication on CPU
+    // so we can focus on the DTW algorithm on GPU
+    float *hXY = new float[m * n]{0};
+    gemm_blas(X, Y, hXY, m, k, n, 2.0);
+    cudaMemcpy(XY, hXY, size_mn, cudaMemcpyHostToDevice);
+    //
     block_size = min(m, 1024);
     grid_size = (m + block_size - 1) / block_size;
-    sq_euclid_norm<<<block_size, grid_size>>>(n, k, Y, YY);
-
-    // compute (2*X)*YT
-    // gemm_blas<T>(X, Y, XY, m, k, n, 2.0);
-    sgemm_cublas(X, Y, XY, m, k, n, 2.0);
-    // cublasHandle_t handle;
-    // cublasCreate(&handle);
-    // const float alpha = 2.0;
-    // const float beta = 0.0;
-    // // call cuBLAS to multiply transposed matrices
-    // // (input is row-major but cublas expects column major
-    // cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_T, m, n, k, &alpha, X, m, Y,
-    // k,
-    //             &beta, XY, m);
-
-    // compute x^2 + y^2 - 2xy
-    euclid_dist<<<block_size, grid_size>>>(m, n, XX, YY, XY, D);
+    euclid_dist<<<block_size, grid_size>>>(m, n, XX, YY, XY, dD);
+    cudaErrchk(cudaMemcpy(D, dD, size_mn, cudaMemcpyDeviceToHost));
+    cudaFree(dD);
     cudaFree(XX);
     cudaFree(YY);
     cudaFree(XY);

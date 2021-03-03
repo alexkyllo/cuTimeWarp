@@ -109,9 +109,9 @@ void sq_euclidean_distance(T *X, T *Y, T *D, size_t m, size_t n, int k)
     gemm_blas<T>(X, Y, XY, m, k, n, 2.0);
 
     // compute x^2 + y^2 - 2xy
-    for (size_t i = 0; i < m; i++)
+    for (uint i = 0; i < m; i++)
     {
-        for (size_t j = 0; j < n; j++)
+        for (uint j = 0; j < n; j++)
         {
             D[i * n + j] = XX[i] + YY[j] - (XY[i * n + j]);
         }
