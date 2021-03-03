@@ -116,10 +116,9 @@ __global__ void euclid_dist(const uint m, const uint n, const float *XX,
 __host__ void sq_euclid_dist(const float *X, const float *Y, float *D,
                              const uint m, const uint n, const uint k)
 {
-    // TODO: change this to work on device arrays only
-    float *XX; // = new float[m]{0};
-    float *YY; // = new float[n]{0};
-    float *XY; // = new float[m * n]{0};
+    float *XX;
+    float *YY;
+    float *XY;
     size_t size_m = m * sizeof(float);
     size_t size_n = n * sizeof(float);
     size_t size_mn = n * size_m;
@@ -139,7 +138,7 @@ __host__ void sq_euclid_dist(const float *X, const float *Y, float *D,
     grid_size = (n + block_size - 1) / block_size;
     sq_euclid_norm<<<block_size, grid_size>>>(n, k, Y, YY);
 
-    // // compute (2*X)*YT
+    // compute (2*X)*YT
     sgemm_cublas(X, Y, XY, m, k, n, 2.0);
 
     block_size = min(m, 1024);
