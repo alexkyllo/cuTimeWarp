@@ -26,7 +26,7 @@ inline void GPUAssert(cudaError_t code, const char *file, int line,
     }
 }
 
-/** Take the softmin of 3n elements
+/** Take the softmin of 3 elements
  * @param a The first element
  * @param b The second element
  * @param c The third element
@@ -48,27 +48,39 @@ __host__ void sgemm_cublas(const float *A, const float *B, float *C,
                            const float alpha)
 {
     // Doesn't work, need to get the transpositions right
+    // Try computing BT * AT = C and then 2.0 * A using cublasSscal
     const float beta = 0.0;
+    const float alpha1 = 1.0;
     cublasHandle_t handle;
     cublasCreate(&handle);
     // call cuBLAS to multiply transposed matrices
+    float *tempA;
+    cudaMalloc(&tempA, m * k * sizeof(float));
+    cudaMemcpy(tempA, A, m * k * sizeof(float), cudaMemcpyDeviceToDevice);
+    cublasSscal(handle, m * k, &alpha, tempA, 1);
     // (input is row-major but cublas expects column major
-    cublasSgemm(handle, CUBLAS_OP_T, CUBLAS_OP_N, k, n, m, &alpha, A, k, B, k,
-                &beta, C, m);
-    // Transpose result matrix C to put in row major order. Requires temp array.
-    float *temp;
-    unsigned int szc = m * n * sizeof(float);
-    cudaMalloc(&temp, szc);
-    cudaMemcpy(temp, C, szc, cudaMemcpyDeviceToDevice);
-    cublasSgeam(handle, CUBLAS_OP_T, CUBLAS_OP_N, m, n, &alpha, temp, n, &beta,
-                temp, m, C, m);
+    cublasSgemm(handle,      // cublas handle
+                CUBLAS_OP_T, // transpose first matrix
+                CUBLAS_OP_N, // tranpose second matrix
+                n,           // rows in first matrix
+                m,           // columns in second matrix
+                k,           // columns in first matrix
+                &alpha1,     // scalar for first matrix
+                B,           // first matrix
+                k,           // stride of first matrix
+                tempA,       // second matrix
+                k,           // stride of second matrix
+                &beta,       // scalar for C
+                C,           // result matrix
+                n            // stride of result matrix
+    );
+    cudaFree(tempA);
     cublasDestroy(handle);
 }
 
 __global__ void sq_euclid_norm(const uint m, const uint k, const float *X,
                                float *XX)
 {
-    // TODO
     uint i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i < m)
     {
@@ -117,6 +129,7 @@ __host__ void sq_euclid_dist(const float *X, const float *Y, float *D,
                              const uint m, const uint n, const uint k)
 {
     // TODO: This needs testing
+    // TODO: change this to work on device arrays only
     float *dX;
     float *dY;
     float *dD;
@@ -151,12 +164,12 @@ __host__ void sq_euclid_dist(const float *X, const float *Y, float *D,
 
     // // compute (2*X)*YT
     // // gemm_blas<T>(X, Y, XY, m, k, n, 2.0);
-    // sgemm_cublas(dX, dY, XY, m, k, n, 2.0);
+    sgemm_cublas(dX, dY, XY, m, k, n, 2.0);
     // workaround for now, doing the matrix multiplication on CPU
     // so we can focus on the DTW algorithm on GPU
-    float *hXY = new float[m * n]{0};
-    gemm_blas(X, Y, hXY, m, k, n, 2.0);
-    cudaMemcpy(XY, hXY, size_mn, cudaMemcpyHostToDevice);
+    // float *hXY = new float[m * n]{0};
+    // gemm_blas(X, Y, hXY, m, k, n, 2.0);
+    // cudaMemcpy(XY, hXY, size_mn, cudaMemcpyHostToDevice);
     //
     block_size = min(m, 1024);
     grid_size = (m + block_size - 1) / block_size;
