@@ -150,7 +150,6 @@ R expected:
 [inf 25.     11.     10.8614 10.8054 10.792  10.792  10.792     2.8054     inf]
 [inf inf     inf     inf     inf     inf     inf     inf           inf     inf]
     */
-    std::cout << "cost: " << cost << "\n";
     REQUIRE(is_close(2.80539, cost));
     delete[] a;
     delete[] b;
@@ -171,7 +170,6 @@ TEST_CASE("soft dtw gradient")
     sq_euclidean_distance(a, b, D, m, n, 1);
     softdtw<double>(D, R, m, n, gamma);
     softdtw_grad(D, R, E, m, n, gamma);
-    std::cout << "E:\n";
     // for (int i = 0; i < m; i++)
     // {
     //     for (int j = 0; j < n; j++)

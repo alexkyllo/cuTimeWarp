@@ -8,19 +8,6 @@ bool is_close(float a, float b, float tol = 0.0001)
     return std::abs(a - b) < tol;
 }
 
-// TEST_CASE("CUDA sq_euclid_norm")
-// {
-//     int m = 4;
-//     int k = 2;
-//     float *X = new float[m * k]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};
-//     float *XX = new float[m * k]{0};
-//     float *dX;
-//     float *dXX;
-//     cudaMalloc(&dX, m * k * sizeof(float));
-//     cudaMalloc(&dXX, m * sizeof(float));
-//     cudaMemset(dXX, 0, m * sizeof(float));
-// }
-
 TEST_CASE("test squared euclidean distance 2d")
 {
     int m = 4;
@@ -42,14 +29,14 @@ TEST_CASE("test squared euclidean distance 2d")
               [59.41, 21.13,  4.82]])
      */
 
-    for (int i = 0; i < m; i++)
-    {
-        for (int j = 0; j < n; j++)
-        {
-            std::cout << D[i * n + j] << " ";
-        }
-        std::cout << std::endl;
-    }
+    // for (int i = 0; i < m; i++)
+    // {
+    //     for (int j = 0; j < n; j++)
+    //     {
+    //         std::cout << D[i * n + j] << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
 
     REQUIRE(is_close(D[0], 0.61));
     REQUIRE(is_close(D[1], 15.13));
