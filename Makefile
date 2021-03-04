@@ -5,7 +5,9 @@ LDFLAGS = -lblas
 NVCC = nvcc
 NVCC_FLAGS = -g -G -maxrregcount=64 -Xcompiler "$(CFLAGS)"
 CU_LDFLAGS = -lcublas
-.PHONY = default build clean test fmt
+.PHONY = default build clean test fmt report
+
+FIGS = 
 
 $(shell mkdir -p bin/ obj/)
 
@@ -42,6 +44,13 @@ bin/test_soft_dtw_cpu: test/test_soft_dtw_cpu.cpp obj/test.o src/soft_dtw_cpu.hp
 bin/test_soft_dtw_cuda: test/test_soft_dtw_cuda.cpp obj/test.o src/soft_dtw.hcu \
 src/soft_dtw.cu
 	$(NVCC) $(NVCC_FLAGS) $< obj/test.o src/soft_dtw.cu -o $@ $(CU_LDFLAGS)
+
+
+## Compile the PDF report
+report: cuTimeWarp.pdf
+
+cuTimeWarp.pdf: cuTimeWarp.tex cuTimeWarp.bib $(FIGS)
+	latexmk -pdf
 
 ## Delete binaries
 clean:

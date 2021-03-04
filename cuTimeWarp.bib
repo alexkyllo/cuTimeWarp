@@ -1,0 +1,33 @@
+@article{cuturi_soft-dtw_2018,
+  title        = {Soft-{DTW}: a Differentiable Loss Function for Time-Series},
+  url          = {http://arxiv.org/abs/1703.01541},
+  shorttitle   = {Soft-{DTW}},
+  abstract     = {We propose in this paper a differentiable learning loss between time series, building upon the celebrated dynamic time warping ({DTW}) discrepancy. Unlike the Euclidean distance, {DTW} can compare time series of variable size and is robust to shifts or dilatations across the time dimension. To compute {DTW}, one typically solves a minimal-cost alignment problem between two time series using dynamic programming. Our work takes advantage of a smoothed formulation of {DTW}, called soft-{DTW}, that computes the soft-minimum of all alignment costs. We show in this paper that soft-{DTW} is a differentiable loss function, and that both its value and gradient can be computed with quadratic time/space complexity ({DTW} has quadratic time but linear space complexity). We show that this regularization is particularly well suited to average and cluster time series under the {DTW} geometry, a task for which our proposal significantly outperforms existing baselines. Next, we propose to tune the parameters of a machine that outputs time series by minimizing its fit with ground-truth labels in a soft-{DTW} sense.},
+  journaltitle = {{arXiv}:1703.01541 [stat]},
+  author       = {Cuturi, Marco and Blondel, Mathieu},
+  urldate      = {2021-01-16},
+  date         = {2018-02-20},
+  eprinttype   = {arxiv},
+  eprint       = {1703.01541},
+  keywords     = {Statistics - Machine Learning},
+  file         = {arXiv Fulltext PDF:C\:\\Users\\jekyllo\\Zotero\\storage\\Q3AVE6KU\\Cuturi and Blondel - 2018 - Soft-DTW a Differentiable Loss Function for Time-.pdf:application/pdf;arXiv.org Snapshot:C\:\\Users\\jekyllo\\Zotero\\storage\\3TZ2UJC3\\1703.html:text/html}
+}
+
+@inproceedings{belviranli_peerwave_2015,
+  location   = {Newport Beach California {USA}},
+  title      = {{PeerWave}: Exploiting Wavefront Parallelism on {GPUs} with Peer-{SM} Synchronization},
+  isbn       = {978-1-4503-3559-1},
+  url        = {https://dl.acm.org/doi/10.1145/2751205.2751243},
+  doi        = {10.1145/2751205.2751243},
+  shorttitle = {{PeerWave}},
+  abstract   = {Nested loops with regular iteration dependencies span a large class of applications ranging from string matching to linear system solvers. Wavefront parallelism is a well-known technique to enable concurrent processing of such applications and is widely being used on {GPUs} to beneﬁt from their massively parallel computing capabilities. Wavefront parallelism on {GPUs} uses global barriers between processing of tiles to enforce data dependencies. However, such diagonal-wide synchronization causes load imbalance by forcing {SMs} to wait for the completion of the {SM} with longest computation. Moreover, diagonal processing causes loss of locality due to elements that border adjacent tiles. In this paper, we propose {PeerWave}, an alternative {GPU} wavefront parallelization technique that improves inter-{SM} load balance by using peer-wise synchronization between {SMs}. and eliminating global synchronization. Our approach also increases {GPU} L2 cache locality through row allocation of tiles to the {SMs}. We further improve {PeerWave} performance by using ﬂexible hyper-tiles that reduce inter-{SM} wait time while maximizing intra-{SM} utilization. We develop an analytical model for determining the optimal tile size. Finally, we present a run-time and a {CUDA} based {API} to allow users to easily implement their applications using {PeerWave}. We evaluate {PeerWave} on the {NVIDIA} K40c {GPU} using 6 diﬀerent applications and achieve speedups of up to 2X compared to the most recent hyperplane transformation based {GPU} implementation.},
+  eventtitle = {{ICS}'15: 2015 International Conference on Supercomputing},
+  pages      = {25--35},
+  booktitle  = {Proceedings of the 29th {ACM} on International Conference on Supercomputing},
+  publisher  = {{ACM}},
+  author     = {Belviranli, Mehmet E. and Deng, Peng and Bhuyan, Laxmi N. and Gupta, Rajiv and Zhu, Qi},
+  urldate    = {2021-03-03},
+  date       = {2015-06-08},
+  langid     = {english},
+  file       = {Belviranli et al. - 2015 - PeerWave Exploiting Wavefront Parallelism on GPUs.pdf:C\:\\Users\\jekyllo\\Zotero\\storage\\ZPUGYVBV\\Belviranli et al. - 2015 - PeerWave Exploiting Wavefront Parallelism on GPUs.pdf:application/pdf}
+}
