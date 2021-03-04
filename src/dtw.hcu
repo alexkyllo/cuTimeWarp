@@ -1,0 +1,26 @@
+#pragma once
+#ifndef __CUDACC__
+#define __device__
+#define __host__
+#endif
+
+typedef unsigned int uint;
+
+__device__ void initialize_warp(const float *W, const uint m, const uint n);
+
+
+__device__ void dtwm_task(size_t i, size_t j,
+               size_t* I, double* C, double* D, size_t* L,
+               size_t* Rsi, size_t* Rsj, size_t* Rli, size_t* Rlj, size_t* Pi, size_t* Pj,
+               double t, size_t o, const size_t n)
+
+__global__  void cuda_dtw(size_t* I, double* C, double* D, size_t* L,
+              size_t* Rsi, size_t* Rsj, size_t* Rli, size_t* Rlj, size_t* Pi, size_t* Pj,
+              double t, size_t o, const size_t m, const size_t n)                   
+
+__device__ double getCost(size_t i, size_t j, double* dX, double* dY)
+
+__global__ void initCuda(size_t *I, double* C, double* D, double* dX, double* dY,
+              const size_t m, const size_t n)
+
+__host__ void sq_dtw(const size_t t , const size_t o) 
