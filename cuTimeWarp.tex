@@ -103,7 +103,14 @@ contiguously \cite{zhu_developing_2018}. A prior implementation of Soft-DTW on
 CUDA using PyTorch and Numba is capable of 100x performance improvement over the
 original Soft-DTW Cython code, but is limited to sequence lengths of 1024 (CUDA
 max block size) and leaves many opportunities for further CUDA optimizations
-such as the use of shared memory \cite{maghoumi_pytorch-softdtw-cuda_2021}. In
+such as the use of shared memory \cite{maghoumi_pytorch-softdtw-cuda_2021}. A
+2015 paper describes a tiling approach called \emph{PeerWave}, which utilizes
+direct synchronization between neighboring streaming multiprocessors (SMs) to
+handle the inter-tile data dependency without atomic operations, locks, or other
+global barriers, leading to improved load balance and scaling properties
+\cite{belviranli_peerwave_2015}.
+
+In
 our project we will focus on this area of opportunity, optimizing matrix
 structure and memory access patterns to maximize parallelism and minimize memory
 latency in the computation of the warping path matrix.
