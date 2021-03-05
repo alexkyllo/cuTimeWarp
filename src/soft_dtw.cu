@@ -281,19 +281,6 @@ __host__ float softdtw_cuda_naive(float *D, uint m, uint n, float gamma)
     softdtw_naive_kernel<<<B, TPB>>>(D, R, d_path_cost, m, n, gamma);
     // Copy the path cost back to host
     cudaMemcpy(&path_cost, d_path_cost, sizeof(float), cudaMemcpyDeviceToHost);
-    
-    // for debug
-    /* float *hR = new float[m2n2]{0};
-    cudaMemcpy(hR, R, sz_R, cudaMemcpyDeviceToHost);
-    for (uint i = 0; i < m + 2; i++)
-    {
-        for (uint j = 0; j < n + 2; j++)
-        {
-            std::cout << hR[i * (n + 2) + j] << " ";
-        }
-        std::cout << "\n";
-    }
-    delete[] hR; */
 
     cudaFree(d_path_cost);
     cudaFree(R);
