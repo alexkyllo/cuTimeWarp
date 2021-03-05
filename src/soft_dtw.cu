@@ -155,19 +155,19 @@ __host__ void sq_euclid_dist(const float *X, const float *Y, float *D,
  *  @param device_num The device number, default 0
  *  @return the SM count
  */
-__host__ uint get_device_sm_count(uint device_num=0)
+__host__ uint get_device_sm_count(uint device_num = 0)
 {
     cudaDeviceProp deviceProp;
     cudaGetDeviceProperties(&deviceProp, device_num);
     return deviceProp.multiProcessorCount;
 }
 
-/** Kernel function for computing "naive" Soft DTW on pairwise Euclidean distance
- * matrix for multivariate time series with CUDA. Input D should be a
+/** Kernel function for computing "naive" Soft DTW on pairwise Euclidean
+ * distance matrix for multivariate time series with CUDA. Input D should be a
  * __device__ array.
  * This naive version only works for sequence lengths <= 1024 i.e. can fit in
- * a single threadblock. 
- * Each block can process one pair of time series.
+ * a single threadblock.
+ * Assumes omly a single threadblock in the kernel launch.
  * Each thread can process one anti-diagonal.
  * @param D The pairwise squared Euclidean distance array of two time series
  * @param R An m+2 x n+2 array that will be filled with the alignments
@@ -180,13 +180,12 @@ __global__ void softdtw_naive_kernel(float *D, float *R, float *cost, uint m,
                                      uint n, float gamma)
 {
     // TODO incomplete
-    //const uint bi = blockIdx.x;
     const uint ii = threadIdx.x;
     // block size = max(m, n) (length of longest diagonal)
     const uint bx = blockDim.x;
     // number of antidiagonals is 2 x max(m,n) - 1
     const uint passes = 2 * bx - 1;
-    
+
     for (uint p = 0; p < passes; p++)
     {
         uint jj = max(0, min(p - ii, n - 1));
@@ -205,6 +204,11 @@ __global__ void softdtw_naive_kernel(float *D, float *R, float *cost, uint m,
         }
         __syncthreads();
     }
+    __syncthreads();
+    if (ii == 0)
+    {
+        *cost = R[m * (n + 2) + n];
+    }
 }
 
 /** Kernel function for computing tiled Soft DTW on pairwise Euclidean distance
@@ -218,22 +222,40 @@ __global__ void softdtw_naive_kernel(float *D, float *R, float *cost, uint m,
  * @param n Length of second time series
  * @param gamma SoftDTW smoothing parameter
  */
- __global__ void softdtw_tiled_kernel(float *D, float *R, float *cost, uint m,
-    uint n, float gamma)
+__global__ void softdtw_tiled_kernel(float *D, float *R, float *cost, uint m,
+                                     uint n, float gamma)
 {
-// TODO
-// Divide R into tiles
-// Each tile depends on the tiles to its top, left, and top-left
-// Assign one thread to spin on the signal variable for this tile
-// Process the tile diagonally from upper left to lower right
-// using a loop counter to keep track of fully processed diagonals
-// and while loop and syncthreads to spin on it
-// Write to the signal variables to signal the next tiles
+    // TODO
+    // Divide R into tiles
+    // Each tile depends on the tiles to its top, left, and top-left
+    // Assign one thread to spin on the signal variable for this tile
+    // Process the tile diagonally from upper left to lower right
+    // using a loop counter to keep track of fully processed diagonals
+    // and while loop and syncthreads to spin on it
+    // Write to the signal variables to signal the next tiles
+}
+
+/** Kernel to fill a matrix with infinity except for index 0 = 0.0
+ *  to initialize the DTW cost matrix
+ */
+__global__ void fill_matrix_inf(float *A, int width, int height, float val)
+{
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    for (int i = idx; i < width * height; i += gridDim.x * blockDim.x)
+    {
+        A[i] = val;
+    }
+    if (idx == 0)
+    {
+        A[0] = 0.0;
+    }
 }
 
 /** Host function for computing Soft DTW on pairwise Euclidean distance matrix
  * for multivariate time series with CUDA.
  * Input D should be a __device__ array.
+ * Only a single block is used. m and n must each be no longer than 1024.
  * @param D The pairwise squared Euclidean distance array of two time series
  * @param m Length of first time series
  * @param n Length of second time series
@@ -241,22 +263,17 @@ __global__ void softdtw_naive_kernel(float *D, float *R, float *cost, uint m,
  */
 __host__ float softdtw_cuda_naive(float *D, uint m, uint n, float gamma)
 {
-    // TODO unfinished
-    // TODO set this up to handle an 3D tensor of k x (m x n) matrices
-    // where k is the # of distance matrices pairs of of time series, 
-    // and m x n are the dimensions of the distance matrix for each pair.
-
     float *R;
-    size_t sz_R = (m + 2) * (n + 2) * sizeof(float);
+    size_t m2n2 = (m + 2) * (n + 2);
+    size_t sz_R = m2n2 * sizeof(float);
     cudaMalloc(&R, sz_R);
-    // Fill matrix R with infinity
-    // hex for IEEE754 single precision infinity
-    cudaMemset(R, 0x7f800000, sz_R);
-    cudaMemset(R, 0, sizeof(float));
-    // TODO: determine optimal grid and block sizes
-    dim3 B = dim3(1, 1);
-    dim3 TPB = dim3(32, 32);
-    // TODO: Allocate an array of bool flags for signaling dependent tiles
+    // Launch a kernel to fill matrix R with infinity
+    const int inf_tpb = 256;
+    int inf_blocks = (m2n2 + inf_tpb - 1) / m2n2;
+    fill_matrix_inf<<<inf_blocks, inf_tpb>>>(R, m + 2, n + 2, std::numeric_limits<float>::infinity());
+
+    dim3 B = dim3(1);
+    dim3 TPB = dim3(max(m, n));
     float path_cost;
     float *d_path_cost;
     cudaMalloc(&d_path_cost, sizeof(float));
@@ -264,6 +281,29 @@ __host__ float softdtw_cuda_naive(float *D, uint m, uint n, float gamma)
     softdtw_naive_kernel<<<B, TPB>>>(D, R, d_path_cost, m, n, gamma);
     // Copy the path cost back to host
     cudaMemcpy(&path_cost, d_path_cost, sizeof(float), cudaMemcpyDeviceToHost);
+    
+    // for debug
+    /* float *hR = new float[m2n2]{0};
+    cudaMemcpy(hR, R, sz_R, cudaMemcpyDeviceToHost);
+    for (uint i = 0; i < m + 2; i++)
+    {
+        for (uint j = 0; j < n + 2; j++)
+        {
+            std::cout << hR[i * (n + 2) + j] << " ";
+        }
+        std::cout << "\n";
+    }
+    delete[] hR; */
+
     cudaFree(d_path_cost);
+    cudaFree(R);
+    
     return path_cost;
 }
+
+// TODO: Soft DTW gradient
+
+// TODO: Barycenter computation (average time series under SoftDTW geometry)
+// through gradient descent with SoftDTW as loss function
+
+// TODO: 1-nearest neighbor classification function

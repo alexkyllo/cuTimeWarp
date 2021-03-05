@@ -1,4 +1,4 @@
-#include "../src/soft_dtw.hcu"
+#include "../src/soft_dtw.cuh"
 #include "catch.h"
 #include <cmath>
 #include <cuda_runtime.h>
@@ -87,9 +87,43 @@ TEST_CASE("test squared euclidean distance 2d")
     delete[] D;
 }
 
-TEST_CASE("Soft DTW CUDA compare with CPU version")
+TEST_CASE("soft dtw cuda for distance matrix (1d ts)")
 {
-    // Generate two time series randomly
-    // Compute Soft DTW distance with CPU
-    // Compute with CUDA and the distance should be nearly equal
+    int m = 5;
+    int k = 1;
+    int n = 8;
+    float gamma = 0.1;
+    float *a = new float[m]{1.0, 2.0, 3.0, 3.0, 5.0};
+    float *b = new float[n]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0};
+    // device arrays
+    float *D;
+    float *da;
+    float *db;
+    cudaMalloc(&da, m * sizeof(float));
+    cudaMalloc(&db, n * sizeof(float));
+    cudaMalloc(&D, m * n * sizeof(float));
+    cudaMemset(D, 0, m * n * sizeof(float));
+    cudaMemcpy(da, a, m * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(db, b, n * sizeof(float), cudaMemcpyHostToDevice);
+
+    sq_euclid_dist(da, db, D, m, n, k);
+
+    float cost = softdtw_cuda_naive(D, m, n, gamma);
+    /*
+R expected:
+[0. inf     inf     inf     inf     inf     inf     inf       inf          inf]
+[inf  0.      1.      2.      3.      4.      5.      6.       15.         inf]
+[inf  1.     -0.     -0.     -0.     -0.     -0.     -0.        4.         inf]
+[inf  5.      1.      0.9307  0.9307  0.9307  0.9307  0.9307    1.         inf]
+[inf  9.      2.      1.8901  1.8614  1.8613  1.8613  1.8613    1.8901     inf]
+[inf 25.     11.     10.8614 10.8054 10.792  10.792  10.792     2.8054     inf]
+[inf inf     inf     inf     inf     inf     inf     inf           inf     inf]
+    */
+    // std::cout << "cost: " << cost << std::endl;
+    REQUIRE(is_close(2.80539, cost));
+    delete[] a;
+    delete[] b;
+    cudaFree(D);
+    cudaFree(da);
+    cudaFree(db);
 }

@@ -132,14 +132,14 @@ TEST_CASE("soft dtw for distance matrix (1d ts)")
     int m = 5;
     int k = 1;
     int n = 8;
-    double gamma = 0.1;
-    double *a = new double[m]{1.0, 2.0, 3.0, 3.0, 5.0};
-    double *b = new double[n]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0};
-    double *D = new double[m * n]{0};
-    sq_euclidean_distance<double>(a, b, D, m, n, k);
+    float gamma = 0.1;
+    float *a = new float[m]{1.0, 2.0, 3.0, 3.0, 5.0};
+    float *b = new float[n]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0};
+    float *D = new float[m * n]{0};
+    sq_euclidean_distance<float>(a, b, D, m, n, k);
 
-    double *R = new double[(m + 2) * (n + 2)]{0.0};
-    double cost = softdtw<double>(D, R, m, n, gamma);
+    float *R = new float[(m + 2) * (n + 2)]{0.0};
+    float cost = softdtw<float>(D, R, m, n, gamma);
     /*
 R expected:
 [0. inf     inf     inf     inf     inf     inf     inf       inf          inf]

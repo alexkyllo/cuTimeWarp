@@ -15,7 +15,7 @@ default: help
 
 ## Format the code with clang-format
 fmt:
-	cd src && clang-format -i *.cpp *.hpp
+	cd src && clang-format -i *.cpp *.hpp *.cu *.cuh *.hcu
 
 ## Build binaries
 build: bin/dtw_cpu
@@ -41,7 +41,7 @@ test_softdtw_cuda: bin/test_soft_dtw_cuda
 bin/test_soft_dtw_cpu: test/test_soft_dtw_cpu.cpp obj/test.o src/soft_dtw_cpu.hpp
 	$(CC) $(CFLAGS) $< obj/test.o -o $@ $(LDFLAGS)
 
-bin/test_soft_dtw_cuda: test/test_soft_dtw_cuda.cpp obj/test.o src/soft_dtw.hcu \
+bin/test_soft_dtw_cuda: test/test_soft_dtw_cuda.cpp obj/test.o src/soft_dtw.cuh \
 src/soft_dtw.cu
 	$(NVCC) $(NVCC_FLAGS) $< obj/test.o src/soft_dtw.cu -o $@ $(CU_LDFLAGS)
 
