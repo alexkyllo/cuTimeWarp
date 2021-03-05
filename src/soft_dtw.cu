@@ -4,6 +4,7 @@
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
 #include <iostream>
+#include <limits>
 
 typedef unsigned int uint;
 
@@ -105,7 +106,7 @@ __global__ void euclid_dist(const uint m, const uint n, const float *XX,
 /** Host function to compute the Squared Euclidean distance between two sets of
  *  column vectors (e.g. two multivariate time series)
  *  X and Y by using the euclidian norms, i.e. X*X + Y*Y - 2X*Y
- *  Inputs X, Y, D should be __device__ vectors
+ *  Inputs X, Y, D should be __device__ arrays.
  *  @param X A set of vectors of length (row count) m
  *  @param Y A set of vectors of length (row count) n
  *  @param D A result array for the distance matrix of dimension (m x n)
@@ -147,4 +148,60 @@ __host__ void sq_euclid_dist(const float *X, const float *Y, float *D,
     cudaFree(XX);
     cudaFree(YY);
     cudaFree(XY);
+}
+
+/** Kernel function for computing Soft DTW on pairwise Euclidean distance
+ * matrix for multivariate time series with CUDA. Input D should be a
+ * __device__ array.
+ * @param D The pairwise squared Euclidean distance array of two time series
+ * @param R An m+2 x n+2 array that will be filled with the alignments
+ * @param cost The total path cost will be written to this address
+ * @param m Length of first time series
+ * @param n Length of second time series
+ * @param gamma SoftDTW smoothing parameter
+ */
+__global__ void softdtw_kernel(float *D, float *R, float *cost, uint m, uint n,
+                               float gamma)
+{
+    // TODO
+    // Divide R into tiles
+    // Each tile depends on the tiles to its top, left, and top-left
+    // Assign one thread to spin on the signal variable for this tile
+    // Process the tile diagonally from upper left to lower right
+    // using a loop counter to keep track of fully processed diagonals
+    // and while loop and syncthreads to spin on it
+    // Write to the signal variables to signal the next tiles
+}
+
+/** Host function for computing Soft DTW on pairwise Euclidean distance matrix
+ * for multivariate time series with CUDA.
+ * Input D should be a __device__ array.
+ * @param D The pairwise squared Euclidean distance array of two time series
+ * @param m Length of first time series
+ * @param n Length of second time series
+ * @param gamma SoftDTW smoothing parameter
+ */
+__host__ float softdtw_cuda(float *D, uint m, uint n, float gamma)
+{
+    // TODO unfinished
+    float *R;
+    size_t sz_R = (m + 2) * (n + 2) * sizeof(float);
+    cudaMalloc(&R, sz_R);
+    // Fill matrix R with infinity
+    // hex for IEEE754 single precision infinity
+    cudaMemset(R, 0x7f800000, sz_R);
+    cudaMemset(R, 0, sizeof(float));
+    // TODO: determine optimal grid and block sizes
+    dim3 B = dim3(1, 1);
+    dim3 TPB = dim3(32, 32);
+    // TODO: Allocate an array of bool flags for signaling dependent tiles
+    float path_cost;
+    float *d_path_cost;
+    cudaMalloc(&d_path_cost, sizeof(float));
+    // Launch the kernel
+    softdtw_kernel<<<B, TPB>>>(D, R, d_path_cost, m, n, gamma);
+    // Copy the path cost back to host
+    cudaMemcpy(&path_cost, d_path_cost, sizeof(float), cudaMemcpyDeviceToHost);
+    cudaFree(d_path_cost);
+    return path_cost;
 }

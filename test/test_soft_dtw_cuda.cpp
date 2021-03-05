@@ -86,3 +86,10 @@ TEST_CASE("test squared euclidean distance 2d")
     delete[] Y;
     delete[] D;
 }
+
+TEST_CASE("Soft DTW CUDA compare with CPU version")
+{
+    // Generate two time series randomly
+    // Compute Soft DTW distance with CPU
+    // Compute with CUDA and the distance should be nearly equal
+}

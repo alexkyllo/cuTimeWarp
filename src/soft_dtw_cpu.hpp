@@ -183,7 +183,7 @@ template <class T> T softdtw(T *a, T *b, T *w, size_t m, size_t n, T gamma)
 /** Soft DTW on pairwise Euclidean distance matrix for multivariate time
  * series
  * @param D The pairwise squared Euclidean distance array of two time series
- * @param R An m+1 x n+1 array that will be filled with the alignment
+ * @param R An m+2 x n+2 array that will be filled with the alignment
  * values.
  * @param m Length of first time series
  * @param n Length of second time series
@@ -224,7 +224,7 @@ template <class T> T softdtw(T *D, T *R, size_t m, size_t n, T gamma)
 
 /** SoftDTW gradient by backpropagation
  * @param D The pairwise squared Euclidean distance array of two time series
- * @param R An m+1 x n+1 array that will be filled with the alignment
+ * @param R An m+2 x n+2 array that will be filled with the alignment
  * values.
  * @param E An m+2 x n+2 array that will be filled with the gradient values.
  * @param m Length of first time series
