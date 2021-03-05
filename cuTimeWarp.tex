@@ -78,6 +78,36 @@ differentiability of Soft-DTW allows for barycenter finding via gradient
 descent, and then new observations can be clustered or classified by finding the
 closest barycenter.
 
+\section{Related Work}
+
+One important optimization we can apply is the use of Sakoe-Chiba bands, which
+prune the warping path search space, allowing path finding in subquadratic time.
+While this technique produces an approximation of the optimal path, in practice
+it has been shown to improve task performance by preventing pathological
+alignments where a very small portion of one time series maps onto a large
+portion of another \cite{keogh_exact_2002}.
+
+Utilizing indexing to construct lower bounds on warping distance is an
+optimization technique for speeding up nearest neighbor search via early removal
+of poor candidates \cite{keogh_exact_2002}. Shen and Chi (2021) proposes an
+optimization of nearest neighbor search of multivariate time series, leveraging
+the triangle inequality and quantization-based point clustering to restrict the
+search \cite{shen_tc-dtw_2021}.
+
+Xiao et al (2013) introduced a prefix computation technique for transforming the
+diagonal data dependence to improve parallel computation of the cost matrix on
+GPU \cite{xiao_parallelizing_2013}. Zhu et al (2018) demonstrates a method of
+optimizing  memory access by taking advantage of the diagonal data dependency to
+rearrange the matrix so that elements on the same diagonal are stored
+contiguously \cite{zhu_developing_2018}. A prior implementation of Soft-DTW on
+CUDA using PyTorch and Numba is capable of 100x performance improvement over the
+original Soft-DTW Cython code, but is limited to sequence lengths of 1024 (CUDA
+max block size) and leaves many opportunities for further CUDA optimizations
+such as the use of shared memory \cite{maghoumi_pytorch-softdtw-cuda_2021}. In
+our project we will focus on this area of opportunity, optimizing matrix
+structure and memory access patterns to maximize parallelism and minimize memory
+latency in the computation of the warping path matrix.
+
 \section{Methods}
 
 \section{Results}

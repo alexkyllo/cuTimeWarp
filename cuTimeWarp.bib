@@ -31,3 +31,73 @@
   langid     = {english},
   file       = {Belviranli et al. - 2015 - PeerWave Exploiting Wavefront Parallelism on GPUs.pdf:C\:\\Users\\jekyllo\\Zotero\\storage\\ZPUGYVBV\\Belviranli et al. - 2015 - PeerWave Exploiting Wavefront Parallelism on GPUs.pdf:application/pdf}
 }
+
+@inproceedings{xiao_parallelizing_2013,
+  title      = {Parallelizing Dynamic Time Warping Algorithm Using Prefix Computations on {GPU}},
+  doi        = {10.1109/HPCC.and.EUC.2013.50},
+  abstract   = {The dynamic time warping ({DTW}) algorithm has O(n2) time complexity, which indicates that it is hard to process large-scale time series within an acceptable time. Recently, many researchers have used graphics processing units ({GPUs}) to accelerate the algorithm. Owing to the data dependence of {DTW}, however, most of existing {GPU}-based {DTW} algorithms exploits task-level parallelism by simply replicating the serial algorithm on every multiprocessor of a {GPU}. The fundamental issue with such coarse-grained parallelism is that the solvable problem size is severely limited by the share memory and cache of a {GPU} multiprocessor. In this study, we introduce a specific transformation of data dependence by using prefix computations. Further, we propose an efficient {GPU}-parallel {DTW} algorithm to address the problem of instance sizes limitation. The efficiency of our algorithm is validated through experiments, which demonstrate improved performance over existing {GPU}-based task-level parallel {DTW} algorithms. Our experimental results indicate speedups up to 99 times faster on {NVIDIA} {GTX}480, compared to {CPU} implementations.},
+  eventtitle = {2013 {IEEE} 10th International Conference on High Performance Computing and Communications 2013 {IEEE} International Conference on Embedded and Ubiquitous Computing},
+  pages      = {294--299},
+  booktitle  = {2013 {IEEE} 10th International Conference on High Performance Computing and Communications 2013 {IEEE} International Conference on Embedded and Ubiquitous Computing},
+  author     = {Xiao, L. and Zheng, Y. and Tang, W. and Yao, G. and Ruan, L.},
+  date       = {2013-11},
+  keywords   = {dynamic time warping, time series, Time series analysis, graphics processing units, Graphics processing units, Instruction sets, multiprocessing systems, {CUDA}, {GPU}, parallel algorithm, Arrays, data dependence, {GPU} based {DTW} algorithms, {GPU} multiprocessor, Heuristic algorithms, {NVIDIA} {GTX}480, Parallel algorithms, parallel {DTW} algorithms, parallel processing, parallelizing dynamic time warping algorithm, prefix computations, serial algorithm, time complexity}
+}
+
+@article{zhu_developing_2018,
+  title        = {Developing a pattern discovery method in time series data and its {GPU} acceleration},
+  volume       = {1},
+  issn         = {2096-0654},
+  doi          = {10.26599/BDMA.2018.9020021},
+  abstract     = {The Dynamic Time Warping ({DTW}) algorithm is widely used in finding the global alignment of time series. Many time series data mining and analytical problems can be solved by the {DTW} algorithm. However, using the {DTW} algorithm to find similar subsequences is computationally expensive or unable to perform accurate analysis. Hence, in the literature, the parallelisation technique is used to speed up the {DTW} algorithm. However, due to the nature of {DTW} algorithm, parallelizing this algorithm remains an open challenge. In this paper, we first propose a novel method that finds the similar local subsequence. Our algorithm first searches for the possible start positions of subsequence, and then finds the best-matching alignment from these positions. Moreover, we parallelize the proposed algorithm on {GPUs} using {CUDA} and further propose an optimization technique to improve the performance of our parallelization implementation on {GPU}. We conducted the extensive experiments to evaluate the proposed method. Experimental results demonstrate that the proposed algorithm is able to discover time series subsequences efficiently and that the proposed {GPU}-based parallelization technique can further speedup the processing.},
+  pages        = {266--283},
+  number       = {4},
+  journaltitle = {Big Data Mining and Analytics},
+  author       = {Zhu, H. and Gu, Z. and Zhao, H. and Chen, K. and Li, C. and He, L.},
+  date         = {2018-12},
+  note         = {Conference Name: Big Data Mining and Analytics},
+  keywords     = {data mining, Data mining, dynamic time warping, time series, Time series analysis, graphics processing units, Graphics processing units, Instruction sets, parallel architectures, {CUDA}, time series data mining, {GPGPU}, parallel algorithm, parallel algorithms, Heuristic algorithms, parallel processing, analytical problems, data analysis, {DTW} algorithm, Dynamic Time Warping algorithm, {GPU} acceleration, Microsoft Windows, parallelisation technique, pattern discovery, pattern discovery method, Pattern matching, time series data},
+  file         = {IEEE Xplore Full Text PDF:C\:\\Users\\jekyllo\\Zotero\\storage\\RA77H8XQ\\Zhu et al. - 2018 - Developing a pattern discovery method in time seri.pdf:application/pdf;IEEE Xplore Abstract Record:C\:\\Users\\jekyllo\\Zotero\\storage\\UB2MY8VN\\8400444.html:text/html}
+}
+
+@software{maghoumi_pytorch-softdtw-cuda_2021,
+  title    = {Maghoumi/pytorch-softdtw-cuda},
+  rights   = {{MIT} License         ,                 {MIT} License},
+  url      = {https://github.com/Maghoumi/pytorch-softdtw-cuda},
+  abstract = {Fast {CUDA} implementation of (differentiable) soft dynamic time warping for {PyTorch} using Numba},
+  author   = {Maghoumi, Mehran},
+  urldate  = {2021-01-23},
+  date     = {2021-01-21},
+  note     = {original-date: 2020-05-02T23:28:24Z},
+  keywords = {cuda, deep-learning, dynamic-time-warping, pytorch, soft-dtw}
+}
+
+@article{shen_tc-dtw_2021,
+  title        = {{TC}-{DTW}: Accelerating Multivariate Dynamic Time Warping Through Triangle Inequality and Point Clustering},
+  url          = {http://arxiv.org/abs/2101.07731},
+  shorttitle   = {{TC}-{DTW}},
+  abstract     = {Dynamic time warping ({DTW}) plays an important role in analytics on time series. Despite the large body of research on speeding up univariate {DTW}, the method for multivariate {DTW} has not been improved much in the last two decades. The most popular algorithm used today is still the one developed seventeen years ago. This paper presents a solution that, as far as we know, for the ﬁrst time consistently outperforms the classic multivariate {DTW} algorithm across dataset sizes, series lengths, data dimensions, temporal window sizes, and machines. The new solution, named {TC}-{DTW}, introduces Triangle Inequality and Point Clustering into the algorithm design on lower bound calculations for multivariate {DTW}. In experiments on {DTW}-based nearest neighbor ﬁnding, the new solution avoids as much as 98\% (60\% average) {DTW} distance calculations and yields as much as 25× (7.5× average) speedups.},
+  journaltitle = {{arXiv}:2101.07731 [cs]},
+  author       = {Shen, Daniel and Chi, Min},
+  urldate      = {2021-02-14},
+  date         = {2021-01-19},
+  langid       = {english},
+  eprinttype   = {arxiv},
+  eprint       = {2101.07731},
+  keywords     = {Computer Science - Artificial Intelligence, Computer Science - Databases, Computer Science - Machine Learning},
+  file         = {Shen and Chi - 2021 - TC-DTW Accelerating Multivariate Dynamic Time War.pdf:C\:\\Users\\jekyllo\\Zotero\\storage\\YERGC7JA\\Shen and Chi - 2021 - TC-DTW Accelerating Multivariate Dynamic Time War.pdf:application/pdf}
+}
+
+@inproceedings{keogh_exact_2002,
+  location  = {Hong Kong, China},
+  title     = {Exact indexing of dynamic time warping},
+  series    = {{VLDB} '02},
+  abstract  = {The problem of indexing time series has attracted much research interest in the database community. Most algorithms used to index time series utilize the Euclidean distance or some variation thereof. However is has been forcefully shown that the Euclidean distance is a very brittle distance measure. Dynamic Time Warping ({DTW}) is a much more robust distance measure for time series, allowing similar shapes to match even if they are out of phase in the time axis. Because of this flexibility, {DTW} is widely used in science, medicine, industry and finance. Unfortunately however, {DTW} does not obey the triangular inequality, and thus has resisted attempts at exact indexing. Instead, many researchers have introduced approximate indexing techniques, or abandoned the idea of indexing and concentrated on speeding up sequential search. In this work we introduce a novel technique for the exact indexing of {DTW}. We prove that our method guarantees no false dismissals and we demonstrate its vast superiority over all competing approaches in the largest and most comprehensive set of time series indexing experiments ever undertaken.},
+  pages     = {406--417},
+  booktitle = {Proceedings of the 28th international conference on Very Large Data Bases},
+  publisher = {{VLDB} Endowment},
+  author    = {Keogh, Eamonn},
+  urldate   = {2021-02-14},
+  date      = {2002-08-20},
+  file      = {Full Text PDF:C\:\\Users\\jekyllo\\Zotero\\storage\\RFRE3B7R\\Keogh - 2002 - Exact indexing of dynamic time warping.pdf:application/pdf}
+}
