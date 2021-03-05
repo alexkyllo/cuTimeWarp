@@ -167,7 +167,7 @@ __host__ uint get_device_sm_count(uint device_num = 0)
  * __device__ array.
  * This naive version only works for sequence lengths <= 1024 i.e. can fit in
  * a single threadblock.
- * Assumes omly a single threadblock in the kernel launch.
+ * Assumes only a single threadblock in the kernel launch.
  * Each thread can process one anti-diagonal.
  * @param D The pairwise squared Euclidean distance array of two time series
  * @param R An m+2 x n+2 array that will be filled with the alignments
