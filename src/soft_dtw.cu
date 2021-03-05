@@ -179,11 +179,10 @@ __host__ uint get_device_sm_count(uint device_num = 0)
 __global__ void softdtw_naive_kernel(float *D, float *R, float *cost, uint m,
                                      uint n, float gamma)
 {
-    // TODO incomplete
     const uint ii = threadIdx.x;
     // block size = max(m, n) (length of longest diagonal)
     const uint bx = blockDim.x;
-    // number of antidiagonals is 2 x max(m,n) - 1
+    // number of antidiagonals is 2 * max(m,n) - 1
     const uint passes = 2 * bx - 1;
 
     for (uint p = 0; p < passes; p++)
@@ -199,12 +198,10 @@ __global__ void softdtw_naive_kernel(float *D, float *R, float *cost, uint m,
             float r2 = R[i * (n + 2) + j - 1];
             float r3 = R[(i - 1) * (n + 2) + j - 1];
             double prev_min = softmin(r1, r2, r3, gamma);
-            // TODO: add a dimension to this so each block can compute one pair
             R[i * (n + 2) + j] = cost + prev_min;
         }
         __syncthreads();
     }
-    __syncthreads();
     if (ii == 0)
     {
         *cost = R[m * (n + 2) + n];
