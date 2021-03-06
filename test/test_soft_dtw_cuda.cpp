@@ -136,9 +136,9 @@ R expected:
 
 TEST_CASE("soft dtw gradient CUDA")
 {
-    int m = 5;
-    int k = 1;
-    int n = 8;
+    const int m = 5;
+    const int k = 1;
+    const int n = 8;
     float gamma = 0.1;
     float *a = new float[m]{1.0, 2.0, 3.0, 3.0, 5.0};
     float *b = new float[n]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0};
@@ -172,30 +172,15 @@ TEST_CASE("soft dtw gradient CUDA")
     softdtw_grad_cuda_naive(D, R, dE, m, n, gamma);
     cudaMemcpy(E, dE, m * n * sizeof(float), cudaMemcpyDeviceToHost);
 
-    // for (int i = 0; i < m; i++)
-    // {
-    //     for (int j = 0; j < n; j++)
-    //     {
-    //         std::cout << E[i * n + j] << " ";
-    //     }
-    //     std::cout << "\n";
-    // }
-    REQUIRE(is_close(E[0], 1.0));
-    REQUIRE(is_close(E[1], 0.0001));
-    REQUIRE(is_close(E[13], 0.8571));
-    REQUIRE(is_close(E[14], 0.4285));
-    REQUIRE(is_close(E[21], 0.2857));
-    REQUIRE(is_close(E[22], 0.5714));
-    REQUIRE(is_close(E[23], 0.1429));
-    REQUIRE(is_close(E[31], 0.4286));
-    REQUIRE(is_close(E[39], 1.0));
-    /* Expected gradient:
-array([[[1.    , 0.0001, 0.    , 0.    , 0.    , 0.    , 0.    , 0.    ],
-        [0.    , 1.    , 1.    , 1.    , 1.    , 0.8571, 0.4285, 0.    ],
-        [0.    , 0.    , 0.    , 0.    , 0.    , 0.2857, 0.5714, 0.1429],
-        [0.    , 0.    , 0.    , 0.    , 0.    , 0.    , 0.5714, 0.4286],
-        [0.    , 0.    , 0.    , 0.    , 0.    , 0.    , 0.    , 1.    ]]])
-     */
+    float E_ex[40]{1.0, 0.0001, 0.0, 0.0, 0.0, 0.0,    0.0,    0.0,
+                   0.0, 1.0,    1.0, 1.0, 1.0, 0.8571, 0.4285, 0.0,
+                   0.0, 0.0,    0.0, 0.0, 0.0, 0.2857, 0.5714, 0.1429,
+                   0.0, 0.0,    0.0, 0.0, 0.0, 0.0,    0.5714, 0.4286,
+                   0.0, 0.0,    0.0, 0.0, 0.0, 0.0,    0.0,    1.0};
+    for (int i = 0; i < m * n; i++)
+    {
+        REQUIRE(is_close(E[i], E_ex[i]));
+    }
     delete[] a;
     delete[] b;
     delete[] E;
