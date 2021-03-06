@@ -1,13 +1,13 @@
 CC = g++
 CFLAGS = -std=c++11 -Wall -Wextra # --pedantic-errors \
 #-g -fsanitize=address -fsanitize=leak -fsanitize=undefined -fno-sanitize-recover
-LDFLAGS = -lblas
+LDFLAGS = -L./inc/lbfgsb-gpu/build/culbfgsb/ -lcuLBFGSB -lblas
 NVCC = nvcc
 NVCC_FLAGS = -g -G -maxrregcount=64 -Xcompiler "$(CFLAGS)"
 CU_LDFLAGS = -lcublas
 .PHONY = default build clean test fmt report
 
-FIGS = 
+FIGS =
 
 $(shell mkdir -p bin/ obj/)
 
@@ -39,7 +39,7 @@ test_softdtw_cuda: bin/test_soft_dtw_cuda
 	./$<
 
 bin/test_soft_dtw_cpu: test/test_soft_dtw_cpu.cpp obj/test.o src/soft_dtw_cpu.hpp
-	$(CC) $(CFLAGS) $< obj/test.o -o $@ $(LDFLAGS)
+	$(CC) $(CFLAGS) -I$(CUDA_HOME)/include/ $< obj/test.o -o $@ $(LDFLAGS)
 
 bin/test_soft_dtw_cuda: test/test_soft_dtw_cuda.cpp obj/test.o src/soft_dtw.cuh \
 src/soft_dtw.cu

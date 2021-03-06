@@ -5,8 +5,10 @@
  */
 #ifndef SOFT_DTW_CPU_H
 #define SOFT_DTW_CPU_H
+#include "../inc/lbfgsb-gpu/culbfgsb/culbfgsb.h"
 #include <cblas.h>
 #include <cmath>
+#include <cuda_runtime.h>
 #include <iostream>
 #include <limits>
 
@@ -291,6 +293,54 @@ void softdtw_grad(T *D_, T *R, T *E_, size_t m, size_t n, T gamma)
     }
     delete[] D;
     delete[] E;
+}
+
+template <class T>
+void jacobian_prod_sq_euc(float *X, float *Y, float *E, float *G)
+{
+    // TODO
+}
+
+template <class T>
+T barycenter_cost(float *Z, float *cost, float *E, uint m, uint n)
+{
+    // TODO
+}
+
+template <class T>
+void softdtw_barycenter(float *X, uint m, uint k, uint n, float gamma,
+                        float tol, uint max_iter)
+{
+    // TODO use L-BFGS-B solver to find optimal barycenter for X
+    // Work in progress
+    LBFGSB_CUDA_OPTION<real> lbfgsb_options;
+
+    lbfgsbcuda::lbfgsbdefaultoption<real>(lbfgsb_options);
+    lbfgsb_options.mode = LCM_NO_ACCELERATION; // use CPU
+    lbfgsb_options.eps_f = static_cast<real>(1e-8);
+    lbfgsb_options.eps_g = static_cast<real>(1e-8);
+    lbfgsb_options.eps_x = static_cast<real>(1e-8);
+    lbfgsb_options.max_iteration = iter;
+
+    // initialize LBFGSB state
+    LBFGSB_CUDA_STATE<real> state;
+    memset(&state, 0, sizeof(state));
+
+    real minimal_f = std::numeric_limits<real>::max();
+    // setup callback function that evaluate function value and its gradient
+    state.m_funcgrad_callback =
+        [&minimal_f](real *x, real &f, real *g, const cudaStream_t &stream,
+                     const LBFGSB_CUDA_SUMMARY<real> &summary) {
+            barycenter_cost<float>(x, f, g);
+            if (summary.num_iteration % 100 == 0)
+            {
+                std::cout << "CPU iteration " << summary.num_iteration
+                          << " F: " << f << std::endl;
+            }
+
+            minimal_f = fmin(minimal_f, f);
+            return 0;
+        };
 }
 
 #endif
