@@ -183,8 +183,7 @@ template <class T> T softdtw(T *a, T *b, T *w, size_t m, size_t n, T gamma)
 /** Soft DTW on pairwise Euclidean distance matrix for multivariate time
  * series
  * @param D The pairwise squared Euclidean distance array of two time series
- * @param R An m+2 x n+2 array that will be filled with the alignment
- * values.
+ * @param R An m+2 x n+2 array that will be filled with alignment values.
  * @param m Length of first time series
  * @param n Length of second time series
  * @param gamma SoftDTW smoothing parameter
@@ -226,7 +225,7 @@ template <class T> T softdtw(T *D, T *R, size_t m, size_t n, T gamma)
  * @param D The pairwise squared Euclidean distance array of two time series
  * @param R An m+2 x n+2 array that will be filled with the alignment
  * values.
- * @param E An m+2 x n+2 array that will be filled with the gradient values.
+ * @param E An m x n array that will be filled with the gradient values.
  * @param m Length of first time series
  * @param n Length of second time series
  * @param gamma SoftDTW smoothing parameter
@@ -247,6 +246,8 @@ void softdtw_grad(T *D_, T *R, T *E_, size_t m, size_t n, T gamma)
 
     // D is m+1 x n+1
     // R and E are m+2 x n+2
+    // fill the last row and column of D with 0
+    // fill the last row and column of R with -inf
     for (size_t i = 1; i < m + 1; i++)
     {
         D[(i - 1) * (n + 1) + n] = 0.0;

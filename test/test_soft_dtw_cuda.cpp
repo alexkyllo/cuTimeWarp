@@ -106,9 +106,14 @@ TEST_CASE("soft dtw cuda for distance matrix (1d ts)")
     cudaMemcpy(da, a, m * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(db, b, n * sizeof(float), cudaMemcpyHostToDevice);
 
+    float *R;
+    size_t m2n2 = (m + 2) * (n + 2);
+    size_t sz_R = m2n2 * sizeof(float);
+    cudaMalloc(&R, sz_R);
+
     sq_euclid_dist(da, db, D, m, n, k);
 
-    float cost = softdtw_cuda_naive(D, m, n, gamma);
+    float cost = softdtw_cuda_naive(D, R, m, n, gamma);
     /*
 R expected:
 [0. inf     inf     inf     inf     inf     inf     inf       inf          inf]
@@ -126,4 +131,77 @@ R expected:
     cudaFree(D);
     cudaFree(da);
     cudaFree(db);
+    cudaFree(R);
+}
+
+TEST_CASE("soft dtw gradient CUDA")
+{
+    int m = 5;
+    int k = 1;
+    int n = 8;
+    float gamma = 0.1;
+    float *a = new float[m]{1.0, 2.0, 3.0, 3.0, 5.0};
+    float *b = new float[n]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0};
+    float *E = new float[m * n];
+    // device arrays
+    float *da;
+    cudaMalloc(&da, m * sizeof(float));
+    cudaMemcpy(da, a, m * sizeof(float), cudaMemcpyHostToDevice);
+
+    float *db;
+    cudaMalloc(&db, n * sizeof(float));
+    cudaMemcpy(db, b, n * sizeof(float), cudaMemcpyHostToDevice);
+
+    float *D;
+    cudaMalloc(&D, m * n * sizeof(float));
+    cudaMemset(D, 0, m * n * sizeof(float));
+
+    float *R;
+    size_t m2n2 = (m + 2) * (n + 2);
+    size_t sz_R = m2n2 * sizeof(float);
+    cudaMalloc(&R, sz_R);
+    cudaMemset(R, 0, sz_R);
+
+    float *dE;
+    cudaMalloc(&dE, m * n * sizeof(float));
+    cudaMemset(dE, 0, m * n * sizeof(float));
+
+    sq_euclid_dist(da, db, D, m, n, k);
+
+    softdtw_cuda_naive(D, R, m, n, gamma);
+    softdtw_grad_cuda_naive(D, R, dE, m, n, gamma);
+    cudaMemcpy(E, dE, m * n * sizeof(float), cudaMemcpyDeviceToHost);
+
+    // for (int i = 0; i < m; i++)
+    // {
+    //     for (int j = 0; j < n; j++)
+    //     {
+    //         std::cout << E[i * n + j] << " ";
+    //     }
+    //     std::cout << "\n";
+    // }
+    REQUIRE(is_close(E[0], 1.0));
+    REQUIRE(is_close(E[1], 0.0001));
+    REQUIRE(is_close(E[13], 0.8571));
+    REQUIRE(is_close(E[14], 0.4285));
+    REQUIRE(is_close(E[21], 0.2857));
+    REQUIRE(is_close(E[22], 0.5714));
+    REQUIRE(is_close(E[23], 0.1429));
+    REQUIRE(is_close(E[31], 0.4286));
+    REQUIRE(is_close(E[39], 1.0));
+    /* Expected gradient:
+array([[[1.    , 0.0001, 0.    , 0.    , 0.    , 0.    , 0.    , 0.    ],
+        [0.    , 1.    , 1.    , 1.    , 1.    , 0.8571, 0.4285, 0.    ],
+        [0.    , 0.    , 0.    , 0.    , 0.    , 0.2857, 0.5714, 0.1429],
+        [0.    , 0.    , 0.    , 0.    , 0.    , 0.    , 0.5714, 0.4286],
+        [0.    , 0.    , 0.    , 0.    , 0.    , 0.    , 0.    , 1.    ]]])
+     */
+    delete[] a;
+    delete[] b;
+    delete[] E;
+    cudaFree(da);
+    cudaFree(db);
+    cudaFree(D);
+    cudaFree(R);
+    cudaFree(dE);
 }
