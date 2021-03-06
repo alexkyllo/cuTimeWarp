@@ -18,7 +18,7 @@ Based on algorithms described in:
 - [ ] Implement soft DTW barycenter estimation on CPU
 - [x] Implement naive soft DTW in CUDA
 - [x] Implement pairwise squared Euclidean distance in CUDA
-- [ ] Implement soft DTW gradient in CUDA
+- [x] Implement soft DTW gradient in CUDA
 - [ ] Implement soft DTW barycenter estimation in CUDA
 - [ ] Implement optimizations for soft DTW in CUDA
 - [ ] Run benchmark experiments
