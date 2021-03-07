@@ -1,7 +1,9 @@
 #include "../src/soft_dtw_cpu.hpp"
 #include "catch.h"
 #include <cmath>
+#include <fstream>
 #include <iostream>
+#include <sstream>
 
 bool is_close(float a, float b, float tol = 0.0001)
 {
@@ -199,4 +201,47 @@ array([[[1.    , 0.0001, 0.    , 0.    , 0.    , 0.    , 0.    , 0.    ],
     delete[] D;
     delete[] R;
     delete[] E;
+}
+
+TEST_CASE("soft dtw barycenter")
+{
+    // read in the example time series line by line into float array
+    std::ifstream datafile("test/test_ecg200_10.txt");
+    // example data is 10 arrays of length 96
+    const uint m = 96;
+    const uint n = 10;
+    float X[m * n]{0};
+    std::stringstream ss;
+    std::string buffer;
+    float temp;
+
+    assert(datafile.is_open());
+
+    for (uint i = 0; i < n && !datafile.eof(); i++)
+    {
+        getline(datafile, buffer);
+        // std::cout << buffer << "\n";
+        ss.str(buffer);
+        for (uint j = 0; j < m; j++)
+        {
+            ss >> temp;
+            X[m * i + j] = temp;
+            // std::cout << X[m * i + j] << " ";
+        }
+        ss.clear();
+    }
+    float Z[m]{0};
+    const float gamma = 0.1;
+    const float tol = 0.0001;
+    const float max_iter = 100;
+    const float lr = 0.001;
+    float cost = find_softdtw_barycenter<float>((float *)&Z, (float *)&X, m, 1,
+                                                n, gamma, tol, max_iter, lr);
+    // print the barycenter values
+    for (uint i = 0; i < m; i++)
+    {
+        std::cout << Z[i] << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "cost: " << cost << "\n";
 }

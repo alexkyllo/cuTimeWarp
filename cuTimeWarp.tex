@@ -55,6 +55,8 @@ series machine learning.
 
 \subsection{Background}
 
+TODO: add an intuitive explanation of what time series data is
+
 There are multiple valid ways to compute a measure of dissimliarity between two
 time series; the simplest is Euclidean distance, which is the square root of the
 sum of squared pairwise differences between two time series $x$ and $y$, each of
@@ -75,7 +77,7 @@ The basic algorithm for DTW is to use Bellman’s recursion, a dynamic programmi
 technique, to find the lowest-cost path diagonally across a pairwise distance
 matrix. The computation cost for this approach is quadratic ($O(mn)$) for time
 series vectors of length m and n \cite{cuturi_soft-dtw_2018}. The formula for
-the DTW between time series x and y is given by equation \ref{dtw}. 
+the DTW between time series x and y is given by equation \ref{dtw}.
 (TODO: explain the algorithm in more detail and provide a visualization)
 
 \begin{equation} \label{dtw}
@@ -107,7 +109,21 @@ recurrent neural networks with Soft-DTW as a loss function
 (TODO: Explain process of barycenter finding with gradient descent on softdtw
 loss)
 
-\section{Related Work}
+Prior to computing the Soft-DTW dissimilarity between any two time series, each
+time series should be \emph{z-normalized}, that is, scaled so that its mean is
+equal to 0 and its standard deviation is equal to 1, to remove the problem of
+``wandering baselines'' or ``drift'' in the measurements, as illustrated in
+\cite{rakthanmanon_addressing_2013} with an ECG classifier that yields incorrect
+results on un-normalized data due to drift that ``may be caused by patient
+movement, dirty lead wires/electrodes, loose electrodes, and so on,'' and which
+``does not have any medical significance.'' Z-normalization also tends to make
+the iterative process of minimizing the cost function through gradient descent
+or Newtonian methods more efficient because its hyperplane is not
+disproportionately stretched in any one dimension, so the step size in any
+direction is the same relative to the scale of that dimension. (TODO: explain
+this better, find a citation)
+
+\subsection{Related Work}
 
 One important optimization we can apply is the use of Sakoe-Chiba bands, which
 prune the warping path search space, allowing path finding in subquadratic time.

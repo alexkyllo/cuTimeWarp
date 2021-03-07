@@ -9,11 +9,14 @@
 //#include <cuda_runtime.h>
 #include <cblas.h>
 #include <cmath>
+#include <cstring>
 #include <iostream>
 #include <limits>
+#include <random>
 
 template <class T>
-void gemm_blas(T *A, T *B, T *C, size_t m, size_t k, size_t n, T alpha);
+void gemm_blas(const T *A, const T *B, T *C, size_t m, size_t k, size_t n,
+               T alpha);
 
 /** Double Matrix-matrix multiply
     @param A The first input matrix
@@ -24,8 +27,8 @@ void gemm_blas(T *A, T *B, T *C, size_t m, size_t k, size_t n, T alpha);
     @param n The number of columns in B
 */
 template <>
-void gemm_blas<double>(double *A, double *B, double *C, size_t m, size_t k,
-                       size_t n, double alpha)
+void gemm_blas<double>(const double *A, const double *B, double *C, size_t m,
+                       size_t k, size_t n, double alpha)
 {
     cblas_dgemm(CblasRowMajor, // Row-major striding
                 CblasNoTrans,  // Do not transpose A
@@ -52,8 +55,8 @@ void gemm_blas<double>(double *A, double *B, double *C, size_t m, size_t k,
     @param n The number of columns in B
 */
 template <>
-void gemm_blas<float>(float *A, float *B, float *C, size_t m, size_t k,
-                      size_t n, float alpha)
+void gemm_blas<float>(const float *A, const float *B, float *C, const size_t m,
+                      const size_t k, const size_t n, const float alpha)
 {
     cblas_sgemm(CblasRowMajor, // Row-major striding
                 CblasNoTrans,  // Do not transpose A
@@ -81,7 +84,8 @@ void gemm_blas<float>(float *A, float *B, float *C, size_t m, size_t k,
  *  @param k Number of columns in X and Y
  */
 template <class T>
-void sq_euclidean_distance(T *X, T *Y, T *D, size_t m, size_t n, int k)
+void sq_euclidean_distance(const T *X, const T *Y, T *D, const size_t m,
+                           const size_t n, const size_t k)
 {
     T *XX = new T[m]{0};
     T *YY = new T[n]{0};
@@ -90,7 +94,7 @@ void sq_euclidean_distance(T *X, T *Y, T *D, size_t m, size_t n, int k)
     // compute squared euclidean norm of X
     for (size_t i = 0; i < m; i++)
     {
-        for (int j = 0; j < k; j++)
+        for (size_t j = 0; j < k; j++)
         {
             T x = X[i * k + j];
             XX[i] += x * x;
@@ -100,7 +104,7 @@ void sq_euclidean_distance(T *X, T *Y, T *D, size_t m, size_t n, int k)
     // compute squared euclidean norm of Y
     for (size_t i = 0; i < n; i++)
     {
-        for (int j = 0; j < k; j++)
+        for (size_t j = 0; j < k; j++)
         {
             T y = Y[i * k + j];
             YY[i] += y * y;
@@ -296,7 +300,8 @@ void softdtw_grad(T *D_, T *R, T *E_, size_t m, size_t n, T gamma)
 }
 
 template <class T>
-void jacobian_prod_sq_euc(T *X, T *Y, T *E, T *G, uint m, uint n, uint d)
+void jacobian_prod_sq_euc(const T *X, const T *Y, T *E, T *G, uint m, uint n,
+                          uint d)
 {
     // TODO write a test for this
     for (uint i = 0; i < m; i++)
@@ -322,8 +327,8 @@ void jacobian_prod_sq_euc(T *X, T *Y, T *E, T *G, uint m, uint n, uint d)
  *  @param gamma The softmin gamma smoothing parameter
  */
 template <class T>
-T barycenter_cost(float *Z, float *X, float *G, uint m, uint n, uint k,
-                  float gamma)
+T barycenter_cost(float *Z, const float *X, float *G, const uint m,
+                  const uint n, const uint k, const float gamma)
 {
     // TODO write a test for this
     // For each series in X:
@@ -355,11 +360,62 @@ T barycenter_cost(float *Z, float *X, float *G, uint m, uint n, uint k,
     return cost;
 }
 
+/** Find Soft-DTW barycenter of a set of time series by gradient descent.
+ *  @param Z The hypothesis barycenter time series of dimension (m x k)
+ *  @param X The time series set of dimension (n x m x k)
+ *  @param m The length of one time series
+ *  @param k The number of variables in the time series
+ *  @param n The number of time series in the set
+ *  @param gamma The softmin gamma smoothing parameter
+ *  @param tol Tolerance (stopping condition) for terminating the cost minimizer
+ *  @param max_iter Max number of iterations for the cost minimizer
+ *  @param lr The learning rate (step size multiplier)
+ */
 template <class T>
-void find_softdtw_barycenter(float *X, uint m, uint k, uint n, float gamma,
-                             float tol, uint max_iter)
+T find_softdtw_barycenter(float *Z, const float *X, const uint m, const uint k,
+                          const uint n, const float gamma,
+                          const float tol = 0.0001, const uint max_iter = 1000,
+                          const float lr = 0.01)
 {
-    // TODO gradient descent to minimize barycenter_cost
+    // TODO gradient descent to minimize barycenter_cost function
+    // Initialize barycenter hypothesis with random unit normal data
+    std::default_random_engine gen;
+    std::normal_distribution<T> dist(0, 1);
+    for (uint i = 0; i < m; i++)
+    {
+        for (uint j = 0; j < k; j++)
+        {
+            Z[i * k + j] = dist(gen);
+        }
+    }
+    float cost = std::numeric_limits<float>::infinity();
+    // Initialize array for gradient w.r.t. Z
+    float *G = new float[m * k]{0};
+    // Iteratively compute the cost and gradient and step the barycenter
+    // weights in the direction of the gradient
+    for (uint it = 0; it < max_iter; it++)
+    {
+        // Get the cost with current weights
+        float new_cost = barycenter_cost<T>(Z, X, G, m, n, k, gamma);
+        // Stop if the improvement in cost is less than the tolerance
+        if (cost - new_cost < tol)
+            break;
+        cost = new_cost;
+        // Step each element of Z by the gradient
+        for (uint i = 0; i < m; i++)
+        {
+            for (uint j = 0; j < k; j++)
+            {
+                Z[i * k + j] -= (lr * G[i * k + j]);
+            }
+        }
+        // TODO: decay the learning rate so step size gets smaller as we
+        // approach the minimum
+    }
+    return cost;
 }
+
+// TODO write a data structure to store the centroids and a nearest centroid
+// classifier function
 
 #endif
