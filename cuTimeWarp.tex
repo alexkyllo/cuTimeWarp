@@ -41,33 +41,57 @@ learning on time series datasets.
 Time series machine learning is a research area with countless useful
 applications such as recognizing sounds and gestures. Clustering or classifying
 large time series datasets is challenging partly because of the need to define a
-measure of dissimilarity between two time series. Practical applications require
-finding common structure despite different speeds or phases; a word means the
-same whether spoken quickly or slowly. Another requirement is that the measure
-must be differentiable so that its gradient can be used as a loss function to
-minimize in model fitting. Finally, the measure must be efficient to calculate.
-To this end we will explore GPU acceleration of Soft Dynamic Time Warping
-(Soft-DTW) \cite{cuturi_soft-dtw_2018}, a differentiable dissimilarity measure,
-to enable high performance time series machine learning.
+measure of dissimilarity between any two given time series. Furthermore,
+practical applications require finding common structure in time series despite
+different speeds or phases; for example, a word means the same whether spoken
+quickly or slowly. Another requirement for machine learning tasks is that the
+dissimilarity measure must be differentiable so that its gradient can be used as
+to minimize it as a loss function to find the best fit model. Finally, the
+measure must be efficient to calculate, because it will be calculated repeatedly
+many times during model fitting. To this end we will explore GPU acceleration of
+Soft Dynamic Time Warping (Soft-DTW) \cite{cuturi_soft-dtw_2018}, a
+differentiable sequence dissimilarity measure, to enable high performance time
+series machine learning.
 
-Dynamic Time Warping (DTW) is an algorithm to compute the dissimilarity between
-two time series, which may vary in speed and phase. The basic algorithm for DTW
-is to use Bellman’s recursion, a dynamic programming technique, to find the
-lowest-cost path diagonally across a pairwise distance matrix. The computation
-cost for this approach is quadratic(mn) for time series vectors of length m and
-n \cite{cuturi_soft-dtw_2018}. The formula for the DTW between time series x and
-y is: 
+\subsection{Background}
 
-$$DTW(x,y) = min_{\pi}\sqrt{\sum_{(i,j)\in\pi}d(x_{i},y_{j})^2}$$
+There are multiple valid ways to compute a measure of dissimliarity between two
+time series; the simplest is Euclidean distance, which is the square root of the
+sum of squared pairwise differences between two time series $x$ and $y$, each of
+length $n$ (equation \ref{euclid}).
+
+\begin{equation} \label{euclid}
+d(x, y) = \sqrt{\sum_{t=1}^{n}(x_t-y_t)^2}
+\end{equation}
+
+The drawback of Euclidean distance in time series applications is that two
+structurally similar time series will produce a large distance if they are
+different speeds or out of phase (TODO: Add a figure to illustrate this).
+Dynamic Time Warping (DTW) was devised in the 1960s as an alternative time
+series dissimilarity measure to address this shortcoming. (TODO: find a
+historical citation)
+
+The basic algorithm for DTW is to use Bellman’s recursion, a dynamic programming
+technique, to find the lowest-cost path diagonally across a pairwise distance
+matrix. The computation cost for this approach is quadratic ($O(mn)$) for time
+series vectors of length m and n \cite{cuturi_soft-dtw_2018}. The formula for
+the DTW between time series x and y is given by equation \ref{dtw}. 
+(TODO: explain the algorithm in more detail and provide a visualization)
+
+\begin{equation} \label{dtw}
+DTW(x,y) = min_{\pi}\sqrt{\sum_{(i,j)\in\pi}d(x_{i},y_{j})^2}
+\end{equation}
 
 Where $d(x_i,y_j)^2$ is the cost function, typically pairwise squared Euclidean
 distance. The loss function for DTW is not differentiable due to the min
 operation within the formula; a small change in the input time series may result
 in zero change in the path cost. However, we can create a differentiable version
-called Soft-DTW by replacing the min with a soft-min function
-\cite{cuturi_soft-dtw_2018}:
+called Soft-DTW by replacing the min function with a soft-min function
+(equation \ref{softdtw}) \cite{cuturi_soft-dtw_2018}.
 
-$$\text{soft-min}_\gamma(a_1,...,a_n) = -\gamma log\sum_{i}e^{-a_i/\gamma}$$
+\begin{equation} \label{softdtw}
+\text{soft-min}_\gamma(a_1,...,a_n) = -\gamma log\sum_{i}e^{-a_i/\gamma}
+\end{equation}
 
 Hence, Soft-DTW is parameterized by the smoothing constant gamma, which becomes
 a tunable hyperparameter in machine learning model training applications.
@@ -75,8 +99,13 @@ a tunable hyperparameter in machine learning model training applications.
 A common technique in machine learning with Soft-DTW is the computation of
 barycenters, which are centroids within the space of a set of time series. The
 differentiability of Soft-DTW allows for barycenter finding via gradient
-descent, and then new observations can be clustered or classified by finding the
-closest barycenter.
+descent, and then new observations can be classified by finding the nearest
+barycenter. Sequence prediction and generation of is also possible using
+recurrent neural networks with Soft-DTW as a loss function
+\cite{cuturi_soft-dtw_2018}.
+
+(TODO: Explain process of barycenter finding with gradient descent on softdtw
+loss)
 
 \section{Related Work}
 
@@ -110,12 +139,16 @@ handle the inter-tile data dependency without atomic operations, locks, or other
 global barriers, leading to improved load balance and scaling properties
 \cite{belviranli_peerwave_2015}.
 
-In
-our project we will focus on this area of opportunity, optimizing matrix
+In our project we will focus on this area of opportunity, optimizing matrix
 structure and memory access patterns to maximize parallelism and minimize memory
 latency in the computation of the warping path matrix.
 
 \section{Methods}
+
+To evaluate various performance optimizations on the Soft-DTW computation, we
+implemented a C++ and CUDA library called cuTimeWarp, which includes functions
+for computing the SoftDTW on CPU and GPU.
+
 
 \section{Results}
 
