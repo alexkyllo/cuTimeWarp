@@ -393,6 +393,8 @@ T find_softdtw_barycenter(float *Z, const float *X, const uint m, const uint k,
     float *G = new float[m * k]{0};
     // Iteratively compute the cost and gradient and step the barycenter
     // weights in the direction of the gradient
+    float eta = lr;
+    float lambda = 0.9; // damping parameter
     for (uint it = 0; it < max_iter; it++)
     {
         // Get the cost with current weights
@@ -401,16 +403,17 @@ T find_softdtw_barycenter(float *Z, const float *X, const uint m, const uint k,
         if (cost - new_cost < tol)
             break;
         cost = new_cost;
+        std::cout << "cost " << it << ": " << cost << "\n";
         // Step each element of Z by the gradient
+        eta = eta * lambda;
         for (uint i = 0; i < m; i++)
         {
             for (uint j = 0; j < k; j++)
             {
-                Z[i * k + j] -= (lr * G[i * k + j]);
+                // Z[i * k + j] -= (lr * G[i * k + j]);
+                Z[i * k + j] -= (eta * G[i * k + j]);
             }
         }
-        // TODO: decay the learning rate so step size gets smaller as we
-        // approach the minimum
     }
     return cost;
 }
