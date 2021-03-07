@@ -5,10 +5,10 @@
  */
 #ifndef SOFT_DTW_CPU_H
 #define SOFT_DTW_CPU_H
-#include "../inc/lbfgsb-gpu/culbfgsb/culbfgsb.h"
+//#include "../inc/lbfgsb-gpu/culbfgsb/culbfgsb.h"
+//#include <cuda_runtime.h>
 #include <cblas.h>
 #include <cmath>
-#include <cuda_runtime.h>
 #include <iostream>
 #include <limits>
 
@@ -296,51 +296,59 @@ void softdtw_grad(T *D_, T *R, T *E_, size_t m, size_t n, T gamma)
 }
 
 template <class T>
-void jacobian_prod_sq_euc(float *X, float *Y, float *E, float *G)
+void jacobian_prod_sq_euc(T *X, T *Y, T *E, T *G, uint m, uint k)
 {
     // TODO
+    for (uint i = 0; i < m; i++)
+    {
+    }
+}
+
+/** Compute the objective cost and gradient for input Z.
+ *  @param Z The barycenter hypothesis time series
+ *  @param X The set of time series we are trying to find the barycenter of
+ *  @param G The array of gradients w.r.t. Z, of dimension m x k
+ *  @param m The length of time series Z and X
+ *  @param n The number of time series in X and leading dimension of X
+ *  @param k The # of variables in time series Z and X
+ *  @param gamma The softmin gamma smoothing parameter
+ */
+template <class T>
+T barycenter_cost(float *Z, float *X, float *G, uint m, uint n, uint k,
+                  float gamma)
+{
+    // TODO
+    // For each series in X:
+    T *D = new T[m * m]{0};
+    T *R = new T[(m + 2) * (m + 2)]{0.0};
+    T *E = new T[m * m]{0.0};
+    for (uint i = 0; i < n; i++)
+    {
+        // calculate squared euclidean distance matrix between Z and X[i] as D
+        sq_euclidean_distance<T>(Z, &X[i * n], D, m, m, k);
+
+        // calculate SoftDTW loss for D
+        T cost = softdtw<T>(D, R, m, m, gamma);
+        // calculate the gradient w.r.t. the points in Z
+        softdtw_grad<T>(D, R, E, m, m, gamma);
+
+        // calculate jacobian product of D and E
+        jacobian_prod_sq_euc(Z, &X[i], E, G, m, k);
+        // zero out D, R and E again
+        memset(D, 0, m * m * sizeof(float));
+        memset(R, 0, (m + 2) * (m + 2) * sizeof(float));
+        memset(E, 0, m * m * sizeof(float));
+    }
+    delete[] D;
+    delete[] R;
+    delete[] E;
 }
 
 template <class T>
-T barycenter_cost(float *Z, float *cost, float *E, uint m, uint n)
+void find_softdtw_barycenter(float *X, uint m, uint k, uint n, float gamma,
+                             float tol, uint max_iter)
 {
-    // TODO
-}
-
-template <class T>
-void softdtw_barycenter(float *X, uint m, uint k, uint n, float gamma,
-                        float tol, uint max_iter)
-{
-    // TODO use L-BFGS-B solver to find optimal barycenter for X
-    // Work in progress
-    // LBFGSB_CUDA_OPTION<real> lbfgsb_options;
-
-    // lbfgsbcuda::lbfgsbdefaultoption<real>(lbfgsb_options);
-    // lbfgsb_options.mode = LCM_NO_ACCELERATION; // use CPU
-    // lbfgsb_options.eps_f = static_cast<real>(1e-8);
-    // lbfgsb_options.eps_g = static_cast<real>(1e-8);
-    // lbfgsb_options.eps_x = static_cast<real>(1e-8);
-    // lbfgsb_options.max_iteration = iter;
-
-    // // initialize LBFGSB state
-    // LBFGSB_CUDA_STATE<real> state;
-    // memset(&state, 0, sizeof(state));
-
-    // real minimal_f = std::numeric_limits<real>::max();
-    // // setup callback function that evaluate function value and its gradient
-    // state.m_funcgrad_callback =
-    //     [&minimal_f](real *x, real &f, real *g, const cudaStream_t &stream,
-    //                  const LBFGSB_CUDA_SUMMARY<real> &summary) {
-    //         barycenter_cost<float>(x, f, g);
-    //         if (summary.num_iteration % 100 == 0)
-    //         {
-    //             std::cout << "CPU iteration " << summary.num_iteration
-    //                       << " F: " << f << std::endl;
-    //         }
-
-    //         minimal_f = fmin(minimal_f, f);
-    //         return 0;
-    //     };
+    // TODO gradient descent to minimize barycenter_cost
 }
 
 #endif

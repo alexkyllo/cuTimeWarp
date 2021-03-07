@@ -169,7 +169,7 @@ TEST_CASE("soft dtw gradient")
     double *E = new double[m * n]{0.0};
     sq_euclidean_distance(a, b, D, m, n, 1);
     softdtw<double>(D, R, m, n, gamma);
-    softdtw_grad(D, R, E, m, n, gamma);
+    softdtw_grad<double>(D, R, E, m, n, gamma);
     // for (int i = 0; i < m; i++)
     // {
     //     for (int j = 0; j < n; j++)
