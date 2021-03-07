@@ -311,9 +311,21 @@ void jacobian_prod_sq_euc(const T *X, const T *Y, T *E, T *G, uint m, uint n,
             for (uint k = 0; k < d; k++)
             {
                 G[i * d + k] +=
-                    E[i * d + j] * 2 * (X[i * d + k] - Y[j * d + k]);
+                    E[i * n + j] * 2 * (X[i * d + k] - Y[j * d + k]);
             }
         }
+    }
+}
+
+template <class T> void print_matrix(const T *X, const uint m, const uint n)
+{
+    for (uint i = 0; i < m; i++)
+    {
+        for (uint j = 0; j < n; j++)
+        {
+            std::cout << X[i * n + j] << " ";
+        }
+        std::cout << "\n";
     }
 }
 
@@ -342,13 +354,16 @@ T barycenter_cost(float *Z, const float *X, float *G, const uint m,
         sq_euclidean_distance<T>(Z, &X[i * n], D, m, m, k);
 
         // calculate SoftDTW loss for D
-        cost += softdtw<T>(D, R, m, m, gamma);
+        T value = softdtw<T>(D, R, m, m, gamma);
+        std::cout << "softdtw value: " << value << "\n";
+        cost += value;
         // calculate the gradient w.r.t. the points in Z
         softdtw_grad<T>(D, R, E, m, m, gamma);
 
         // calculate jacobian product of D and E, adding to G
         jacobian_prod_sq_euc(Z, &X[i], E, G, m, m, k);
-
+        // std::cout << "G:\n";
+        // print_matrix<T>(G, m, k);
         // zero out D, R and E again
         memset(D, 0, m * m * sizeof(float));
         memset(R, 0, (m + 2) * (m + 2) * sizeof(float));
@@ -379,15 +394,29 @@ T find_softdtw_barycenter(float *Z, const float *X, const uint m, const uint k,
 {
     // TODO gradient descent to minimize barycenter_cost function
     // Initialize barycenter hypothesis with random unit normal data
-    std::default_random_engine gen;
-    std::normal_distribution<T> dist(0, 1);
+    // std::default_random_engine gen;
+    // std::normal_distribution<T> dist(0, 1);
+    std::cout << "Z init: "
+              << "\n";
     for (uint i = 0; i < m; i++)
     {
         for (uint j = 0; j < k; j++)
         {
-            Z[i * k + j] = dist(gen);
+            // Z[i * k + j] = dist(gen);
+            float avg = 0;
+            for (uint nn = 0; nn < n; nn++)
+            {
+                uint idx = nn * m + i + j;
+                avg += X[idx];
+                // std::cout << X[idx] << " ";
+            }
+
+            avg /= n;
+            Z[i * k + j] = avg;
+            // std::cout << Z[i * k + j] << " ";
         }
     }
+    std::cout << "\n";
     float cost = std::numeric_limits<float>::infinity();
     // Initialize array for gradient w.r.t. Z
     float *G = new float[m * k]{0};

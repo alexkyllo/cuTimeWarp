@@ -203,45 +203,94 @@ array([[[1.    , 0.0001, 0.    , 0.    , 0.    , 0.    , 0.    , 0.    ],
     delete[] E;
 }
 
-TEST_CASE("soft dtw barycenter")
+TEST_CASE("test jacobian product")
 {
-    // read in the example time series line by line into float array
-    std::ifstream datafile("test/test_ecg200_10.txt");
-    // example data is 10 arrays of length 96
     const uint m = 96;
-    const uint n = 10;
-    float X[m * n]{0};
-    std::stringstream ss;
-    std::string buffer;
-    float temp;
-
-    assert(datafile.is_open());
-
-    for (uint i = 0; i < n && !datafile.eof(); i++)
-    {
-        getline(datafile, buffer);
-        // std::cout << buffer << "\n";
-        ss.str(buffer);
-        for (uint j = 0; j < m; j++)
-        {
-            ss >> temp;
-            X[m * i + j] = temp;
-            // std::cout << X[m * i + j] << " ";
-        }
-        ss.clear();
-    }
-    float Z[m]{0};
     const float gamma = 0.1;
-    const float tol = 0.0001;
-    const float max_iter = 100;
-    const float lr = 0.001;
-    float cost = find_softdtw_barycenter<float>((float *)&Z, (float *)&X, m, 1,
-                                                n, gamma, tol, max_iter, lr);
-    // print the barycenter values
+    float X[m] = {0};
+    float Z[m] = {0};
+    float G[m] = {0};  // expected
+    float G0[m] = {0}; // actual
+    float D[m * m] = {0};
+    float R[(m + 2) * (m + 2)] = {0};
+    float E[m * m] = {0};
+    std::ifstream fileX("test/test_jacobian_X0.txt");
+    std::ifstream fileZ("test/test_jacobian_Z.txt");
+    std::ifstream fileG("test/test_jacobian.txt");
+    std::string buffer;
+    std::stringstream ss;
+    float temp;
     for (uint i = 0; i < m; i++)
     {
-        std::cout << Z[i] << " ";
+        getline(fileX, buffer);
+        ss.str(buffer);
+        ss >> temp;
+        X[i] = temp;
+        ss.clear();
+
+        getline(fileZ, buffer);
+        ss.str(buffer);
+        ss >> temp;
+        Z[i] = temp;
+        ss.clear();
+
+        getline(fileG, buffer);
+        ss.str(buffer);
+        ss >> temp;
+        G[i] = temp;
+        ss.clear();
     }
-    std::cout << std::endl;
-    std::cout << "cost: " << cost << "\n";
+    sq_euclidean_distance<float>((float *)&Z, (float *)&X, (float *)&D, m, m,
+                                 1);
+    softdtw<float>((float *)&D, (float *)&R, m, m, gamma);
+    softdtw_grad<float>((float *)&D, (float *)&R, (float *)&E, m, m, gamma);
+    jacobian_prod_sq_euc((float *)&Z, (float *)&X, (float *)&E, G0, m, m, 1);
+    for (uint i = 0; i < m; i++)
+    {
+        REQUIRE(is_close(G[i], G0[i], 0.001));
+    }
 }
+
+// TEST_CASE("soft dtw barycenter")
+// {
+//     // read in the example time series line by line into float array
+//     std::ifstream datafile("test/test_ecg200_10.txt");
+//     // example data is 10 arrays of length 96
+//     const uint m = 96;
+//     const uint n = 10;
+//     float X[m * n]{0};
+//     std::stringstream ss;
+//     std::string buffer;
+//     float temp;
+
+//     assert(datafile.is_open());
+
+//     for (uint i = 0; i < n && !datafile.eof(); i++)
+//     {
+//         getline(datafile, buffer);
+//         // std::cout << buffer << "\n";
+//         ss.str(buffer);
+//         for (uint j = 0; j < m; j++)
+//         {
+//             ss >> temp;
+//             X[m * i + j] = temp;
+//             // std::cout << X[m * i + j] << " ";
+//         }
+//         ss.clear();
+//     }
+//     float Z[m]{0};
+//     const float gamma = 0.1;
+//     const float tol = 0.0001;
+//     const float max_iter = 100;
+//     const float lr = 0.001;
+//     float cost = find_softdtw_barycenter<float>((float *)&Z, (float *)&X, m,
+//     1,
+//                                                 n, gamma, tol, max_iter, lr);
+//     // print the barycenter values
+//     for (uint i = 0; i < m; i++)
+//     {
+//         std::cout << Z[i] << " ";
+//     }
+//     std::cout << std::endl;
+//     std::cout << "cost: " << cost << "\n";
+// }
