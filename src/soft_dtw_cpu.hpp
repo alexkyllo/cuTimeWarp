@@ -296,11 +296,19 @@ void softdtw_grad(T *D_, T *R, T *E_, size_t m, size_t n, T gamma)
 }
 
 template <class T>
-void jacobian_prod_sq_euc(T *X, T *Y, T *E, T *G, uint m, uint k)
+void jacobian_prod_sq_euc(T *X, T *Y, T *E, T *G, uint m, uint n, uint d)
 {
-    // TODO
+    // TODO write a test for this
     for (uint i = 0; i < m; i++)
     {
+        for (uint j = 0; j < n; j++)
+        {
+            for (uint k = 0; k < d; k++)
+            {
+                G[i * d + k] +=
+                    E[i * d + j] * 2 * (X[i * d + k] - Y[j * d + k]);
+            }
+        }
     }
 }
 
@@ -317,23 +325,25 @@ template <class T>
 T barycenter_cost(float *Z, float *X, float *G, uint m, uint n, uint k,
                   float gamma)
 {
-    // TODO
+    // TODO write a test for this
     // For each series in X:
     T *D = new T[m * m]{0};
     T *R = new T[(m + 2) * (m + 2)]{0.0};
     T *E = new T[m * m]{0.0};
+    T cost = 0;
     for (uint i = 0; i < n; i++)
     {
         // calculate squared euclidean distance matrix between Z and X[i] as D
         sq_euclidean_distance<T>(Z, &X[i * n], D, m, m, k);
 
         // calculate SoftDTW loss for D
-        T cost = softdtw<T>(D, R, m, m, gamma);
+        cost += softdtw<T>(D, R, m, m, gamma);
         // calculate the gradient w.r.t. the points in Z
         softdtw_grad<T>(D, R, E, m, m, gamma);
 
-        // calculate jacobian product of D and E
-        jacobian_prod_sq_euc(Z, &X[i], E, G, m, k);
+        // calculate jacobian product of D and E, adding to G
+        jacobian_prod_sq_euc(Z, &X[i], E, G, m, m, k);
+
         // zero out D, R and E again
         memset(D, 0, m * m * sizeof(float));
         memset(R, 0, (m + 2) * (m + 2) * sizeof(float));
@@ -342,6 +352,7 @@ T barycenter_cost(float *Z, float *X, float *G, uint m, uint n, uint k,
     delete[] D;
     delete[] R;
     delete[] E;
+    return cost;
 }
 
 template <class T>
