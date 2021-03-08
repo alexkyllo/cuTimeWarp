@@ -251,14 +251,74 @@ TEST_CASE("test jacobian product")
     }
 }
 
+TEST_CASE("test jacobian product 1")
+{
+    const uint m = 96;
+    const uint n = 10;
+    const float gamma = 0.1;
+    float X[m * n] = {0};
+    float Z[m] = {0};
+    float G[m] = {0};  // expected
+    float G0[m] = {0}; // actual
+
+    std::ifstream fileX("test/test_ecg200_10.txt");
+    std::ifstream fileZ("test/test_jacobian_Z.txt");
+    std::ifstream fileG("test/test_jacobian_G0.txt");
+    std::string buffer;
+    std::stringstream ss;
+    float temp;
+    for (uint i = 0; i < n; i++)
+    {
+        getline(fileX, buffer);
+        ss.str(buffer);
+        for (uint j = 0; j < m; j++)
+        {
+            ss >> temp;
+            X[i * m + j] = temp;
+            ss.clear();
+        }
+    }
+    for (uint i = 0; i < m; i++)
+    {
+        getline(fileZ, buffer);
+        ss.str(buffer);
+        ss >> temp;
+        Z[i] = temp;
+        ss.clear();
+
+        getline(fileG, buffer);
+        ss.str(buffer);
+        ss >> temp;
+        G[i] = temp;
+        ss.clear();
+    }
+    // float D[m * m] = {0};
+    // float R[(m + 2) * (m + 2)] = {0};
+    // float E[m * m] = {0};
+    // sq_euclidean_distance<float>((float *)&Z, (float *)&X, (float *)&D, m, m,
+    //                              1);
+    // softdtw<float>((float *)&D, (float *)&R, m, m, gamma);
+    // softdtw_grad<float>((float *)&D, (float *)&R, (float *)&E, m, m, gamma);
+    // jacobian_prod_sq_euc((float *)&Z, (float *)&X, (float *)&E, G0, m, m, 1);
+    barycenter_cost<float>((float *)&Z, (float *)&X, (float *)&G0, m, n, 1,
+                           gamma);
+    // print_matrix((float *)&G0, m, 1);
+    for (uint i = 0; i < m; i++)
+    {
+        REQUIRE(is_close(G[i], G0[i], 0.001));
+    }
+}
+
 TEST_CASE("test barycenter cost")
 {
     std::ifstream datafile("test/test_ecg200_10.txt");
     std::ifstream fileZ("test/test_jacobian_Z.txt");
+    std::ifstream fileG("test/test_jacobian_G0.txt");
     // example data is 10 arrays of length 96
     const uint m = 96;
     const uint n = 10;
-    float G[m] = {0};
+    float G0[m] = {0}; // actual
+    float G[m] = {0};  // expected
     float X[m * n]{0};
     std::stringstream ss;
     std::string buffer;
@@ -273,7 +333,7 @@ TEST_CASE("test barycenter cost")
         for (uint j = 0; j < m; j++)
         {
             ss >> temp;
-            X[m * i + j] = temp;
+            X[i * m + j] = temp;
         }
         ss.clear();
     }
@@ -285,21 +345,36 @@ TEST_CASE("test barycenter cost")
         ss >> temp;
         Z[i] = temp;
         ss.clear();
+
+        getline(fileG, buffer);
+        ss.str(buffer);
+        ss >> temp;
+        G[i] = temp;
+        ss.clear();
     }
     const float gamma = 0.1;
-    float cost = barycenter_cost<float>((float *)&Z, (float *)&X, (float *)&G,
+    float cost = barycenter_cost<float>((float *)&Z, (float *)&X, (float *)&G0,
                                         m, n, 1, gamma);
     REQUIRE(is_close(cost, 37.4417));
+    // print_matrix((float *)&G, m, 1);
+    // std::cout << "expected: \n";
+    // print_matrix((float *)&G1, m, 1);
+    for (uint i = 0; i < m; i++)
+    {
+        REQUIRE(is_close(G[i], G0[i], 0.001));
+    }
 }
 
 TEST_CASE("test barycenter cost 1")
 {
     std::ifstream datafile("test/test_ecg200_10.txt");
     std::ifstream fileZ("test/test_jacobian_Z1.txt");
+    std::ifstream fileG("test/test_jacobian_G1.txt");
     // example data is 10 arrays of length 96
     const uint m = 96;
     const uint n = 10;
-    float G[m] = {0};
+    float G[m] = {0};  // expected
+    float G0[m] = {0}; // actual
     float X[m * n]{0};
     std::stringstream ss;
     std::string buffer;
@@ -326,11 +401,20 @@ TEST_CASE("test barycenter cost 1")
         ss >> temp;
         Z[i] = temp;
         ss.clear();
+        getline(fileG, buffer);
+        ss.str(buffer);
+        ss >> temp;
+        G[i] = temp;
+        ss.clear();
     }
     const float gamma = 0.1;
-    float cost = barycenter_cost<float>((float *)&Z, (float *)&X, (float *)&G,
+    float cost = barycenter_cost<float>((float *)&Z, (float *)&X, (float *)&G0,
                                         m, n, 1, gamma);
     REQUIRE(is_close(cost, -1.672, 0.001));
+    for (uint i = 0; i < m; i++)
+    {
+        REQUIRE(is_close(G[i], G0[i], 0.01));
+    }
 }
 
 // TEST_CASE("soft dtw barycenter")

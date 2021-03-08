@@ -47,6 +47,8 @@ bin/test_soft_dtw_cuda: test/test_soft_dtw_cuda.cpp obj/test.o src/soft_dtw.cuh 
 src/soft_dtw.cu
 	$(NVCC) $(NVCC_FLAGS) $< obj/test.o src/soft_dtw.cu -o $@ $(CU_LDFLAGS)
 
+bin/lbfgs: src/lbfgs_main.cpp src/soft_dtw_cost.hpp
+	$(CC) -I./inc/Eigen -I./inc/ $(CFLAGS) src/lbfgs_main.cpp -o bin/lbfgs -lblas
 
 ## Compile the PDF report
 report: cuTimeWarp.pdf

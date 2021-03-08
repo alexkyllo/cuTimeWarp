@@ -1,5 +1,8 @@
+/** A class for the LBFGS++ library to minimze SoftDTWCost.
+ */
 #include "../inc/Eigen/Core"
 #include "../inc/LBFGS.h"
+#include "../inc/LBFGSB.h"
 #include "soft_dtw_cpu.hpp"
 #include <cstring>
 
@@ -30,7 +33,7 @@ template <class T> class SoftDTWCost
         T fx = 0.0;
         // copy x to Z and grad to G
         std::cout << "z:\n";
-        for (int i = 0; i < m; i++)
+        for (uint i = 0; i < m; i++)
         {
             // TODO make this multidimensional
             std::cout << x(i) << " ";
@@ -43,7 +46,7 @@ template <class T> class SoftDTWCost
         std::cout << "\ncost: " << fx << "\n";
 
         // copy G back to grad
-        for (int i = 0; i < m; i++)
+        for (uint i = 0; i < m; i++)
         {
             grad(i) = G[i];
         }

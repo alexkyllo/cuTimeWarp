@@ -56,8 +56,9 @@ int main()
     // Set up parameters
     LBFGSParam<float> param;
     param.epsilon = 1e-3;
-    param.max_iterations = 100;
-    param.max_linesearch = 50;
+    param.max_iterations = 50;
+    // param.max_linesearch = 20;
+    param.linesearch = LBFGS_LINESEARCH_BACKTRACKING_STRONG_WOLFE;
 
     // test data
     float X[m * n]{0};
@@ -66,7 +67,11 @@ int main()
     test_load_Z(Z);
 
     // Create solver and function object
-    LBFGSSolver<float> solver(param);
+    // LBFGSSolver<float> solver(param);
+    // LBFGSSolver<float, LineSearchBacktracking> solver(param);
+    LBFGSSolver<float, LineSearchNocedalWright> solver(param);
+    // VectorXf lb = VectorXf::Constant(n, -3.0);
+    // VectorXf ub = VectorXf::Constant(n, 3.0);
     SoftDTWCost<float> fun((float *)&X, m, n, k, gamma);
 
     // Initial guess
@@ -79,6 +84,7 @@ int main()
     // x will be overwritten to be the best point found
     float fx;
     int niter = solver.minimize(fun, x, fx);
+    // int niter = solver.minimize(fun, x, fx, lb, ub);
 
     std::cout << niter << " iterations" << std::endl;
     std::cout << "x = \n" << x.transpose() << std::endl;

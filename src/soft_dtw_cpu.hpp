@@ -338,8 +338,8 @@ template <class T> void print_matrix(const T *X, const uint m, const uint n)
  *  @param gamma The softmin gamma smoothing parameter
  */
 template <class T>
-T barycenter_cost(float *Z, const float *X, float *G, const uint m,
-                  const uint n, const uint k, const float gamma)
+T barycenter_cost(T *Z, const T *X, T *G, const uint m, const uint n,
+                  const uint k, const T gamma)
 {
     // TODO write a test for this
     T *D = new T[m * m]{0};
@@ -359,8 +359,12 @@ T barycenter_cost(float *Z, const float *X, float *G, const uint m,
         softdtw_grad<T>(D, R, E, m, m, gamma);
 
         // calculate jacobian product of D and E, adding to G
-        jacobian_prod_sq_euc(Z, &X[i], E, G, m, m, k);
-
+        jacobian_prod_sq_euc(Z, &X[i * m], E, G, m, m, k);
+        // if (i < 3)
+        // {
+        //     std::cout << "G" << i << ":\n";
+        //     print_matrix<float>(G, m, 1);
+        // }
         // zero out D, R and E again
         memset(D, 0, m * m * sizeof(float));
         memset(R, 0, (m + 2) * (m + 2) * sizeof(float));
@@ -384,10 +388,9 @@ T barycenter_cost(float *Z, const float *X, float *G, const uint m,
  *  @param lr The learning rate (step size multiplier)
  */
 template <class T>
-T find_softdtw_barycenter(float *Z, const float *X, const uint m, const uint k,
-                          const uint n, const float gamma,
-                          const float tol = 0.0001, const uint max_iter = 1000,
-                          const float lr = 0.01)
+T find_softdtw_barycenter(T *Z, const T *X, const uint m, const uint k,
+                          const uint n, const T gamma, const T tol = 0.0001,
+                          const uint max_iter = 1000, const T lr = 0.01)
 {
     // TODO gradient descent to minimize barycenter_cost function
     // Initialize barycenter hypothesis with random unit normal data
@@ -422,17 +425,17 @@ T find_softdtw_barycenter(float *Z, const float *X, const uint m, const uint k,
     //     }
     // }
     // std::cout << "\n";
-    float cost = std::numeric_limits<float>::infinity();
+    T cost = std::numeric_limits<float>::infinity();
     // Initialize array for gradient w.r.t. Z
-    float *G = new float[m * k]{0};
+    T *G = new float[m * k]{0};
     // Iteratively compute the cost and gradient and step the barycenter
     // weights in the direction of the gradient
-    float eta = lr;
-    float lambda = 0.9; // damping parameter
+    T eta = lr;
+    T lambda = 0.9; // damping parameter
     for (uint it = 0; it < max_iter; it++)
     {
         // Get the cost with current weights
-        float new_cost = barycenter_cost<T>(Z, X, G, m, n, k, gamma);
+        T new_cost = barycenter_cost<T>(Z, X, G, m, n, k, gamma);
         // Stop if the improvement in cost is less than the tolerance
         // if (cost - new_cost < tol)
         //    break;
