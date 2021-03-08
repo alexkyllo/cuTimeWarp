@@ -55,4 +55,9 @@ template <class T> class SoftDTWCost
         memset(Z, 0.0, m * k * sizeof(T));
         return fx;
     }
+    ~SoftDTWCost()
+    {
+        delete[] G;
+        delete[] Z;
+    }
 };
