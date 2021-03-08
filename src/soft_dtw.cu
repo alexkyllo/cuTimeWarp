@@ -169,6 +169,9 @@ __host__ void sq_euclid_dist_mult(const float *X, const float *Y, float *D,
                                   const uint n, const uint k)
 {
     // TODO work in progress, needs testing, probably going to be slow
+    // Maybe rather than computing this for all pairs and then softdtw,
+    // it would be faster to compute parallelize across the pairs once and
+    // compute the distance matrix and softdtw for each pair independently?
     float *XX; // nX x m
     float *YY; // nY x n
     float *XY; // (nX x nY) x m x n

@@ -165,10 +165,26 @@ To evaluate various performance optimizations on the Soft-DTW computation, we
 implemented a C++ and CUDA library called cuTimeWarp, which includes functions
 for computing the SoftDTW on CPU and GPU.
 
+Given a set of many multivariate time series of the same length and number of
+variables, we can compute the Soft-DTW distance between every time series and
+every other time series in the set by computing, in parallel for each pair, a
+pairwise squared Euclidian matrix, then applying the Soft-DTW
+calculation on the distance matrix.
 
 \section{Results}
 
 \section{Discussion}
+
+\section{Future Work}
+
+Our library provides CUDA kernels and C++ wrappers for computing pairwise
+Soft-DTW dissimilarity measures as well their gradients in parallel. Potential
+future work includes integrating this library with an optimization library that
+can iteratively minimize Soft-DTW cost to find barycenters among a set of time
+series, to assemble a nearest centroid classification system. Another area of
+potential is writing Python bindings to expose the Soft-DTW loss and gradient
+functions to deep learning frameworks such as TensorFlow or PyTorch, to enable
+the use of Soft-DTW loss as a training objective for recurrent neural networks.
 
 \printbibliography[]
 \end{document}
