@@ -391,43 +391,51 @@ T find_softdtw_barycenter(float *Z, const float *X, const uint m, const uint k,
 {
     // TODO gradient descent to minimize barycenter_cost function
     // Initialize barycenter hypothesis with random unit normal data
-    // std::default_random_engine gen;
-    // std::normal_distribution<T> dist(0, 1);
-    std::cout << "Z init: "
-              << "\n";
+    std::default_random_engine gen;
+    std::normal_distribution<T> dist(0, 1);
     for (uint i = 0; i < m; i++)
     {
         for (uint j = 0; j < k; j++)
         {
-            // Z[i * k + j] = dist(gen);
-            float avg = 0;
-            for (uint nn = 0; nn < n; nn++)
-            {
-                uint idx = nn * m + i + j;
-                avg += X[idx];
-                // std::cout << X[idx] << " ";
-            }
-
-            avg /= n;
-            Z[i * k + j] = avg;
-            // std::cout << Z[i * k + j] << " ";
+            Z[i * k + j] = dist(gen);
         }
     }
-    std::cout << "\n";
+    // Euclidean mean init
+    // std::cout << "Z init: "
+    //           << "\n";
+    // for (uint i = 0; i < m; i++)
+    // {
+    //     for (uint j = 0; j < k; j++)
+    //     {
+    //         // Z[i * k + j] = dist(gen);
+    //         float avg = 0;
+    //         for (uint nn = 0; nn < n; nn++)
+    //         {
+    //             uint idx = nn * m + i + j;
+    //             avg += X[idx];
+    //             // std::cout << X[idx] << " ";
+    //         }
+
+    //         avg /= n;
+    //         Z[i * k + j] = avg;
+    //         // std::cout << Z[i * k + j] << " ";
+    //     }
+    // }
+    // std::cout << "\n";
     float cost = std::numeric_limits<float>::infinity();
     // Initialize array for gradient w.r.t. Z
     float *G = new float[m * k]{0};
     // Iteratively compute the cost and gradient and step the barycenter
     // weights in the direction of the gradient
     float eta = lr;
-    float lambda = 0.8; // damping parameter
+    float lambda = 0.9; // damping parameter
     for (uint it = 0; it < max_iter; it++)
     {
         // Get the cost with current weights
         float new_cost = barycenter_cost<T>(Z, X, G, m, n, k, gamma);
         // Stop if the improvement in cost is less than the tolerance
-        if (cost - new_cost < tol)
-            break;
+        // if (cost - new_cost < tol)
+        //    break;
         cost = new_cost;
         std::cout << "cost " << it << ": " << cost << "\n";
         // Step each element of Z by the gradient
@@ -436,10 +444,11 @@ T find_softdtw_barycenter(float *Z, const float *X, const uint m, const uint k,
         {
             for (uint j = 0; j < k; j++)
             {
-                Z[i * k + j] += (eta * G[i * k + j]);
+                Z[i * k + j] -= (eta * G[i * k + j]);
             }
         }
-        // TODO: zero out G at each iteration?
+        // zero out G after each iteration
+        memset(G, 0, m * k * sizeof(T));
     }
     return cost;
 }

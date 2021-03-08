@@ -292,6 +292,47 @@ TEST_CASE("test barycenter cost")
     REQUIRE(is_close(cost, 37.4417));
 }
 
+TEST_CASE("test barycenter cost 1")
+{
+    std::ifstream datafile("test/test_ecg200_10.txt");
+    std::ifstream fileZ("test/test_jacobian_Z1.txt");
+    // example data is 10 arrays of length 96
+    const uint m = 96;
+    const uint n = 10;
+    float G[m] = {0};
+    float X[m * n]{0};
+    std::stringstream ss;
+    std::string buffer;
+    float temp;
+
+    assert(datafile.is_open());
+
+    for (uint i = 0; i < n && !datafile.eof(); i++)
+    {
+        getline(datafile, buffer);
+        ss.str(buffer);
+        for (uint j = 0; j < m; j++)
+        {
+            ss >> temp;
+            X[m * i + j] = temp;
+        }
+        ss.clear();
+    }
+    float Z[m]{0};
+    for (uint i = 0; i < m; i++)
+    {
+        getline(fileZ, buffer);
+        ss.str(buffer);
+        ss >> temp;
+        Z[i] = temp;
+        ss.clear();
+    }
+    const float gamma = 0.1;
+    float cost = barycenter_cost<float>((float *)&Z, (float *)&X, (float *)&G,
+                                        m, n, 1, gamma);
+    REQUIRE(is_close(cost, -1.672, 0.001));
+}
+
 // TEST_CASE("soft dtw barycenter")
 // {
 //     // read in the example time series line by line into float array
@@ -323,7 +364,7 @@ TEST_CASE("test barycenter cost")
 //     const float gamma = 0.1;
 //     const float tol = 0.0001;
 //     const float max_iter = 100;
-//     const float lr = 0.001;
+//     const float lr = 0.01;
 //     float cost = find_softdtw_barycenter<float>((float *)&Z, (float *)&X, m,
 //     1,
 //                                                 n, gamma, tol, max_iter, lr);
