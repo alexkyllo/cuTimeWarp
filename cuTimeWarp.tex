@@ -171,6 +171,12 @@ every other time series in the set by computing, in parallel for each pair, a
 pairwise squared Euclidian matrix, then applying the Soft-DTW
 calculation on the distance matrix.
 
+\subsection{Test Data}
+
+For performance testing we selected datasets from the UCR Time Series Archive
+\cite{dau_ucr_2019} and the UEA Multivariate Time Series Classification Archive
+\cite{bagnall_uea_2018}.
+
 \section{Results}
 
 \section{Discussion}
@@ -185,6 +191,8 @@ series, to assemble a nearest centroid classification system. Another area of
 potential is writing Python bindings to expose the Soft-DTW loss and gradient
 functions to deep learning frameworks such as TensorFlow or PyTorch, to enable
 the use of Soft-DTW loss as a training objective for recurrent neural networks.
+This will facilitate tasks such as classifying, predicting and generating sounds,
+gestures, and sensor data under the dynamic time warping geometry.
 
 \printbibliography[]
 \end{document}
