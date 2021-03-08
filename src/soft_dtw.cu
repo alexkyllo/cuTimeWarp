@@ -82,8 +82,8 @@ __global__ void sq_euclid_norm(const uint m, const uint k, const float *X,
     }
 }
 
-/** CUDA kernel to compute the euclidean distance between two sets of vectors
- *  X and Y by using the euclidian norms, i.e. X*X + Y*Y - 2X*Y
+/** CUDA kernel to compute the euclidean distance between two Euclidean norm
+ * vectors XX and YY, i.e. X*X + Y*Y - 2X*Y
  *  @param m The length of vectors in X
  *  @param n The length of vectors in Y
  *  @param XX Squared Euclidean norm of X
@@ -150,6 +150,105 @@ __host__ void sq_euclid_dist(const float *X, const float *Y, float *D,
     cudaFree(YY);
     cudaFree(XY);
 }
+
+/** Host function to compute all pairwise squared Euclidean distances between
+ *  two sets of time series so that we can compute Soft-DTW
+ *  on many distance matrices in parallel.
+ *  Inputs X, Y, D should be __device__ arrays.
+ *  @param X A set of nX vectors of length (row count) m x k (column count)
+ *  @param Y A set of nY vectors of length (row count) n x k (column count)
+ *  @param D A result array for the distance matrix of dimension (m x n)
+ *  @param nX The number of time series in batch X
+ *  @param nY The number of time series in batch Y
+ *  @param m The length of vectors in X
+ *  @param n The length of vectors in Y
+ *  @param k The number of vectors in X and Y (columns)
+ */
+__host__ void sq_euclid_dist_mult(const float *X, const float *Y, float *D,
+                                  const uint nX, const uint nY, const uint m,
+                                  const uint n, const uint k)
+{
+    // TODO work in progress, needs testing, probably going to be slow
+    float *XX; // nX x m
+    float *YY; // nY x n
+    float *XY; // (nX x nY) x m x n
+    size_t size_mx = nX * m * sizeof(float);
+    size_t size_ny = nY * n * sizeof(float);
+    size_t size_mnxy = nX * m * size_ny;
+    cudaMalloc(&XX, size_mx);
+    cudaMalloc(&YY, size_ny);
+    cudaMalloc(&XY, size_mnxy);
+    cudaMemset(XX, 0, size_mx);
+    cudaMemset(YY, 0, size_ny);
+    cudaMemset(XY, 0, size_mnxy);
+    cudaMemset(D, 0, size_mnxy);
+
+    uint block_size_m = min(m, 1024);
+    uint grid_size_m = (m + block_size_m - 1) / block_size_m;
+    uint block_size_n = min(n, 1024);
+    uint grid_size_n = (n + block_size_n - 1) / block_size_n;
+    // compute squared euclidean norm of X
+    // is a loop the best way to do this or can we write one kernel to compute
+    // multiple norms in parallel?
+    // Need to use cudaStreamCreate to run kernels in the loop in parallel?
+    for (uint i = 0; i < m; i++)
+    {
+        sq_euclid_norm<<<grid_size_m, block_size_m>>>(m, k, &X[i * (m * k)],
+                                                      &XX[i * m]);
+    }
+    for (uint i = 0; i < n; i++)
+    {
+        sq_euclid_norm<<<block_size_n, grid_size_n>>>(n, k, &Y[i * (n * k)],
+                                                      &YY[i * n]);
+    }
+    cudaDeviceSynchronize();
+    // compute (2*X)*YT
+    const float beta = 0.0;
+    const float alpha = 2.0;
+    cublasHandle_t handle;
+    cublasCreate(&handle);
+    for (uint i = 0; i < m; i++)
+    {
+        for (uint j = 0; j < n; j++)
+        {
+            // call cuBLAS to multiply transposed matrices B^T * A
+            // (input is row-major but cublas expects column major)
+            cublasSgemm(handle,               // cublas handle
+                        CUBLAS_OP_T,          // transpose first matrix
+                        CUBLAS_OP_N,          // tranpose second matrix
+                        n,                    // rows in first matrix
+                        m,                    // columns in second matrix
+                        k,                    // columns in first matrix
+                        &alpha,               // scalar for first matrix
+                        &Y[j * (n + k)],      // first matrix
+                        k,                    // stride of first matrix
+                        &X[i * (m * k)],      // second matrix
+                        k,                    // stride of second matrix
+                        &beta,                // scalar for C
+                        &XY[i * (m * n) + j], // result matrix
+                        n                     // stride of result matrix
+            );
+        }
+    }
+    cublasDestroy(handle);
+    cudaDeviceSynchronize();
+    for (uint i = 0; i < m; i++)
+    {
+        for (uint j = 0; j < n; j++)
+        {
+            euclid_dist<<<block_size_m, grid_size_m>>>(
+                m, n, &XX[i * m], &YY[j * n], &XY[i * (m * n) + j],
+                &D[i * (m * n) + j]);
+        }
+    }
+    cudaFree(XX);
+    cudaFree(YY);
+    cudaFree(XY);
+}
+
+// TODO: Compute squared euclidean distance for many time series in parallel
+// TODO: Write a kernel that can handle an additional dimension of D (distance
+// matrix).
 
 /** Host function for retrieving the number of SMs on the GPU device
  *  Useful for limiting the # of threadblocks to the # of SMs in a kernel launch
