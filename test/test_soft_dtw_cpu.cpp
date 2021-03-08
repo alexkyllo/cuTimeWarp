@@ -251,6 +251,47 @@ TEST_CASE("test jacobian product")
     }
 }
 
+TEST_CASE("test barycenter cost")
+{
+    std::ifstream datafile("test/test_ecg200_10.txt");
+    std::ifstream fileZ("test/test_jacobian_Z.txt");
+    // example data is 10 arrays of length 96
+    const uint m = 96;
+    const uint n = 10;
+    float G[m] = {0};
+    float X[m * n]{0};
+    std::stringstream ss;
+    std::string buffer;
+    float temp;
+
+    assert(datafile.is_open());
+
+    for (uint i = 0; i < n && !datafile.eof(); i++)
+    {
+        getline(datafile, buffer);
+        ss.str(buffer);
+        for (uint j = 0; j < m; j++)
+        {
+            ss >> temp;
+            X[m * i + j] = temp;
+        }
+        ss.clear();
+    }
+    float Z[m]{0};
+    for (uint i = 0; i < m; i++)
+    {
+        getline(fileZ, buffer);
+        ss.str(buffer);
+        ss >> temp;
+        Z[i] = temp;
+        ss.clear();
+    }
+    const float gamma = 0.1;
+    float cost = barycenter_cost<float>((float *)&Z, (float *)&X, (float *)&G,
+                                        m, n, 1, gamma);
+    REQUIRE(is_close(cost, 37.4417));
+}
+
 // TEST_CASE("soft dtw barycenter")
 // {
 //     // read in the example time series line by line into float array

@@ -303,7 +303,6 @@ template <class T>
 void jacobian_prod_sq_euc(const T *X, const T *Y, T *E, T *G, uint m, uint n,
                           uint d)
 {
-    // TODO write a test for this
     for (uint i = 0; i < m; i++)
     {
         for (uint j = 0; j < n; j++)
@@ -343,27 +342,25 @@ T barycenter_cost(float *Z, const float *X, float *G, const uint m,
                   const uint n, const uint k, const float gamma)
 {
     // TODO write a test for this
-    // For each series in X:
     T *D = new T[m * m]{0};
-    T *R = new T[(m + 2) * (m + 2)]{0.0};
-    T *E = new T[m * m]{0.0};
+    T *R = new T[(m + 2) * (m + 2)]{0};
+    T *E = new T[m * m]{0};
     T cost = 0;
+    // For each series in X:
     for (uint i = 0; i < n; i++)
     {
         // calculate squared euclidean distance matrix between Z and X[i] as D
-        sq_euclidean_distance<T>(Z, &X[i * n], D, m, m, k);
+        sq_euclidean_distance<T>(Z, &X[i * m], D, m, m, k);
 
         // calculate SoftDTW loss for D
         T value = softdtw<T>(D, R, m, m, gamma);
-        std::cout << "softdtw value: " << value << "\n";
         cost += value;
         // calculate the gradient w.r.t. the points in Z
         softdtw_grad<T>(D, R, E, m, m, gamma);
 
         // calculate jacobian product of D and E, adding to G
         jacobian_prod_sq_euc(Z, &X[i], E, G, m, m, k);
-        // std::cout << "G:\n";
-        // print_matrix<T>(G, m, k);
+
         // zero out D, R and E again
         memset(D, 0, m * m * sizeof(float));
         memset(R, 0, (m + 2) * (m + 2) * sizeof(float));
@@ -423,7 +420,7 @@ T find_softdtw_barycenter(float *Z, const float *X, const uint m, const uint k,
     // Iteratively compute the cost and gradient and step the barycenter
     // weights in the direction of the gradient
     float eta = lr;
-    float lambda = 0.9; // damping parameter
+    float lambda = 0.8; // damping parameter
     for (uint it = 0; it < max_iter; it++)
     {
         // Get the cost with current weights
@@ -439,10 +436,10 @@ T find_softdtw_barycenter(float *Z, const float *X, const uint m, const uint k,
         {
             for (uint j = 0; j < k; j++)
             {
-                // Z[i * k + j] -= (lr * G[i * k + j]);
-                Z[i * k + j] -= (eta * G[i * k + j]);
+                Z[i * k + j] += (eta * G[i * k + j]);
             }
         }
+        // TODO: zero out G at each iteration?
     }
     return cost;
 }
