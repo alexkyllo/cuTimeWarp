@@ -198,7 +198,6 @@ int main(int argc, char **argv)
               << " time series of length " << m << "\n";
 
     // Get a pointer to the array data which is dimension (m x n)
-    //float *X = &data_vec[0];
    
     //Let's start checking the performance
     comparison(data_vec , m , n , argv[2]);
