@@ -8,6 +8,9 @@
 #include <sstream>
 #include <vector>
 
+// To run as an example:
+// make build
+// ./bin/soft_dtw_perf data/ECG200/ECG200_TRAIN.txt
 int main(int argc, char **argv)
 {
     // TODO
