@@ -95,7 +95,6 @@ __host__ void comparison(std::vector<float> X, int time_series_lenght ,int count
             auto softdtw_cuda_naive_duration = std::chrono::duration_cast<std::chrono::microseconds>(softdtw_cuda_naive_end - softdtw_cuda_naive_start).count();
             
 
-
             // the softdtw grad cuda naive kernel execution.....timing....
             std::cout << "STARTING softdtw grad cuda naive" << std::endl;
             auto softdtw_grad_cuda_naive_start = std::chrono::high_resolution_clock::now();
