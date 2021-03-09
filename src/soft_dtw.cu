@@ -231,19 +231,15 @@ __host__ void sq_euclid_dist_multi(const float *X, const float *Y, float *D,
                         &XY[(i * nX + j) * m * n], // result matrix
                         n                          // stride of result matrix
             );
-        }
-    }
-    cublasDestroy(handle);
-    cudaDeviceSynchronize();
-    for (uint i = 0; i < m; i++)
-    {
-        for (uint j = 0; j < n; j++)
-        {
+            // compute XX + YY - 2XY for each pair of X and Y
             euclid_dist<<<block_size_m, grid_size_m>>>(
                 m, n, &XX[i * m], &YY[j * n], &XY[(i * nX + j) * m * n],
                 &D[(i * nX + j) * m * n]);
         }
     }
+    cublasDestroy(handle);
+    cudaDeviceSynchronize();
+
     cudaFree(XX);
     cudaFree(YY);
     cudaFree(XY);
