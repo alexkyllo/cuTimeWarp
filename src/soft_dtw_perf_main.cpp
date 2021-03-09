@@ -40,18 +40,31 @@ int main(int argc, char **argv)
     {
         getline(input_file, str_buf);
         ss.str(str_buf);
+        // first element per line is a class label not a data point.
+        bool is_data = false;
         while (!ss.eof())
         {
             ss >> float_buf;
-            data_vec.push_back(float_buf);
+            if (is_data)
+            {
+                data_vec.push_back(float_buf);
+            }
+            is_data = true;
         }
         ss.clear();
         n++;
     }
+    n--;
     m = data_vec.size() / n;
     // n will overcount by 1 line when we reach the end.
-    n--;
     std::cout << "Data file " << argv[1] << " contains " << n
               << " time series of length " << m << "\n";
+
+    // Get a pointer to the array data which is dimension (m x n)
+    float *X = &data_vec[0];
+
+    // TODO: calculate and time SoftDTW between every time series and every
+    // other time series in the dataset.
+
     return 0;
 }
