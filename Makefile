@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -std=c++11 -Wall -Wextra # --pedantic-errors \
+CFLAGS = -g -std=c++11 -Wall -Wextra # --pedantic-errors \
 #-g -fsanitize=address -fsanitize=leak -fsanitize=undefined -fno-sanitize-recover
 #LDFLAGS = -L./inc/lbfgsb-gpu/build/culbfgsb/ -lcuLBFGSB -lblas
 LDFLAGS = -lblas
