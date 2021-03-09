@@ -41,6 +41,10 @@ obj/soft_dtw.o: src/soft_dtw.cu
 obj/soft_dtw_perf_main.o: src/soft_dtw_perf_main.cpp
 	$(CC) -I$(CUDA_HOME)/include $(CFLAGS) -c $< -o $@
 
+## Run experiments
+run: bin/soft_dtw_perf
+	./$< data/ECG200/ECG200_TRAIN.txt output/ECG200/PERFORMANCE.csv
+
 ## Build and run unit tests
 test: test_softdtw_cpu test_softdtw_cuda
 
