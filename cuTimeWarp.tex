@@ -71,7 +71,12 @@ structurally similar time series will produce a large distance if they are
 different speeds or out of phase (TODO: Add a figure to illustrate this).
 Dynamic Time Warping (DTW) was devised in the 1960s as an alternative time
 series dissimilarity measure to address this shortcoming. (TODO: find a
-historical citation)
+historical citation). DTW is a nonlinear mapping of from each point in one time
+series to the nearest point in a second time series. While DTW is technically
+not considered a ``distance'' because it does not conform to the triangle
+inequality, and therefore we refer to it as a ``dissimilarity'' instead, it can
+be used in place of Euclidean distance or other distance measures for many
+applications of time series data.
 
 The basic algorithm for DTW is to use Bellman’s recursion, a dynamic programming
 technique, to find the lowest-cost path diagonally across a pairwise distance

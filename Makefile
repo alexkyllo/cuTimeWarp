@@ -19,7 +19,7 @@ fmt:
 	cd src && clang-format -i *.cpp *.hpp *.cu *.cuh *.hcu
 
 ## Build binaries
-build: bin/dtw_cpu
+build: bin/dtw_cpu bin/soft_dtw_perf
 
 bin/dtw_cpu: src/dtw_cpu.cpp
 	$(CC) $(CFLAGS) $^ -o $@
@@ -49,6 +49,10 @@ src/soft_dtw.cu
 
 bin/lbfgs: src/lbfgs_main.cpp src/soft_dtw_cost.hpp
 	$(CC) -I./inc/Eigen -I./inc/ $(CFLAGS) src/lbfgs_main.cpp -o bin/lbfgs -lblas
+
+bin/soft_dtw_perf: src/soft_dtw_perf_main.cpp src/soft_dtw_cpu.hpp \
+src/soft_dtw.cu src/soft_dtw.cuh
+	$(NVCC) $(NVCC_FLAGS) $< src/soft_dtw.cu -o $@ $(CU_LDFLAGS)
 
 ## Compile the PDF report
 report: cuTimeWarp.pdf

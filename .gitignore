@@ -7,8 +7,10 @@
 *.lock
 Pipfile
 /bin/
-/dat/
 /obj/
+/dat/
+!/dat/Univariate_arff/ECG200
+
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
