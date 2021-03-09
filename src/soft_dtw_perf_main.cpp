@@ -141,7 +141,7 @@ __host__ void comparison(std::vector<float> X, int time_series_lenght ,int count
 
 // To run as an example:
 // make build
-// ./bin/soft_dtw_perf data/ECG200/ECG200_TRAIN.txt  output/ECG200/performance.csv
+// ./bin/soft_dtw_perf data/ECG200/ECG200_TRAIN.txt  output/ECG200/PERFORMANCE.CSV
 int main(int argc, char **argv)
 {
     // TODO
