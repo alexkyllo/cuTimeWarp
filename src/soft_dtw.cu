@@ -164,9 +164,9 @@ __host__ void sq_euclid_dist(const float *X, const float *Y, float *D,
  *  @param n The length of vectors in Y
  *  @param k The number of vectors in X and Y (columns)
  */
-__host__ void sq_euclid_dist_mult(const float *X, const float *Y, float *D,
-                                  const uint nX, const uint nY, const uint m,
-                                  const uint n, const uint k)
+__host__ void sq_euclid_dist_multi(const float *X, const float *Y, float *D,
+                                   const uint nX, const uint nY, const uint m,
+                                   const uint n, const uint k)
 {
     // TODO work in progress, needs testing, probably going to be slow
     // Maybe rather than computing this for all pairs and then softdtw,
@@ -205,45 +205,41 @@ __host__ void sq_euclid_dist_mult(const float *X, const float *Y, float *D,
                                                       &YY[i * n]);
     }
     cudaDeviceSynchronize();
-    // compute (2*X)*YT
     const float beta = 0.0;
     const float alpha = 2.0;
     cublasHandle_t handle;
     cublasCreate(&handle);
-    for (uint i = 0; i < m; i++)
+    // Compute 2*X*Y^T for each X and Y
+    for (uint i = 0; i < nX; i++)
     {
-        for (uint j = 0; j < n; j++)
+        for (uint j = 0; j < nY; j++)
         {
             // call cuBLAS to multiply transposed matrices B^T * A
             // (input is row-major but cublas expects column major)
-            cublasSgemm(handle,               // cublas handle
-                        CUBLAS_OP_T,          // transpose first matrix
-                        CUBLAS_OP_N,          // tranpose second matrix
-                        n,                    // rows in first matrix
-                        m,                    // columns in second matrix
-                        k,                    // columns in first matrix
-                        &alpha,               // scalar for first matrix
-                        &Y[j * (n + k)],      // first matrix
-                        k,                    // stride of first matrix
-                        &X[i * (m * k)],      // second matrix
-                        k,                    // stride of second matrix
-                        &beta,                // scalar for C
-                        &XY[i * (m * n) + j], // result matrix
-                        n                     // stride of result matrix
+            cublasSgemm(handle,                    // cublas handle
+                        CUBLAS_OP_T,               // transpose first matrix
+                        CUBLAS_OP_N,               // tranpose second matrix
+                        n,                         // rows in first matrix
+                        m,                         // columns in second matrix
+                        k,                         // columns in first matrix
+                        &alpha,                    // scalar for first matrix
+                        &Y[j * (n * k)],           // first matrix
+                        k,                         // stride of first matrix
+                        &X[i * (m * k)],           // second matrix
+                        k,                         // stride of second matrix
+                        &beta,                     // scalar for C
+                        &XY[(i * nX + j) * m * n], // result matrix
+                        n                          // stride of result matrix
             );
+            // compute XX + YY - 2XY for each pair of X and Y
+            euclid_dist<<<block_size_m, grid_size_m>>>(
+                m, n, &XX[i * m], &YY[j * n], &XY[(i * nX + j) * m * n],
+                &D[(i * nX + j) * m * n]);
         }
     }
     cublasDestroy(handle);
     cudaDeviceSynchronize();
-    for (uint i = 0; i < m; i++)
-    {
-        for (uint j = 0; j < n; j++)
-        {
-            euclid_dist<<<block_size_m, grid_size_m>>>(
-                m, n, &XX[i * m], &YY[j * n], &XY[i * (m * n) + j],
-                &D[i * (m * n) + j]);
-        }
-    }
+
     cudaFree(XX);
     cudaFree(YY);
     cudaFree(XY);

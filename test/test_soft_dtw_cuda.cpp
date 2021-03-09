@@ -22,6 +22,18 @@ inline void GPUAssert(cudaError_t code, const char *file, int line,
     }
 }
 
+void print_matrix(const float *X, const uint m, const uint n)
+{
+    for (uint i = 0; i < m; i++)
+    {
+        for (uint j = 0; j < n; j++)
+        {
+            std::cout << X[i * n + j] << " ";
+        }
+        std::cout << "\n";
+    }
+}
+
 bool is_close(float a, float b, float tol = 0.0001)
 {
     return std::abs(a - b) < tol;
@@ -85,6 +97,10 @@ TEST_CASE("test squared euclidean distance 2d")
     delete[] X;
     delete[] Y;
     delete[] D;
+
+    cudaFree(dX);
+    cudaFree(dY);
+    cudaFree(dD);
 }
 
 TEST_CASE("soft dtw cuda for distance matrix (1d ts)")
@@ -189,4 +205,158 @@ TEST_CASE("soft dtw gradient CUDA")
     cudaFree(D);
     cudaFree(R);
     cudaFree(dE);
+}
+
+TEST_CASE("test squared euclidean distance 2d with multi nX = 1 nY = 1")
+{
+    int m = 4;
+    int k = 2;
+    int n = 3;
+    float *X = new float[m * k]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0}; // 4x2
+    float *Y = new float[k * n]{1.5, 2.6, 3.7, 4.8, 5.9, 6.1}; // 3 x 2
+    float *D = new float[m * n]{0};                            // 4 x 3
+    float *dX;
+    float *dY;
+    float *dD;
+    size_t size_m = m * sizeof(float);
+    size_t size_n = n * sizeof(float);
+    size_t size_mn = n * size_m;
+    size_t size_mk = k * size_m;
+    size_t size_nk = k * size_n;
+    cudaMalloc(&dD, size_mn);
+    cudaMalloc(&dX, size_mk);
+    cudaMalloc(&dY, size_nk);
+    cudaMemset(dD, 0, size_mn);
+    cudaMemcpy(dX, X, size_mk, cudaMemcpyHostToDevice);
+    cudaMemcpy(dY, Y, size_nk, cudaMemcpyHostToDevice);
+    sq_euclid_dist_multi(dX, dY, dD, 1, 1, m, n, k);
+    cudaErrchk(
+        cudaMemcpy(D, dD, m * n * sizeof(float), cudaMemcpyDeviceToHost));
+    /**
+       sklearn.metrics.pairwise.euclidean_distances(X, Y, squared=True)
+
+       array([[ 0.61, 15.13, 40.82],
+              [ 4.21,  1.13, 12.82],
+              [23.81,  3.13,  0.82],
+              [59.41, 21.13,  4.82]])
+     */
+
+    REQUIRE(is_close(D[0], 0.61));
+    REQUIRE(is_close(D[1], 15.13));
+    REQUIRE(is_close(D[2], 40.82));
+    REQUIRE(is_close(D[3], 4.21));
+    REQUIRE(is_close(D[4], 1.13));
+    REQUIRE(is_close(D[5], 12.82));
+    REQUIRE(is_close(D[6], 23.81));
+    REQUIRE(is_close(D[7], 3.13));
+    REQUIRE(is_close(D[8], 0.82));
+    REQUIRE(is_close(D[9], 59.41));
+    REQUIRE(is_close(D[10], 21.13));
+    REQUIRE(is_close(D[11], 4.82));
+    delete[] X;
+    delete[] Y;
+    delete[] D;
+
+    cudaFree(dX);
+    cudaFree(dY);
+    cudaFree(dD);
+}
+
+TEST_CASE("Test squared Euclidan distance multi")
+{
+    /*
+    import numpy as np
+    from sklearn.metrics.pairwise import euclidean_distances
+    >>> a
+    np.array([[1., 2., 3., 3., 5.],
+             [5., 3., 3., 2., 1.]])
+    >>> b
+    np.array([[1., 2., 2., 2., 2., 2., 2., 4.],
+              [4., 2., 2., 2., 2., 2., 2., 1.]])
+    D = np.array([euclidean_distances(x.reshape(-1,1), y.reshape(-1,1),
+    squared=True) for x in a for y in b])
+    np.array([[
+        [ 0.,  1.,  1.,  1.,  1.,  1.,  1.,  9.],
+        [ 1.,  0.,  0.,  0.,  0.,  0.,  0.,  4.],
+        [ 4.,  1.,  1.,  1.,  1.,  1.,  1.,  1.],
+        [ 4.,  1.,  1.,  1.,  1.,  1.,  1.,  1.],
+        [16.,  9.,  9.,  9.,  9.,  9.,  9.,  1.]],
+
+       [[ 9.,  1.,  1.,  1.,  1.,  1.,  1.,  0.],
+        [ 4.,  0.,  0.,  0.,  0.,  0.,  0.,  1.],
+        [ 1.,  1.,  1.,  1.,  1.,  1.,  1.,  4.],
+        [ 1.,  1.,  1.,  1.,  1.,  1.,  1.,  4.],
+        [ 1.,  9.,  9.,  9.,  9.,  9.,  9., 16.]],
+
+       [[16.,  9.,  9.,  9.,  9.,  9.,  9.,  1.],
+        [ 4.,  1.,  1.,  1.,  1.,  1.,  1.,  1.],
+        [ 4.,  1.,  1.,  1.,  1.,  1.,  1.,  1.],
+        [ 1.,  0.,  0.,  0.,  0.,  0.,  0.,  4.],
+        [ 0.,  1.,  1.,  1.,  1.,  1.,  1.,  9.]],
+
+       [[ 1.,  9.,  9.,  9.,  9.,  9.,  9., 16.],
+        [ 1.,  1.,  1.,  1.,  1.,  1.,  1.,  4.],
+        [ 1.,  1.,  1.,  1.,  1.,  1.,  1.,  4.],
+        [ 4.,  0.,  0.,  0.,  0.,  0.,  0.,  1.],
+        [ 9.,  1.,  1.,  1.,  1.,  1.,  1.,  0.]]])
+     */
+    const int m = 5;
+    const int n = 8;
+    const int nX = 2;
+    const int nY = 2;
+    const int k = 1;
+    float *X =
+        new float[nX * m * k]{1.0, 2.0, 3.0, 3.0, 5.0, 5.0, 3.0, 3.0, 2.0, 1.0};
+    float *Y = new float[nY * n * k]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0,
+                                     4.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0};
+    float *D = new float[m * nX * n * nY]{0};
+    float *dX;
+    float *dY;
+    float *dD;
+    size_t size_mx = nX * m * sizeof(float);
+    size_t size_ny = nY * n * sizeof(float);
+    size_t size_mnxy = nX * m * size_ny;
+    cudaMalloc(&dD, size_mnxy);
+    cudaMalloc(&dX, size_mx * k);
+    cudaMalloc(&dY, size_ny * k);
+    cudaMemset(dD, 0, size_mnxy);
+    cudaMemcpy(dX, X, size_mx * k, cudaMemcpyHostToDevice);
+    cudaMemcpy(dY, Y, size_ny * k, cudaMemcpyHostToDevice);
+    sq_euclid_dist_multi(dX, dY, dD, nX, nY, m, n, k);
+    cudaErrchk(cudaMemcpy(D, dD, size_mnxy, cudaMemcpyDeviceToHost));
+
+    float D_exp[m * n * nX * nY]{0, 1, 1, 1, 1, 1, 1, 9,  // dist(X[0], Y[0])
+                                 1, 0, 0, 0, 0, 0, 0, 4,  //
+                                 4, 1, 1, 1, 1, 1, 1, 1,  //
+                                 4, 1, 1, 1, 1, 1, 1, 1,  //
+                                 16, 9, 9, 9, 9, 9, 9, 1, //
+                                                          //
+                                 9, 1, 1, 1, 1, 1, 1, 0,  // dist(X[0], Y[1])
+                                 4, 0, 0, 0, 0, 0, 0, 1,  //
+                                 1, 1, 1, 1, 1, 1, 1, 4,  //
+                                 1, 1, 1, 1, 1, 1, 1, 4,  //
+                                 1, 9, 9, 9, 9, 9, 9, 16, //
+                                                          //
+                                 16, 9, 9, 9, 9, 9, 9, 1, // dist(X[1], Y[0])
+                                 4, 1, 1, 1, 1, 1, 1, 1,  //
+                                 4, 1, 1, 1, 1, 1, 1, 1,  //
+                                 1, 0, 0, 0, 0, 0, 0, 4,  //
+                                 0, 1, 1, 1, 1, 1, 1, 9,  //
+                                                          //
+                                 1, 9, 9, 9, 9, 9, 9, 16, // dist(X[1], Y[1])
+                                 1, 1, 1, 1, 1, 1, 1, 4,  //
+                                 1, 1, 1, 1, 1, 1, 1, 4,  //
+                                 4, 0, 0, 0, 0, 0, 0, 1,  //
+                                 9, 1, 1, 1, 1, 1, 1, 0};
+
+    for (int i = 0; i < m * n * nX * nY; i++)
+    {
+        REQUIRE(is_close(D_exp[i], D[i]));
+    }
+    delete[] X;
+    delete[] Y;
+    delete[] D;
+    cudaFree(dX);
+    cudaFree(dY);
+    cudaFree(dD);
 }
