@@ -8,9 +8,9 @@
 Pipfile
 /bin/
 /obj/
-/dat/
-!/dat/Univariate_arff/ECG200
-
+/data/**/*
+!/data/ECG200/
+!/data/ECG200/*.txt
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
