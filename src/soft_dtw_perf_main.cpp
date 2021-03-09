@@ -107,7 +107,6 @@ __host__ void comparison(std::vector<float> X, int time_series_lenght ,int count
             std::cout << "FINISHED softdtw grad cuda naive" << std::endl;           
             auto softdtw_grad_cuda_naive_duration = std::chrono::duration_cast<std::chrono::microseconds>(softdtw_grad_cuda_naive_end - softdtw_grad_cuda_naive_start).count();
             
-            
             cudaMemcpy(E, dE, m * n * sizeof(float), cudaMemcpyDeviceToHost);
 
             std::cout << 
