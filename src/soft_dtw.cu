@@ -238,8 +238,6 @@ __host__ void sq_euclid_dist_multi(const float *X, const float *Y, float *D,
         }
     }
     cublasDestroy(handle);
-    cudaDeviceSynchronize();
-
     cudaFree(XX);
     cudaFree(YY);
     cudaFree(XY);
@@ -303,6 +301,56 @@ __global__ void softdtw_naive_kernel(float *D, float *R, float *cost, uint m,
     if (tx == 0)
     {
         *cost = R[m * (n + 2) + n];
+    }
+}
+
+/** Kernel function for computing "naive" Soft DTW on pairwise Euclidean
+ * distance matrix for multivariate time series with CUDA.
+ * Input D should be a __device__ array.
+ * This naive version only works for sequence lengths <= 1024 i.e. can fit in
+ * a single threadblock.
+ * Each threadblock computes DTW for a pair of time series
+ * Each thread can process one anti-diagonal.
+ * @param D The pairwise squared Euclidean distance array of two time series
+ * @param R An m+2 x n+2 array that will be filled with the alignments
+ * @param cost The total path costs will be written to this array of length nD
+ * @param nD The number of distance matrices in D and its leading dimension
+ * @param m Length of first time series
+ * @param n Length of second time series
+ * @param gamma SoftDTW smoothing parameter
+ */
+__global__ void softdtw_naive_kernel_multi(float *D, float *R, float *cost,
+                                           uint nD, uint m, uint n, float gamma)
+{
+    const uint tx = threadIdx.x;
+    const uint bx = blockIdx.x;
+    uint bD = bx * m * n;
+    uint bD2 = bx * (m + 2) * (n + 2);
+
+    // block size = max(m, n) (length of longest diagonal)
+    // number of antidiagonals is 2 * max(m,n) - 1
+    const uint passes = 2 * blockDim.x - 1;
+
+    for (uint p = 0; p < passes; p++)
+    {
+        uint jj = max(0, min(p - tx, n - 1));
+        uint i = tx + 1;
+        uint j = jj + 1;
+
+        if (tx + jj == p && (tx < m && jj < n))
+        {
+            float c = D[bD + (i - 1) * n + j - 1];
+            float r1 = R[bD2 + (i - 1) * (n + 2) + j];
+            float r2 = R[bD2 + i * (n + 2) + j - 1];
+            float r3 = R[bD2 + (i - 1) * (n + 2) + j - 1];
+            double prev_min = softmin(r1, r2, r3, gamma);
+            R[bD2 + i * (n + 2) + j] = c + prev_min;
+        }
+        __syncthreads();
+    }
+    if (tx == 0)
+    {
+        cost[bx] = R[bD2 + m * (n + 2) + n];
     }
 }
 
@@ -389,10 +437,8 @@ __global__ void fill_matrix_inf(float *A, int width, int height, float val)
     for (int i = idx; i < width * height; i += gridDim.x * blockDim.x)
     {
         A[i] = val;
-    }
-    if (idx == 0)
-    {
-        A[0] = 0.0;
+        if (i % width == 0)
+            A[i] = 0.0;
     }
 }
 
@@ -402,6 +448,7 @@ __global__ void fill_matrix_inf(float *A, int width, int height, float val)
  * Only a single block is used. m and n must each be no longer than 1024.
  * @param D The pairwise squared Euclidean distance array of two time series
  * @param R An m+2 x n+2 device array that will be filled with alignment values.
+ * @param nD The number of distance matrices in D and its leading dimension
  * @param m Length of first time series
  * @param n Length of second time series
  * @param gamma SoftDTW smoothing parameter
@@ -429,6 +476,41 @@ __host__ float softdtw_cuda_naive(float *D, float *R, uint m, uint n,
     cudaFree(d_path_cost);
 
     return path_cost;
+}
+
+/** Host function for computing Soft DTW on pairwise Euclidean distance matrix
+ * for multivariate time series with CUDA.
+ * Input D should be a __device__ array of dimension (nD x m x n).
+ * Each threadblock computes DTW for a pair of time series
+ * m and n must each be no longer than 1024.
+ * @param D The pairwise squared Euclidean distance array of two time series
+ * @param R An (nD x (m+2) x (n+2)) device array to fill with alignment values.
+ * @param costs A length nD array that will be filled with the pairwise costs
+ * @param nD The number of distance matrices in D and its leading dimension
+ * @param m Length of first time series
+ * @param n Length of second time series
+ * @param gamma SoftDTW smoothing parameter
+ */
+__host__ void softdtw_cuda_naive_multi(float *D, float *R, float *costs,
+                                       uint nD, uint m, uint n, float gamma)
+{
+    size_t m2n2 = nD * (m + 2) * (n + 2);
+    // Launch a kernel to fill matrix R with infinity
+    const int inf_tpb = 256;
+    int inf_blocks = (m2n2 + inf_tpb - 1) / m2n2;
+    fill_matrix_inf<<<inf_blocks, inf_tpb>>>(
+        R, (m + 2) * (n + 2), nD, std::numeric_limits<float>::infinity());
+
+    dim3 B = dim3(nD);
+    dim3 TPB = dim3(max(m, n));
+    float *d_path_cost;
+    cudaMalloc(&d_path_cost, nD * sizeof(float));
+    // Launch the kernel
+    softdtw_naive_kernel_multi<<<B, TPB>>>(D, R, d_path_cost, nD, m, n, gamma);
+    // Copy the path cost back to host
+    cudaMemcpy(costs, d_path_cost, nD * sizeof(float), cudaMemcpyDeviceToHost);
+
+    cudaFree(d_path_cost);
 }
 
 /** Host function for computing SoftDTW gradient by backpropagation
