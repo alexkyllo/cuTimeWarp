@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -g -std=c++11 -Wall -Wextra # --pedantic-errors \
+CFLAGS = -std=c++11 -Wall -Wextra # --pedantic-errors \
 #-g -fsanitize=address -fsanitize=leak -fsanitize=undefined -fno-sanitize-recover
 #LDFLAGS = -L./inc/lbfgsb-gpu/build/culbfgsb/ -lcuLBFGSB -lblas
 LDFLAGS = -lblas
@@ -7,7 +7,6 @@ NVCC = nvcc
 NVCC_FLAGS = -g -G -maxrregcount=64 -Xcompiler "$(CFLAGS)"
 CU_LDFLAGS = -lcublas
 .PHONY = default build clean test fmt report
-
 FIGS =
 
 $(shell mkdir -p bin/ obj/)
@@ -30,6 +29,18 @@ bin/timewarp: src/timewarp.cu
 obj/test.o: test/test.cpp test/catch.h
 	$(CC) -std=c++11 test/test.cpp -c -o $@
 
+obj/device_functions.o: src/kernels/device_functions.cu
+	$(NVCC) -dc $< -o $@
+
+obj/soft_dtw_naive.o: src/kernels/soft_dtw_naive.cu
+	$(NVCC) -dc $< -o $@
+
+obj/soft_dtw.o: src/soft_dtw.cu
+	$(NVCC) -dc $< -o $@
+
+obj/soft_dtw_perf_main.o: src/soft_dtw_perf_main.cpp
+	$(CC) -I$(CUDA_HOME)/include $(CFLAGS) -c $< -o $@
+
 ## Build and run unit tests
 test: test_softdtw_cpu test_softdtw_cuda
 
@@ -43,16 +54,16 @@ bin/test_soft_dtw_cpu: test/test_soft_dtw_cpu.cpp obj/test.o src/soft_dtw_cpu.hp
 	$(CC) $(CFLAGS) $< obj/test.o -o $@ $(LDFLAGS)
 #$(CC) $(CFLAGS) -I$(CUDA_HOME)/include/ $< obj/test.o -o $@ $(LDFLAGS)
 
-bin/test_soft_dtw_cuda: test/test_soft_dtw_cuda.cpp obj/test.o src/soft_dtw.cuh \
-src/soft_dtw.cu
-	$(NVCC) $(NVCC_FLAGS) $< obj/test.o src/soft_dtw.cu -o $@ $(CU_LDFLAGS)
+bin/test_soft_dtw_cuda: test/test_soft_dtw_cuda.cpp obj/test.o \
+obj/device_functions.o obj/soft_dtw.o obj/soft_dtw_naive.o
+	$(NVCC) $(NVCC_FLAGS) $^ -o $@ $(CU_LDFLAGS)
 
 bin/lbfgs: src/lbfgs_main.cpp src/soft_dtw_cost.hpp
 	$(CC) -I./inc/Eigen -I./inc/ $(CFLAGS) src/lbfgs_main.cpp -o bin/lbfgs -lblas
 
-bin/soft_dtw_perf: src/soft_dtw_perf_main.cpp src/soft_dtw_cpu.hpp \
-src/soft_dtw.cu src/soft_dtw.cuh
-	$(NVCC) $(NVCC_FLAGS) $< src/soft_dtw.cu -o $@ $(CU_LDFLAGS)
+bin/soft_dtw_perf: obj/soft_dtw_perf_main.o obj/soft_dtw.o obj/soft_dtw_naive.o \
+obj/device_functions.o
+	$(NVCC) $^ -o $@ $(CU_LDFLAGS)
 
 ## Compile the PDF report
 report: cuTimeWarp.pdf
