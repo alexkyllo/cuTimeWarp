@@ -9,6 +9,10 @@ CU_LDFLAGS = -lcublas
 .PHONY = default build clean test fmt report
 FIGS =
 
+CU_OBJ = obj/euclid_dist.o obj/helper_functions.o obj/soft_dtw.o \
+obj/soft_dtw_naive.o \
+obj/soft_dtw_naive_multi.o \
+
 $(shell mkdir -p bin/ obj/)
 
 default: help
@@ -29,17 +33,14 @@ bin/timewarp: src/timewarp.cu
 obj/test.o: test/test.cpp test/catch.h
 	$(CC) -std=c++11 test/test.cpp -c -o $@
 
-obj/device_functions.o: src/kernels/device_functions.cu
-	$(NVCC) -dc $< -o $@
-
-obj/soft_dtw_naive.o: src/kernels/soft_dtw_naive.cu
-	$(NVCC) -dc $< -o $@
+obj/soft_dtw_perf_main.o: src/soft_dtw_perf_main.cpp
+	$(CC) -I$(CUDA_HOME)/include $(CFLAGS) -c $< -o $@
 
 obj/soft_dtw.o: src/soft_dtw.cu
 	$(NVCC) -dc $< -o $@
 
-obj/soft_dtw_perf_main.o: src/soft_dtw_perf_main.cpp
-	$(CC) -I$(CUDA_HOME)/include $(CFLAGS) -c $< -o $@
+obj/%.o: src/kernels/%.cu
+	$(NVCC) -dc $< -o $@
 
 ## Run experiments
 run: bin/soft_dtw_perf
@@ -56,17 +57,14 @@ test_softdtw_cuda: bin/test_soft_dtw_cuda
 
 bin/test_soft_dtw_cpu: test/test_soft_dtw_cpu.cpp obj/test.o src/soft_dtw_cpu.hpp
 	$(CC) $(CFLAGS) $< obj/test.o -o $@ $(LDFLAGS)
-#$(CC) $(CFLAGS) -I$(CUDA_HOME)/include/ $< obj/test.o -o $@ $(LDFLAGS)
 
-bin/test_soft_dtw_cuda: test/test_soft_dtw_cuda.cpp obj/test.o \
-obj/device_functions.o obj/soft_dtw.o obj/soft_dtw_naive.o
+bin/test_soft_dtw_cuda: test/test_soft_dtw_cuda.cpp obj/test.o $(CU_OBJ)
 	$(NVCC) $(NVCC_FLAGS) $^ -o $@ $(CU_LDFLAGS)
 
 bin/lbfgs: src/lbfgs_main.cpp src/soft_dtw_cost.hpp
 	$(CC) -I./inc/Eigen -I./inc/ $(CFLAGS) src/lbfgs_main.cpp -o bin/lbfgs -lblas
 
-bin/soft_dtw_perf: obj/soft_dtw_perf_main.o obj/soft_dtw.o obj/soft_dtw_naive.o \
-obj/device_functions.o
+bin/soft_dtw_perf: obj/soft_dtw_perf_main.o $(CU_OBJ)
 	$(NVCC) $^ -o $@ $(CU_LDFLAGS)
 
 ## Compile the PDF report
