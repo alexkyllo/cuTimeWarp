@@ -1,6 +1,8 @@
 #pragma once
-/** Kernel function for computing "naive" Soft DTW on pairwise Euclidean
+
+/** Kernel function for computing Soft DTW on pairwise Euclidean
  * distance matrix for multivariate time series with CUDA.
+ * Uses a shared memory stencil for caching the previous diagonal
  * Input D should be a __device__ array.
  * This naive version only works for sequence lengths <= 1024 i.e. can fit in
  * a single threadblock.
@@ -15,6 +17,5 @@
  * @param n Length of second time series
  * @param gamma SoftDTW smoothing parameter
  */
-__global__ void softdtw_naive_kernel_multi(float *D, float *R, float *cost,
-                                           uint nD, uint m, uint n,
-                                           float gamma);
+__global__ void softdtw_stencil(float *D, float *R, float *cost, uint nD,
+                                uint m, uint n, float gamma);

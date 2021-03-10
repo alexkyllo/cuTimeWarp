@@ -21,7 +21,7 @@ __global__ void softdtw_naive_kernel(float *D, float *R, float *cost, uint m,
     const uint tx = threadIdx.x;
     // block size = max(m, n) (length of longest diagonal)
     // number of antidiagonals is 2 * max(m,n) - 1
-    const uint passes = 2 * blockDim.x - 1;
+    const uint passes = 2 * blockDim.x - 2;
 
     for (uint p = 0; p < passes; p++)
     {

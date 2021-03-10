@@ -8,7 +8,8 @@
  * a single threadblock.
  * Each threadblock computes DTW for a pair of time series
  * Each thread can process one anti-diagonal.
- * @param D The pairwise squared Euclidean distance array of two time series
+ * @param D A 3D tensor of pairwise squared Euclidean distance matrices
+ * between time series
  * @param R An m+2 x n+2 array that will be filled with the alignments
  * @param cost The total path costs will be written to this array of length nD
  * @param nD The number of distance matrices in D and its leading dimension
@@ -26,7 +27,7 @@ __global__ void softdtw_naive_kernel_multi(float *D, float *R, float *cost,
 
     // block size = max(m, n) (length of longest diagonal)
     // number of antidiagonals is 2 * max(m,n) - 1
-    const uint passes = 2 * blockDim.x - 1;
+    const uint passes = 2 * blockDim.x - 2;
 
     for (uint p = 0; p < passes; p++)
     {
@@ -50,3 +51,5 @@ __global__ void softdtw_naive_kernel_multi(float *D, float *R, float *cost,
         cost[bx] = R[bD2 + m * (n + 2) + n];
     }
 }
+
+// TODO: write a backward gradient kernel for multi time series

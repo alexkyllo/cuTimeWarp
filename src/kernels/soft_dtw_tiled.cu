@@ -5,13 +5,16 @@
  * This naive version only works for sequence length <= 1024.
  * @param D The pairwise squared Euclidean distance array of two time series
  * @param R An m+2 x n+2 array that will be filled with the alignments
- * @param cost The total path cost will be written to this address
+ * @param T Array of bools to signal when each tile is done, to dependent tiles.
+ * @param cost Array to fill with the DTW costs for each pair
+ * @param nD The number of distance matrices in D and its leading dimension
  * @param m Length of first time series
  * @param n Length of second time series
+ * @param tile_width The width of one tile
  * @param gamma SoftDTW smoothing parameter
  */
-__global__ void softdtw_tiled_kernel(float *D, float *R, float *cost, uint m,
-                                     uint n, float gamma)
+__global__ void softdtw_tiled_kernel(float *D, float *R, float *cost, uint nD,
+                                     uint m, uint n, float gamma)
 {
     // TODO
     // Divide R into tiles
