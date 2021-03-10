@@ -358,6 +358,7 @@ __host__ void soft_dtw_tiled(float *a , float *b, float *D , uint m, uint n , ui
     cudaMemcpy( D, D_, mn_size, cudaMemcpyDeviceToDevice);
 
     //TODO: result verification here
+}
 
 /** Host function for computing Soft DTW on pairwise Euclidean distance matrix
  * for multivariate time series with CUDA.
