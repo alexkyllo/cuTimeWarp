@@ -21,3 +21,6 @@ __host__ void sq_euclid_dist_multi(const float *X, const float *Y, float *D,
                                    const uint n, const uint k);
 __host__ void softdtw_cuda_naive_multi(float *D, float *R, float *costs,
                                        uint nD, uint m, uint n, float gamma);
+
+__host__ void soft_dtw_tiled(float *a , float *b, float *D , uint m, uint n , uint tile_width );
+

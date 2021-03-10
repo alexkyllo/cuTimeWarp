@@ -126,6 +126,23 @@ __host__ void comparison(std::vector<float> X, int time_series_lenght,
 
             cudaMemcpy(E, dE, m * n * sizeof(float), cudaMemcpyDeviceToHost);
 
+
+            //parameters need to revise
+
+            //distance matrix
+            float *D_tiled ;
+            D_tiled = (float*) malloc(m * n * sizeof(float));
+
+            //TODO: //need to check again
+            //initializing distance matrix with 0    
+            for (int i = 0; i < m * n; i++)
+                D_tiled[i]=0.0f;
+
+            //TODO: I need to remove the memcopy from the soft_dtw to here
+            //for timing 
+            soft_dtw_tiled(a , b, D_tiled, m, n , 16 ) ;
+
+            
             std::cout << " i, j  squared Euclidean distances Execution Time , "
                          "softdtw cuda naive Execution Time, softdtw grad cuda "
                          "naive\n";
