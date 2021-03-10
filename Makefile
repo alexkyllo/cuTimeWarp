@@ -9,9 +9,11 @@ CU_LDFLAGS = -lcublas
 .PHONY = default build clean test fmt report
 FIGS =
 
+# list the CUDA kernel object files
 CU_OBJ = obj/euclid_dist.o obj/helper_functions.o obj/soft_dtw.o \
 obj/soft_dtw_naive.o \
 obj/soft_dtw_naive_multi.o \
+obj/soft_dtw_stencil.o \
 
 $(shell mkdir -p bin/ obj/)
 

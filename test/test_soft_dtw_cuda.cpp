@@ -361,7 +361,7 @@ TEST_CASE("Test squared Euclidan distance multi")
     cudaFree(dD);
 }
 
-TEST_CASE("soft dtw cuda multi nX = 1, nY = 1")
+TEST_CASE("soft dtw cuda multi nX is 1 nY is 1")
 {
     int m = 5;
     int k = 1;
@@ -409,7 +409,7 @@ R expected:
     cudaFree(R);
 }
 
-TEST_CASE("soft dtw cuda multi nX = 2, nY = 2")
+TEST_CASE("soft dtw cuda multi nX is 2 nY is 2")
 {
     const int m = 5;
     const int k = 1;
@@ -455,10 +455,72 @@ R expected:
 [inf 25.     11.     10.8614 10.8054 10.792  10.792  10.792     2.8054     inf]
 [inf inf     inf     inf     inf     inf     inf     inf           inf     inf]
     */
-    // std::cout << "cost: " << cost << std::endl;
     // print_matrix(R, nX * nY * (m + 2), n + 2);
     float hR[m2n2]{0};
     cudaMemcpy(hR, R, m2n2 * sizeof(float), cudaMemcpyDeviceToHost);
+    REQUIRE(is_close(2.80539, costs[0]));
+    REQUIRE(is_close(26.86135, costs[1]));
+    REQUIRE(is_close(26.86135, costs[2]));
+    REQUIRE(is_close(2.80539, costs[3]));
+    delete[] a;
+    delete[] b;
+    cudaFree(D);
+    cudaFree(da);
+    cudaFree(db);
+    cudaFree(R);
+}
+
+
+TEST_CASE("soft dtw cuda stencil") // TODO: FIX FAILING TEST
+{
+    const int m = 5;
+    const int k = 1;
+    const int n = 8;
+    const int nX = 2;
+    const int nY = 2;
+    const float gamma = 0.1;
+    float *a =
+        new float[nX * m * k]{1.0, 2.0, 3.0, 3.0, 5.0, 5.0, 3.0, 3.0, 2.0, 1.0};
+    float *b = new float[nY * n * k]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0,
+                                     4.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 1.0};
+    // device arrays
+    float *D;
+    float *da;
+    float *db;
+    cudaMalloc(&da, m * nX * sizeof(float));
+    cudaMalloc(&db, n * nY * sizeof(float));
+    cudaMalloc(&D, m * n * nX * nY * sizeof(float));
+    cudaMemset(D, 0, m * n * nX * nY * sizeof(float));
+    cudaMemcpy(da, a, m * nX * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(db, b, n * nY * sizeof(float), cudaMemcpyHostToDevice);
+
+    float *R;
+    size_t m2n2 = nX * nY * (m + 2) * (n + 2);
+    size_t sz_R = m2n2 * sizeof(float);
+    cudaMalloc(&R, sz_R);
+
+    sq_euclid_dist_multi(da, db, D, nX, nY, m, n, k);
+
+    // float hD[m * n * nX * nY];
+    // cudaMemcpy(&hD, D, m * n * nX * nY * sizeof(float),
+    // cudaMemcpyDeviceToHost); print_matrix(hD, m * nX * nY, n);
+
+    float costs[nX * nY];
+    softdtw_cuda_stencil(D, R, (float *)&costs, nX * nY, m, n, gamma);
+    /*
+R expected:
+[0. inf     inf     inf     inf     inf     inf     inf       inf          inf]
+[inf  0.      1.      2.      3.      4.      5.      6.       15.         inf]
+[inf  1.     -0.     -0.     -0.     -0.     -0.     -0.        4.         inf]
+[inf  5.      1.      0.9307  0.9307  0.9307  0.9307  0.9307    1.         inf]
+[inf  9.      2.      1.8901  1.8614  1.8613  1.8613  1.8613    1.8901     inf]
+[inf 25.     11.     10.8614 10.8054 10.792  10.792  10.792     2.8054     inf]
+[inf inf     inf     inf     inf     inf     inf     inf           inf     inf]
+    */
+    print_matrix(costs, nX, nY);
+    float hR[m2n2]{0};
+    cudaMemcpy(hR, R, m2n2 * sizeof(float), cudaMemcpyDeviceToHost);
+    print_matrix(hR, nX * nY * (m + 2), n + 2);
     REQUIRE(is_close(2.80539, costs[0]));
     REQUIRE(is_close(26.86135, costs[1]));
     REQUIRE(is_close(26.86135, costs[2]));
