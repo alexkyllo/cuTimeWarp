@@ -103,7 +103,7 @@ __global__ void softdtw_stencil(float *D, float *R, float *cost, uint nD,
         // write this from the stencil back to the cost array in global memory
         if (p == passes - 1 && tx + jj == pp && tx < m + 1 && jj < n + 1)
         {
-            cost[bD] = stencil[prev2_idx + tx];
+            cost[bx] = stencil[prev2_idx + tx];
         }
     }
 }

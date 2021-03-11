@@ -176,13 +176,13 @@ __host__ void sq_euclid_dist_multi(const float *X, const float *Y, float *D,
                         &X[i * (m * k)],           // second matrix
                         k,                         // stride of second matrix
                         &beta,                     // scalar for C
-                        &XY[(i * nX + j) * m * n], // result matrix
+                        &XY[(i * nY + j) * m * n], // result matrix
                         n                          // stride of result matrix
             );
             // compute XX + YY - 2XY for each pair of X and Y
             euclid_dist<<<block_size_m, grid_size_m>>>(
-                m, n, &XX[i * m], &YY[j * n], &XY[(i * nX + j) * m * n],
-                &D[(i * nX + j) * m * n]);
+                m, n, &XX[i * m], &YY[j * n], &XY[(i * nY + j) * m * n],
+                &D[(i * nY + j) * m * n]);
         }
     }
     cublasDestroy(handle);
