@@ -515,10 +515,10 @@ R expected:
 [inf 25.     11.     10.8614 10.8054 10.792  10.792  10.792     2.8054     inf]
 [inf inf     inf     inf     inf     inf     inf     inf           inf     inf]
     */
-    print_matrix(costs, nX, nY);
+    // print_matrix(costs, nX, nY);
     float hR[m2n2]{0};
     cudaMemcpy(hR, R, m2n2 * sizeof(float), cudaMemcpyDeviceToHost);
-    print_matrix(hR, nX * nY * (m + 2), n + 2);
+    // print_matrix(hR, nX * nY * (m + 2), n + 2);
     // print_matrix(hR, (m + 2), n + 2);
     REQUIRE(is_close(2.80539, costs[0]));
     delete[] a;

@@ -94,22 +94,16 @@ __global__ void softdtw_stencil(float *D, float *R, float *cost, uint nD,
         // shared memory back to global memory
         if (is_wave)
         {
-            if (bx == 0)
-                printf("pass %d tid %d loading %.2f to R[%d]\n", p, tx,
-                       stencil[prev2_idx + tx], (i - 1) * (n + 2) + (j - 1));
+            // if (bx == 0)
+            //     printf("pass %d tid %d loading %.2f to R[%d]\n", p, tx,
+            //            stencil[prev2_idx + tx], (i - 1) * (n + 2) + (j - 1));
             R[bD2 + tx * (n + 2) + jj] = stencil[prev2_idx + tx];
         }
         // R[m,n] is the best path total cost, the last thread should
         // write this from the stencil back to the cost array in global memory
-        if (p == passes - 1 && tx + jj == pp && tx < m + 1 &&
-            jj < n + 1) // == blockDim.x - 1)
+        if (p == passes - 1 && tx + jj == pp && tx < m + 1 && jj < n + 1)
         {
-            if (bx == 0)
-                printf("pass %d tid %d\n", p, tx);
             cost[bD] = stencil[prev2_idx + tx];
-            // if (bx == 0)
-
-            // cost[bD] = stencil[prev2_idx + jj + 2];
         }
     }
 }
