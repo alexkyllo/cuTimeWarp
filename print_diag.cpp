@@ -60,7 +60,7 @@ void print_diag(const char *X, const uint m, const uint n)
     }
 }
 
-float softdtw_stencil(float *D, float *R, uint m, uint n, float gamma)
+float _softdtw_stencil(float *D, float *R, uint m, uint n, float gamma)
 {
     // dynamic shared memory diagonal buffer array for caching the previous
     // diagonals.
@@ -147,6 +147,75 @@ float softdtw_stencil(float *D, float *R, uint m, uint n, float gamma)
         }
         print_matrix(R, (m + 2), (n + 2));
     }
+    return cost;
+}
+
+float softdtw_stencil(float *D, float *R, uint m, uint n, float gamma)
+{
+    uint max_dim = max(m, n);
+    float cost = 0;
+    float *stencil = new float[(max_dim + 2) * 3];
+    const uint passes = 2 * max_dim - 2;
+    for (uint p = 0; p < passes; p++)
+    {
+        printf("pass %d\n", p);
+        for (uint tx = 0; tx < max_dim + 2; tx++)
+        {
+            uint pp = p;
+            uint jj = max((uint)0, min(pp - tx, n - 1));
+            uint i = tx + 1;
+            uint j = jj + 1;
+            uint cur_idx = ((p + 2) % 3) * (max_dim + 2);
+            uint prev_idx = ((p + 1) % 3) * (max_dim + 2);
+            uint prev2_idx = (p % 3) * (max_dim + 2);
+            bool is_wave = tx + jj == pp && tx < m && jj < n;
+            if (is_wave)
+            {
+                if (p == 0 && tx == 0)
+                {
+                    stencil[prev2_idx] = 0;
+                }
+                printf("tid %d loading R[%d, %d] = %.2f into prev2[%d]\n", tx,
+                       i - 1, j - 1, R[tx * (n + 2) + jj], jj);
+                stencil[prev2_idx + jj] = R[tx * (n + 2) + jj];
+            }
+        }
+        for (uint tx = 0; tx < max_dim + 2; tx++)
+        {
+            uint pp = p - 2;
+            uint jj = max((uint)0, min(pp - tx, n - 1));
+            uint i = tx + 1;
+            uint j = jj + 1;
+            uint cur_idx = ((pp + 2) % 3) * (max_dim + 2);
+            uint prev_idx = ((pp + 1) % 3) * (max_dim + 2);
+            uint prev2_idx = (pp % 3) * (max_dim + 2);
+            bool is_wave = tx + jj == pp && tx < m + 1 && jj < n + 1;
+            if (is_wave)
+            {
+                float c = D[(i - 1) * n + j - 1];
+                printf("tid %d reading %.2f from D[%d,%d]\n", tx, c, jj, tx);
+                float r1 = stencil[prev_idx + i];
+                float r2 = stencil[prev_idx + i - 1];
+                float r3 = stencil[prev2_idx + i - 1];
+                // float r1 = R[(i - 1) * (n + 2) + j];
+                // float r2 = R[i * (n + 2) + j - 1];
+                // float r3 = R[(i - 1) * (n + 2) + j - 1];
+                printf("tid %d reading %.2f from prev[%d]\n", tx, r1, i);
+                printf("tid %d reading %.2f from prev[%d]\n", tx, r2, i - 1);
+                printf("tid %d reading %.2f from prev2[%d]\n", tx, r3, i - 1);
+                double prev_min = softmin(r1, r2, r3, gamma);
+                printf("tid %d writing cost %.2f to cur[%d]\n", tx,
+                       c + prev_min, i);
+                stencil[cur_idx + i] = c + prev_min;
+                // TODO: doesn't work if this line is removed
+                // R[i * (n + 2) + j] = c + prev_min;
+                printf("tid %d writing %.2f to R[%d, %d]\n", tx,
+                       stencil[prev2_idx + (i - 1)], i - 1, j - 1);
+                R[(i - 1) * (n + 2) + (j - 1)] = stencil[prev2_idx + (i - 1)];
+            }
+        }
+    }
+    cost = R[m * (n + 2) + n];
     return cost;
 }
 
