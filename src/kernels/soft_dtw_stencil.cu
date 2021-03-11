@@ -1,6 +1,7 @@
 #include "helper_functions.cuh"
 #include "soft_dtw_stencil.cuh"
 #include <stdio.h>
+
 /** Kernel function for computing Soft DTW on pairwise Euclidean
  * distance matrix for multivariate time series with CUDA.
  * Uses a shared memory stencil for caching the previous diagonal
@@ -57,12 +58,6 @@ __global__ void softdtw_stencil(float *D, float *R, float *cost, uint nD,
             {
                 stencil[prev2_idx] = 0;
             }
-            // if (bx == 0)
-            //{
-            // printf("pass %d\n", p);
-            // printf("thread %d setting stencil[%d] to R[%d]\n", tx,
-            //        prev_idx + tx, bD2 + (i - 1) * (n + 2) + j);
-            //}
             stencil[prev2_idx + jj] = R[bD2 + tx * (n + 2) + jj];
         }
         // synchronize to make sure shared mem is done loading
@@ -94,9 +89,6 @@ __global__ void softdtw_stencil(float *D, float *R, float *cost, uint nD,
         // shared memory back to global memory
         if (is_wave)
         {
-            // if (bx == 0)
-            //     printf("pass %d tid %d loading %.2f to R[%d]\n", p, tx,
-            //            stencil[prev2_idx + tx], (i - 1) * (n + 2) + (j - 1));
             R[bD2 + tx * (n + 2) + jj] = stencil[prev2_idx + tx];
         }
         // R[m,n] is the best path total cost, the last thread should
