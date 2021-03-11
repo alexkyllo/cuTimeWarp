@@ -79,7 +79,9 @@ __host__ void softdtw_grad_cuda_naive(float *D, float *R, float *E, uint m,
 __host__ void softdtw_cuda_naive_multi(float *D, float *R, float *costs,
                                        uint nD, uint m, uint n, float gamma);
 
-__host__ void soft_dtw_tiled(float *a , float *b, float *D , uint m, uint n , uint tile_width );
+__host__ void soft_dtw_tiled(float *da, float *db, float *D_, 
+                             uint tile_width, uint total_tiles_waves,uint total_tiles_columns,
+                             uint total_tiles_rows, uint min_tiles,float gamma  );
 
 /** Host function for computing Soft DTW on pairwise Euclidean distance matrix
  * for multivariate time series with CUDA.
