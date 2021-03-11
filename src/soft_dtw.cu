@@ -419,7 +419,7 @@ __host__ void softdtw_cuda_stencil(float *D, float *R, float *costs, uint nD,
         R, (m + 2) * (n + 2), nD, std::numeric_limits<float>::infinity());
 
     dim3 B = dim3(nD);
-    dim3 TPB = dim3(max(m, n));
+    dim3 TPB = dim3(max(m + 2, n + 2));
     uint SMEM = nD * (max(m, n) + 2) * 3 * sizeof(float);
     float *d_path_cost;
     cudaMalloc(&d_path_cost, nD * sizeof(float));
