@@ -25,7 +25,7 @@ fmt:
 	cd src && clang-format -i *.cpp *.hpp *.cu *.cuh *.hcu
 
 ## Build binaries
-build: bin/dtw_cpu bin/soft_dtw_perf
+build: bin/dtw_cpu bin/soft_dtw_perf bin/soft_dtw_perf_multi
 
 bin/dtw_cpu: src/dtw_cpu.cpp
 	$(CC) $(CFLAGS) $^ -o $@
@@ -37,6 +37,9 @@ obj/test.o: test/test.cpp test/catch.h
 	$(CC) -std=c++11 test/test.cpp -c -o $@
 
 obj/soft_dtw_perf_main.o: src/soft_dtw_perf_main.cpp
+	$(CC) -I$(CUDA_HOME)/include $(CFLAGS) -c $< -o $@
+
+obj/soft_dtw_perf_multi.o: src/soft_dtw_perf_multi.cpp
 	$(CC) -I$(CUDA_HOME)/include $(CFLAGS) -c $< -o $@
 
 obj/soft_dtw.o: src/soft_dtw.cu
@@ -68,6 +71,9 @@ bin/lbfgs: src/lbfgs_main.cpp src/soft_dtw_cost.hpp
 	$(CC) -I./inc/Eigen -I./inc/ $(CFLAGS) src/lbfgs_main.cpp -o bin/lbfgs -lblas
 
 bin/soft_dtw_perf: obj/soft_dtw_perf_main.o $(CU_OBJ)
+	$(NVCC) $^ -o $@ $(CU_LDFLAGS)
+
+bin/soft_dtw_perf_multi: obj/soft_dtw_perf_multi.o $(CU_OBJ)
 	$(NVCC) $^ -o $@ $(CU_LDFLAGS)
 
 ## Compile the PDF report
