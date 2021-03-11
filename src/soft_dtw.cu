@@ -298,41 +298,45 @@ __host__ void softdtw_grad_cuda_naive(float *D, float *R, float *E, uint m,
 /** Host function for computing soft DTW tiled and shared memory version
  *  we consider the tile with as square, otherwise need to define tile width and
  * height
- * @param a The first time series data
- * @param b The second time series data
- * @param D The distance matrix
- * @param m Length of first time series
- * @param n Length of second time series
- * @param tile_width the width of our tiled for takin the advantage of shared
+ * @param da The device array for the first time series data
+ * @param db The device array for the second time series data
+ * @param D_tiled The device array for the distance matrix
+ * @param tile_width the width of our tiled for taking the advantage of shared
  * memory
+ * @param total_tiles_waves the total number of tiles
+ * @param total_tiles_columns the total number of tiles in one column
+ * @param total_tiles_rows the total number of tiles in one row
+ * @param min_tiles the minimum number of possible tiles 
+ *    
  */
-__host__ void soft_dtw_tiled(float *a, float *b, float *D, uint m, uint n,
-                             uint tile_width)
+__host__ void soft_dtw_tiled(float *da, float *db, float *D_, 
+                             uint tile_width, uint total_tiles_waves,uint total_tiles_columns,
+                             uint total_tiles_rows, uint min_tiles ,float gamma )
 {
-    uint total_tiles_columns = (m + tile_width - 1) / tile_width;
-    uint total_tiles_rows = (n + tile_width - 1) / tile_width;
-    uint total_tiles_waves = total_tiles_columns + total_tiles_rows - 1;
+    // uint total_tiles_columns = (m + tile_width - 1) / tile_width;
+    // uint total_tiles_rows = (n + tile_width - 1) / tile_width;
+    // uint total_tiles_waves = total_tiles_columns + total_tiles_rows - 1;
 
-    uint min_tiles = min(total_tiles_columns, total_tiles_rows);
-    uint max_tiles = max(total_tiles_columns, total_tiles_rows);
+    // uint min_tiles = min(total_tiles_columns, total_tiles_rows);
+    // uint max_tiles = max(total_tiles_columns, total_tiles_rows);
 
-    uint tile_size = tile_width * tile_width;
+    // uint tile_size = tile_width * tile_width;
 
-    size_t mn_size = m * n * sizeof(float);
-    size_t m_size = m * sizeof(float);
-    size_t n_size = n * sizeof(float);
+    // size_t mn_size = m * n * sizeof(float);
+    // size_t m_size = m * sizeof(float);
+    // size_t n_size = n * sizeof(float);
 
-    float *da, *db;
-    float *D_;
-    cudaMalloc(&da, m_size);
-    cudaMalloc(&db, n_size);
-    cudaMalloc(&D_, mn_size);
+    // float *da, *db;
+    // float *D_;
+    // cudaMalloc(&da, m_size);
+    // cudaMalloc(&db, n_size);
+    // cudaMalloc(&D_, mn_size);
 
-    cudaMemcpy(da, a, m_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(db, b, n_size, cudaMemcpyHostToDevice);
+    // cudaMemcpy(da, a, m_size, cudaMemcpyHostToDevice);
+    // cudaMemcpy(db, b, n_size, cudaMemcpyHostToDevice);
 
-    // TODO: not yet sure about this one, need to check
-    cudaMemcpy(D_, D, mn_size, cudaMemcpyHostToDevice);
+    // // TODO: not yet sure about this one, need to check
+    // cudaMemcpy(D_, D, mn_size, cudaMemcpyHostToDevice);
 
     // start wave fron t process
     // Populate dependency managed by loop
@@ -350,12 +354,12 @@ __host__ void soft_dtw_tiled(float *a, float *b, float *D, uint m, uint n,
 
         softdtw_global_tiled<<<blockPerGrid, threadPerBlock>>>(
             da, db, D_, waveId, total_tiles_rows, total_tiles_columns,
-            tile_width);
+            tile_width,gamma);
 
         cudaDeviceSynchronize();
     }
     // copy back data to host
-    cudaMemcpy(D, D_, mn_size, cudaMemcpyDeviceToDevice);
+    //cudaMemcpy(D, D_, mn_size, cudaMemcpyDeviceToDevice);
 
     // TODO: result verification here
 }

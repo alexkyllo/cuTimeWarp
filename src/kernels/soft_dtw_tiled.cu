@@ -1,4 +1,6 @@
 #include "soft_dtw_tiled.cuh"
+#include "helper_functions.cuh"
+
 
 // __global__ void softdtw_tiled_kernel(float *D, float *R, float *cost, uint m,
 //                                      uint n, float gamma)
@@ -30,9 +32,12 @@
  * @param gamma SoftDTW smoothing parameter
  */
 
+
+
+
 __global__ void softdtw_global_tiled(float *da, float *db, float *D, int waveId,
                                      uint total_tiles_rows,
-                                     uint total_tiles_columns, uint tile_width)
+                                     uint total_tiles_columns, uint tile_width,float gamma)
 {
 
     uint tile_Row = waveId - blockIdx.x;
@@ -47,7 +52,7 @@ __global__ void softdtw_global_tiled(float *da, float *db, float *D, int waveId,
 
     softdtw_tiled_wavefront(da, db, D, waveId, total_tiles_rows,
                             total_tiles_columns, tile_width, tile_Row,
-                            tile_Column);
+                            tile_Column,gamma);
 }
 
 /** Kernel function for computing tiled Soft DTW using wave front approach
@@ -71,7 +76,7 @@ __device__ void softdtw_tiled_wavefront(float *a, float *b, float *D,
                                         int waveId, uint total_tiles_rows,
                                         uint total_tiles_columns,
                                         uint tile_width, uint tileRow,
-                                        uint tileColumn)
+                                        uint tileColumn, float gamma)
 {
 
     // the main tile computation start here
@@ -103,11 +108,11 @@ __device__ void softdtw_tiled_wavefront(float *a, float *b, float *D,
         if (row >= 0 && row < tile_width && column >= 0 && column < tile_width)
         {
 
-            const int cost = fabs(seq2_local[row] - seq1_local[column]);
+            const float cost = fabs(seq2_local[row] - seq1_local[column]);
 
-            int upleft = 0;
-            int left = 0;
-            int up = 0;
+            float upleft = 0;
+            float left = 0;
+            float up = 0;
 
             // LEFT & UP
             if (tileColumn > 0 || column > 0) // left
@@ -143,7 +148,12 @@ __device__ void softdtw_tiled_wavefront(float *a, float *b, float *D,
             }
 
             // TODO: should be change to softmin
-            D[index] = ((int)cost / 100) + min(upleft, min(left, up));
+            //D[index] = ((int)cost / 100) + min(upleft, min(left, up));
+
+            D[index] = (float)cost + softmin(upleft, left, up, gamma);
+
+
+
         }
 
         __syncthreads();
