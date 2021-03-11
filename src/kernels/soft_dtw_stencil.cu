@@ -1,6 +1,6 @@
 #include "helper_functions.cuh"
 #include "soft_dtw_stencil.cuh"
-
+#include <stdio.h>
 /** Kernel function for computing Soft DTW on pairwise Euclidean
  * distance matrix for multivariate time series with CUDA.
  * Uses a shared memory stencil for caching the previous diagonal
@@ -41,6 +41,7 @@ __global__ void softdtw_stencil(float *D, float *R, float *cost, uint nD,
         uint jj = max(0, min(p - tx, n - 1));
         uint i = tx + 1;
         uint j = jj + 1;
+        bool is_wave = tx + jj == p && tx < m && jj < n;
 
         // calculate index offsets into the shared memory array for each
         // diagonal, using mod to rotate them.
@@ -52,20 +53,26 @@ __global__ void softdtw_stencil(float *D, float *R, float *cost, uint nD,
         // load a diagonal into shared memory
         // TODO: figure out how to index into the stencil and cycle
         // diagonals into and out of it
-        if (tx == 0)
+        if (p == 0 && tx == 0)
         {
             stencil[prev2_idx] = 0;
         }
         // Each thread loads the element above the element that it computes
         // into the stencil
-        if (tx + jj == p && (tx < m && jj < n))
+        if (is_wave)
         {
+            if (bx == 0)
+            {
+                // printf("pass %d\n", p);
+                // printf("thread %d setting stencil[%d] to R[%d]\n", tx,
+                //        prev_idx + tx, bD2 + (i - 1) * (n + 2) + j);
+            }
             stencil[prev_idx + tx] = R[bD2 + (i - 1) * (n + 2) + j];
         }
         // synchronize to make sure shared mem is done loading
         __syncthreads();
         // check if this thread is on the current diagonal and in-bounds
-        if (tx + jj == p && (tx < m && jj < n))
+        if (is_wave)
         {
             float c = D[bD + (i - 1) * n + j - 1];
             // read the elements of R from the stencil
@@ -78,18 +85,21 @@ __global__ void softdtw_stencil(float *D, float *R, float *cost, uint nD,
             double prev_min = softmin(r1, r2, r3, gamma);
             // write the current element of R back to the stencil
             // R[bD2 + i * (n + 2) + j] = c + prev_min;
-            stencil[cur_idx + i] = c + prev_min;
+            // stencil[cur_idx + i] = c + prev_min;
         }
         // make sure the diagonal is finished before proceeding to the next
         __syncthreads();
 
         // after a diagonal is no longer used, write that portion of R in
         // shared memory back to global memory
-        R[bD2 + tx * n + jj] = stencil[prev2_idx + tx];
+        // R[bD2 + tx * n + jj] = stencil[prev2_idx + tx];
+
+        if (is_wave)
+            R[bD2 + tx * (n + 2) + jj] = stencil[prev2_idx + tx];
 
         // R[m,n] is the best path total cost, the last thread should
         // write this from the stencil back to the cost array in global memory
-        if (tx == (blockDim.x - 1))
+        if (is_wave && tx == (blockDim.x - 1))
         {
             // cost[bx] = R[bD2 + m * (n + 2) + n];
             cost[bx] = stencil[prev2_idx + tx];
