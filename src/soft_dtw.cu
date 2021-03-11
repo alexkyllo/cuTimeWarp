@@ -313,32 +313,7 @@ __host__ void soft_dtw_tiled(float *da, float *db, float *D_,
                              uint tile_width, uint total_tiles_waves,uint total_tiles_columns,
                              uint total_tiles_rows, uint min_tiles ,float gamma )
 {
-    // uint total_tiles_columns = (m + tile_width - 1) / tile_width;
-    // uint total_tiles_rows = (n + tile_width - 1) / tile_width;
-    // uint total_tiles_waves = total_tiles_columns + total_tiles_rows - 1;
-
-    // uint min_tiles = min(total_tiles_columns, total_tiles_rows);
-    // uint max_tiles = max(total_tiles_columns, total_tiles_rows);
-
-    // uint tile_size = tile_width * tile_width;
-
-    // size_t mn_size = m * n * sizeof(float);
-    // size_t m_size = m * sizeof(float);
-    // size_t n_size = n * sizeof(float);
-
-    // float *da, *db;
-    // float *D_;
-    // cudaMalloc(&da, m_size);
-    // cudaMalloc(&db, n_size);
-    // cudaMalloc(&D_, mn_size);
-
-    // cudaMemcpy(da, a, m_size, cudaMemcpyHostToDevice);
-    // cudaMemcpy(db, b, n_size, cudaMemcpyHostToDevice);
-
-    // // TODO: not yet sure about this one, need to check
-    // cudaMemcpy(D_, D, mn_size, cudaMemcpyHostToDevice);
-
-    // start wave fron t process
+    // start wave front process
     // Populate dependency managed by loop
     for (int waveId = 0; waveId < total_tiles_waves; waveId++)
     {

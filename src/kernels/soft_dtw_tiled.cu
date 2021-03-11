@@ -88,13 +88,13 @@ __device__ void softdtw_tiled_wavefront(float *a, float *b, float *D,
     const int nWaves = tile_width * 2 - 1;
 
     // TODO: check with 1024
-    __shared__ float seq1_local[512];
-    __shared__ float seq2_local[512];
+    __shared__ float seq1[512];
+    __shared__ float seq2[512];
 
     __syncthreads();
 
-    seq1_local[tid] = a[tileColumn * tile_width + tid];
-    seq2_local[tid] = b[tileRow * tile_width + tid];
+    seq1[tid] = a[tileColumn * tile_width + tid];
+    seq2[tid] = b[tileRow * tile_width + tid];
 
     __syncthreads();
 
@@ -108,7 +108,7 @@ __device__ void softdtw_tiled_wavefront(float *a, float *b, float *D,
         if (row >= 0 && row < tile_width && column >= 0 && column < tile_width)
         {
 
-            const float cost = fabs(seq2_local[row] - seq1_local[column]);
+            const float cost = fabs(seq2[row] - seq1[column]);
 
             float upleft = 0;
             float left = 0;
@@ -151,8 +151,6 @@ __device__ void softdtw_tiled_wavefront(float *a, float *b, float *D,
             //D[index] = ((int)cost / 100) + min(upleft, min(left, up));
 
             D[index] = (float)cost + softmin(upleft, left, up, gamma);
-
-
 
         }
 
