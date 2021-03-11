@@ -14,6 +14,7 @@ CU_OBJ = obj/euclid_dist.o obj/helper_functions.o obj/soft_dtw.o \
 obj/soft_dtw_naive.o \
 obj/soft_dtw_naive_multi.o \
 obj/soft_dtw_stencil.o \
+obj/soft_dtw_tiled.o \
 
 $(shell mkdir -p bin/ obj/)
 
