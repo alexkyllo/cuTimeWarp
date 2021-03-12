@@ -2,39 +2,33 @@
  *  @file soft_dtw_perf_main.cpp
  */
 
+#include "soft_dtw.cuh" // includes host wrappers for the CUDA kernels
+#include <chrono>       // timing
 #include <cmath>
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
-#include <iostream>
-#include <limits>
-#include <chrono> // timing
-#include <cuda_runtime.h>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <vector>
-#include "kernels/soft_dtw_tiled.cuh"
-#include "kernels/soft_dtw_naive.cuh"
-#include "soft_dtw.cuh"
 
 using namespace std::chrono;
-
 
 bool is_close(float a, float b, float tol = 0.0001)
 {
     return std::abs(a - b) < tol;
 }
 
-
 /** Host function to record the performance of each kernel
  *  on a given dataset
- *  @param X A vector of time series dataset with lenght m
- *  @param time_series_lenght The length of each series in X
+ *  @param X A vector of time series dataset with len m
+ *  @param time_series_len The length of each series in X
  *  @param count The number of time series in Dataset
  *  @param filename The output CSV file, storing the timing
  */
-__host__ void comparison(std::vector<float> X, int time_series_lenght,
-                         int count, char *filename)
+void comparison(std::vector<float> X, int time_series_len, int count,
+                char *filename)
 {
     std::ofstream output_file;
     output_file.open(filename, std::ios_base::out);
@@ -52,18 +46,17 @@ __host__ void comparison(std::vector<float> X, int time_series_lenght,
         // memcpy(&X[X.size() - dataArraySize], &dataArray[0], dataArraySize *
         // sizeof(int));
 
-        const int m = time_series_lenght;
+        const int m = time_series_len;
 
         for (int j{i + 1}; j < count; j++)
         {
 
             float gamma = 0.1;
             float *b = &X[j];
-            const int n = time_series_lenght;
-            float *E  = (float*) malloc(m * n * sizeof(float));
-            float *D_naive  = (float*) malloc(m * n * sizeof(float));
-            
-            
+            const int n = time_series_len;
+            float *E = (float *)malloc(m * n * sizeof(float));
+            float *D_naive = (float *)malloc(m * n * sizeof(float));
+
             // device arrays
             float *da;
             cudaMalloc(&da, m * sizeof(float));
@@ -123,7 +116,8 @@ __host__ void comparison(std::vector<float> X, int time_series_lenght,
                     softdtw_cuda_naive_end - softdtw_cuda_naive_start)
                     .count();
 
-            cudaMemcpy(D_naive, D, m * n * sizeof(float), cudaMemcpyDeviceToHost);
+            cudaMemcpy(D_naive, D, m * n * sizeof(float),
+                       cudaMemcpyDeviceToHost);
 
             // the softdtw grad cuda naive kernel execution.....timing....
             std::cout << "STARTING softdtw grad cuda naive" << std::endl;
@@ -145,20 +139,19 @@ __host__ void comparison(std::vector<float> X, int time_series_lenght,
 
             cudaMemcpy(E, dE, m * n * sizeof(float), cudaMemcpyDeviceToHost);
 
+            // parameters need to revise
 
-            //parameters need to revise
+            // distance matrix
+            float *D_tiled;
+            D_tiled = (float *)malloc(m * n * sizeof(float));
 
-            //distance matrix
-            float *D_tiled ;
-            D_tiled = (float*) malloc(m * n * sizeof(float));
-
-            //TODO: //need to check again
-            //initializing distance matrix with 0    
+            // TODO: //need to check again
+            // initializing distance matrix with 0
             for (int i = 0; i < m * n; i++)
-                D_tiled[i]=0.0f;
+                D_tiled[i] = 0.0f;
 
-            //TODO: I need to remove the memcopy from the soft_dtw to here
-            //for timing 
+            // TODO: I need to remove the memcopy from the soft_dtw to here
+            // for timing
 
             uint tile_width = 512;
 
@@ -167,14 +160,13 @@ __host__ void comparison(std::vector<float> X, int time_series_lenght,
             uint total_tiles_waves = total_tiles_columns + total_tiles_rows - 1;
 
             uint min_tiles = std::min(total_tiles_columns, total_tiles_rows);
-            //uint max_tiles = std::max(total_tiles_columns, total_tiles_rows);
+            // uint max_tiles = std::max(total_tiles_columns, total_tiles_rows);
 
-            //uint tile_size = tile_width * tile_width;
+            // uint tile_size = tile_width * tile_width;
 
             size_t mn_size = m * n * sizeof(float);
             size_t m_size = m * sizeof(float);
             size_t n_size = n * sizeof(float);
-
 
             float *D_;
             cudaMalloc(&da, m_size);
@@ -185,49 +177,48 @@ __host__ void comparison(std::vector<float> X, int time_series_lenght,
             cudaMemcpy(db, b, n_size, cudaMemcpyHostToDevice);
 
             // TODO: not yet sure about this one, need to check
-           // cudaMemcpy(D_, D_tiled, mn_size, cudaMemcpyHostToDevice);
+            // cudaMemcpy(D_, D_tiled, mn_size, cudaMemcpyHostToDevice);
 
-
-            //start timer here
+            // start timer here
             // the softdtw tiled execution.....timing....
             std::cout << "STARTING softdtw tiled" << std::endl;
             auto softdtw_tiled_start =
                 std::chrono::high_resolution_clock::now();
 
-
             // start wave front process
-            soft_dtw_tiled(da,db,D_,tile_width,total_tiles_waves,total_tiles_columns
-                ,total_tiles_rows,min_tiles,gamma);
+            soft_dtw_tiled(da, db, D_, tile_width, total_tiles_waves,
+                           total_tiles_columns, total_tiles_rows, min_tiles,
+                           gamma);
 
             cudaDeviceSynchronize();
 
-            auto softdtw_tiled_end =
-                std::chrono::high_resolution_clock::now();
+            auto softdtw_tiled_end = std::chrono::high_resolution_clock::now();
             std::cout << "FINISHED softdtw tiled" << std::endl;
             auto softdtw_tiled_duration =
                 std::chrono::duration_cast<std::chrono::microseconds>(
-                    softdtw_tiled_end - softdtw_tiled_start).count();
+                    softdtw_tiled_end - softdtw_tiled_start)
+                    .count();
 
             // copy back data to host
             cudaMemcpy(D_tiled, D_, mn_size, cudaMemcpyDeviceToHost);
 
-
             std::cout << " i, j  squared Euclidean distances Execution Time , "
-                         "softdtw cuda naive Execution Time, softdtw grad cuda naive, softdtw tiled\n";
+                         "softdtw cuda naive Execution Time, softdtw grad cuda "
+                         "naive, softdtw tiled\n";
             std::cout << i << ", " << j << " , " << sq_euclid_dist_duration
                       << " , " << softdtw_cuda_naive_duration << " , "
-                      << softdtw_grad_cuda_naive_duration <<" , " <<softdtw_tiled_duration <<'\n';
+                      << softdtw_grad_cuda_naive_duration << " , "
+                      << softdtw_tiled_duration << '\n';
 
             output_file << i << ", " << j << " , " << sq_euclid_dist_duration
                         << "," << softdtw_cuda_naive_duration << ","
-                        << softdtw_grad_cuda_naive_duration <<","<<softdtw_tiled_duration<< '\n';
+                        << softdtw_grad_cuda_naive_duration << ","
+                        << softdtw_tiled_duration << '\n';
 
-            //error checking
+            // error checking
 
-            //for (int i=0 ; i < m*n ;i++) 
+            // for (int i=0 ; i < m*n ;i++)
             //    std::cout<< D_naive[i]  << " , " << D_tiled[i] <<std::endl;
-                    
-
 
             // delete[] a;
             delete[] D_tiled;
