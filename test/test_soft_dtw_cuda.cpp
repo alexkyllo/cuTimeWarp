@@ -789,15 +789,15 @@ TEST_CASE("soft dtw cuda multi nX is 1 nY is 1 Sakoe-chiba band")
     sq_euclid_dist(da, db, D, m, n, k);
 
     float costs = 0;
-    softdtw_cuda_naive_multi(D, R, &costs, 1, m, n, gamma, 4);
+    softdtw_cuda_naive_multi(D, R, &costs, 1, m, n, gamma, 3);
     /*
       R expected:
       0 inf inf inf inf inf inf inf inf inf
-      inf 0 1 2 3 inf inf inf inf inf
-      inf 1 -9.08334e-06 -1.36251e-05 -1.36251e-05 -1.36251e-05 inf inf inf inf
-      inf 5 0.999986 0.930672 0.930667 0.930667 0.999977 inf inf inf
-      inf 9 1.99999 1.89012 1.86135 1.86135 1.89011 1.99996 inf inf
-      inf inf 11 10.8614 10.8054 10.792 10.8054 10.8613 2.99996 inf
+      inf 0 1 2 inf inf inf inf inf inf
+      inf 1 -9.08334e-06 -1.36251e-05 -1.36251e-05 inf inf inf inf inf
+      inf 5 0.999986 0.930672 0.930667 0.999977 inf inf inf inf
+      inf inf 1.99999 1.89012 1.86135 1.89011 1.99996 inf inf inf
+      inf inf inf 10.8614 10.8054 10.8054 10.8613 2.99996 inf inf
       inf inf inf inf inf inf inf inf inf inf
     */
     // std::cout << "cost: " << cost << std::endl;

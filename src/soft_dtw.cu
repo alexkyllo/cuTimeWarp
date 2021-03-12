@@ -377,7 +377,7 @@ __host__ void softdtw_cuda_naive_multi(float *D, float *R, float *costs,
     dim3 B = dim3(nD);
     uint max_mn = max(m, n);
     // If bandwidth is set, we only need that many threads
-    // uint threads = bandwidth > 0 ? min(bandwidth, max_mn) : max_mn;
+    // uint threads = bandwidth > 0 ? min(bandwidth * 2, max_mn) : max_mn;
     uint threads = max_mn;
     assert(threads < 1025);
     dim3 TPB = dim3(threads);
