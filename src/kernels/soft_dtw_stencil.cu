@@ -20,7 +20,7 @@
  * @param gamma SoftDTW smoothing parameter
  */
 __global__ void softdtw_stencil(float *D, float *R, float *cost, uint nD,
-                                uint m, uint n, float gamma)
+                                uint m, uint n, float gamma, uint bandwidth)
 {
     // dynamic shared memory diagonal buffer array for caching the previous
     // diagonals.
@@ -50,8 +50,8 @@ __global__ void softdtw_stencil(float *D, float *R, float *cost, uint nD,
         uint cur_idx = (pp + 2) % 3 * (blockDim.x);
         uint prev_idx = (pp + 1) % 3 * (blockDim.x);
         uint prev2_idx = pp % 3 * (blockDim.x);
-        bool is_wave = tx + jj == pp && tx < m + 2 && jj < n + 2;
-        if (is_wave)
+        bool is_in_wave = tx + jj == pp && tx < m + 2 && jj < n + 2;
+        if (is_in_wave)
         {
             // load a diagonal into shared memory
             if (p == 0 && tx == 0)
@@ -62,7 +62,7 @@ __global__ void softdtw_stencil(float *D, float *R, float *cost, uint nD,
         }
         // synchronize to make sure shared mem is done loading
         __syncthreads();
-        // check if this thread is on the current diagonal and in-bounds
+
         pp = p - 2;
         jj = max(0, min(pp - tx, n));
         i = tx + 1;
@@ -70,8 +70,16 @@ __global__ void softdtw_stencil(float *D, float *R, float *cost, uint nD,
         cur_idx = (pp + 2) % 3 * (blockDim.x);
         prev_idx = (pp + 1) % 3 * (blockDim.x);
         prev2_idx = pp % 3 * (blockDim.x);
-        is_wave = tx + jj == pp && (tx < m + 1 && jj < n + 1);
-        if (is_wave)
+        // check if this thread is on the current diagonal and in-bounds
+        is_in_wave = tx + jj == pp && (tx < m + 1 && jj < n + 1);
+        bool is_in_band = true; // check_sakoe_chiba_band(m, n, i, j, 2);
+
+        // if (blockIdx.x == 0 && is_in_wave && !is_in_band)
+        // {
+        //     printf("out of band: pp %d i %d j %d\n", pp, i, j);
+        // }
+
+        if (is_in_wave && is_in_band)
         {
             float c = D[bD + (i - 1) * n + j - 1];
             // read the elements of R from the stencil
@@ -87,7 +95,7 @@ __global__ void softdtw_stencil(float *D, float *R, float *cost, uint nD,
 
         // after a diagonal is no longer used, write that portion of R in
         // shared memory back to global memory
-        if (is_wave)
+        if (is_in_wave && is_in_band)
         {
             R[bD2 + tx * (n + 2) + jj] = stencil[prev2_idx + tx];
         }

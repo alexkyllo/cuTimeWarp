@@ -99,6 +99,9 @@ __host__ void soft_dtw_tiled(float *da, float *db, float *D_, uint tile_width,
  * @param m Length of first time series
  * @param n Length of second time series
  * @param gamma SoftDTW smoothing parameter
+ * @param bandwidth Maximum warping distance from the diagonal to consider for
+ * optimal path calculation (Sakoe-Chiba band). Default = 0 = unlimited.
  */
 __host__ void softdtw_cuda_stencil(float *D, float *R, float *costs, uint nD,
-                                   uint m, uint n, float gamma);
+                                   uint m, uint n, float gamma,
+                                   uint bandwidth = 0);

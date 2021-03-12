@@ -402,9 +402,11 @@ __host__ void softdtw_cuda_naive_multi(float *D, float *R, float *costs,
  * @param m Length of first time series
  * @param n Length of second time series
  * @param gamma SoftDTW smoothing parameter
+ * @param bandwidth Maximum warping distance from the diagonal to consider for
+ * optimal path calculation (Sakoe-Chiba band). Default = 0 = unlimited.
  */
 __host__ void softdtw_cuda_stencil(float *D, float *R, float *costs, uint nD,
-                                   uint m, uint n, float gamma)
+                                   uint m, uint n, float gamma, uint bandwidth)
 {
     size_t m2n2 = nD * (m + 2) * (n + 2);
     // Launch a kernel to fill matrix R with infinity
@@ -419,7 +421,8 @@ __host__ void softdtw_cuda_stencil(float *D, float *R, float *costs, uint nD,
     float *d_path_cost;
     cudaMalloc(&d_path_cost, nD * sizeof(float));
     // Launch the kernel
-    softdtw_stencil<<<B, TPB, SMEM>>>(D, R, d_path_cost, nD, m, n, gamma);
+    softdtw_stencil<<<B, TPB, SMEM>>>(D, R, d_path_cost, nD, m, n, gamma,
+                                      bandwidth);
     // Copy the path cost back to host
     cudaMemcpy(costs, d_path_cost, nD * sizeof(float), cudaMemcpyDeviceToHost);
 

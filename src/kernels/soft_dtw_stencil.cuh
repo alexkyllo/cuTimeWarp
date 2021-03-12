@@ -18,4 +18,5 @@
  * @param gamma SoftDTW smoothing parameter
  */
 __global__ void softdtw_stencil(float *D, float *R, float *cost, uint nD,
-                                uint m, uint n, float gamma);
+                                uint m, uint n, float gamma,
+                                uint bandwidth = 0);

@@ -37,13 +37,10 @@ __global__ void softdtw_naive_kernel_multi(float *D, float *R, float *cost,
         uint jj = max(0, min(p - tx, n - 1));
         uint i = tx + 1;
         uint j = jj + 1;
-        int width = abs((int)m - (int)n) + bandwidth;
-        int lower = max(1, i - bandwidth);
-        int upper = min(max((int)m, (int)n), (int)i + width) + 1;
-        bool is_in_lower = m > n ? i >= lower : j >= lower;
-        bool is_in_upper = m > n ? i < upper : j < upper;
-        bool is_in_band = bandwidth == 0 || (is_in_lower && is_in_upper);
-        if (tx + jj == p && is_in_band && tx < m && jj < n)
+        bool is_in_wave = tx + jj == p;
+        bool is_in_bounds = tx < m && jj < n;
+        bool is_in_band = check_sakoe_chiba_band(m, n, i, j, bandwidth);
+        if (is_in_wave && is_in_bounds && is_in_band)
         {
             float c = D[bD + (i - 1) * n + j - 1];
             float r1 = R[bD2 + (i - 1) * (n + 2) + j];

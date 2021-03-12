@@ -1,5 +1,5 @@
 #include "helper_functions.cuh"
-
+#include <stdio.h>
 /** Host function for retrieving the number of SMs on the GPU device
  *  Useful for limiting the # of threadblocks to the # of SMs in a kernel launch
  *  @param device_num The device number, default 0
@@ -27,6 +27,29 @@ __device__ float softmin(float a, float b, float c, const float gamma)
     float sum = exp(a - max_of) + exp(b - max_of) + exp(c - max_of);
 
     return -gamma * (log(sum) + max_of);
+}
+
+/** Check whether i,j are within the Sakoe-Chiba band
+ *  @param m The length of the first time series
+ *  @param n The length of the second time series
+ *  @param i The cell row index
+ *  @param j The cell column index
+ *  @param bandwidth Maximum warping distance from the diagonal to consider for
+ *  optimal path calculation (Sakoe-Chiba band). 0 = unlimited.
+ */
+__device__ bool check_sakoe_chiba_band(int m, int n, int i, int j,
+                                       int bandwidth)
+{
+    if (bandwidth == 0)
+    {
+        return true;
+    }
+    int width = abs(m - n) + bandwidth;
+    int lower = max(1, i - bandwidth);
+    int upper = min(max(m, n), i + width) + 1;
+    bool is_in_lower = m > n ? i >= lower : j >= lower;
+    bool is_in_upper = m > n ? i < upper : j < upper;
+    return is_in_lower && is_in_upper;
 }
 
 /** Kernel to fill a matrix with infinity except for index 0 = 0.0
