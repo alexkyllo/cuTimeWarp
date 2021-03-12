@@ -14,7 +14,9 @@
  * @param m Length of first time series
  * @param n Length of second time series
  * @param gamma SoftDTW smoothing parameter
+ * @param bandwidth Maximum warping distance from the diagonal to consider for
+ * optimal path calculation (Sakoe-Chiba band). Default = 0 = unlimited.
  */
 __global__ void softdtw_naive_kernel_multi(float *D, float *R, float *cost,
-                                           uint nD, uint m, uint n,
-                                           float gamma);
+                                           uint nD, uint m, uint n, float gamma,
+                                           uint bandwidth = 0);

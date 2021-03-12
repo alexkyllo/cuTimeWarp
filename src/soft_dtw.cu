@@ -7,6 +7,7 @@
 #include "kernels/soft_dtw_naive_multi.cuh"
 #include "kernels/soft_dtw_stencil.cuh"
 #include "kernels/soft_dtw_tiled.cuh"
+#include <cassert>
 #include <cmath>
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
@@ -359,9 +360,12 @@ __host__ void soft_dtw_tiled(float *da, float *db, float *D_, uint tile_width,
  * @param m Length of first time series
  * @param n Length of second time series
  * @param gamma SoftDTW smoothing parameter
+ * @param bandwidth Maximum warping distance from the diagonal to consider for
+ * optimal path calculation (Sakoe-Chiba band). Default = 0 = unlimited.
  */
 __host__ void softdtw_cuda_naive_multi(float *D, float *R, float *costs,
-                                       uint nD, uint m, uint n, float gamma)
+                                       uint nD, uint m, uint n, float gamma,
+                                       uint bandwidth)
 {
     size_t m2n2 = nD * (m + 2) * (n + 2);
     // Launch a kernel to fill matrix R with infinity
@@ -371,11 +375,17 @@ __host__ void softdtw_cuda_naive_multi(float *D, float *R, float *costs,
         R, (m + 2) * (n + 2), nD, std::numeric_limits<float>::infinity());
 
     dim3 B = dim3(nD);
-    dim3 TPB = dim3(max(m, n));
+    uint max_mn = max(m, n);
+    // If bandwidth is set, we only need that many threads
+    // uint threads = bandwidth > 0 ? min(bandwidth, max_mn) : max_mn;
+    uint threads = max_mn;
+    assert(threads < 1025);
+    dim3 TPB = dim3(threads);
     float *d_path_cost;
     cudaMalloc(&d_path_cost, nD * sizeof(float));
     // Launch the kernel
-    softdtw_naive_kernel_multi<<<B, TPB>>>(D, R, d_path_cost, nD, m, n, gamma);
+    softdtw_naive_kernel_multi<<<B, TPB>>>(D, R, d_path_cost, nD, m, n, gamma,
+                                           bandwidth);
     // Copy the path cost back to host
     cudaMemcpy(costs, d_path_cost, nD * sizeof(float), cudaMemcpyDeviceToHost);
 

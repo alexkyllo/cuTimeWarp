@@ -44,50 +44,59 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     cudaMemset(dR, 0, sz_R);
 
     // the pairwise squared Euclidean distances kernel execution
-    auto sq_euclid_dist_start = high_resolution_clock::now();
-
+    auto start = high_resolution_clock::now();
     sq_euclid_dist_multi(dX, dY, dD, nX, nY, m, n, k);
-
     cudaDeviceSynchronize();
-    auto sq_euclid_dist_end = high_resolution_clock::now();
-    auto sq_euclid_dist_duration =
-        duration_cast<microseconds>(sq_euclid_dist_end - sq_euclid_dist_start)
-            .count();
-
-    std::cout << "sq_euclid_dist_multi " << sq_euclid_dist_duration
-              << std::endl;
+    auto end = high_resolution_clock::now();
+    auto duration = duration_cast<microseconds>(end - start).count();
+    std::cout << "sq_euclid_dist_multi " << duration << std::endl;
 
     // the softdtw cuda naive kernel execution .....timing....
-    auto softdtw_cuda_naive_start = high_resolution_clock::now();
-
     float *costs = new float[nX * nY]{0};
+    start = high_resolution_clock::now();
     softdtw_cuda_naive_multi(dD, dR, costs, nX * nY, m, n, gamma);
-
     cudaDeviceSynchronize();
-    auto softdtw_cuda_naive_end = high_resolution_clock::now();
-    auto softdtw_cuda_naive_duration =
-        duration_cast<microseconds>(softdtw_cuda_naive_end -
-                                    softdtw_cuda_naive_start)
-            .count();
-
-    std::cout << "softdtw_cuda_naive_multi " << softdtw_cuda_naive_duration
-              << std::endl;
-
+    end = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(end - start).count();
+    std::cout << "softdtw_cuda_naive_multi " << duration << std::endl;
     // zero out costs so we can reuse it
     memset(costs, 0, nX * nY * sizeof(float));
-    // the softdtw cuda stencil kernel execution .....timing....
-    auto softdtw_cuda_stencil_start = high_resolution_clock::now();
-    softdtw_cuda_stencil(dD, dR, costs, nX * nY, m, n, gamma);
 
+    // the softdtw cuda naive kernel execution bandwidth = 80
+    start = high_resolution_clock::now();
+    softdtw_cuda_naive_multi(dD, dR, costs, nX * nY, m, n, gamma, 80);
     cudaDeviceSynchronize();
-    auto softdtw_cuda_stencil_end = high_resolution_clock::now();
-    auto softdtw_cuda_stencil_duration =
-        duration_cast<microseconds>(softdtw_cuda_stencil_end -
-                                    softdtw_cuda_stencil_start)
-            .count();
+    end = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(end - start).count();
+    std::cout << "softdtw_cuda_naive_multi_bw_80 " << duration << std::endl;
+    memset(costs, 0, nX * nY * sizeof(float));
 
-    std::cout << "softdtw_cuda_stencil_multi " << softdtw_cuda_stencil_duration
-              << std::endl;
+    // the softdtw cuda naive kernel execution bandwidth = 60
+    start = high_resolution_clock::now();
+    softdtw_cuda_naive_multi(dD, dR, costs, nX * nY, m, n, gamma, 60);
+    cudaDeviceSynchronize();
+    end = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(end - start).count();
+    std::cout << "softdtw_cuda_naive_multi_bw_60 " << duration << std::endl;
+    memset(costs, 0, nX * nY * sizeof(float));
+
+    // the softdtw cuda naive kernel execution bandwidth = 40
+    start = high_resolution_clock::now();
+    softdtw_cuda_naive_multi(dD, dR, costs, nX * nY, m, n, gamma, 40);
+    cudaDeviceSynchronize();
+    end = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(end - start).count();
+    std::cout << "softdtw_cuda_naive_multi_bw_40 " << duration << std::endl;
+    memset(costs, 0, nX * nY * sizeof(float));
+
+    // the softdtw cuda stencil kernel execution .....timing....
+    start = high_resolution_clock::now();
+    softdtw_cuda_stencil(dD, dR, costs, nX * nY, m, n, gamma);
+    cudaDeviceSynchronize();
+    end = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(end - start).count();
+    std::cout << "softdtw_cuda_stencil_multi " << duration << std::endl;
+
     delete[] costs;
     cudaFree(dX);
     cudaFree(dY);

@@ -16,9 +16,12 @@
  * @param m Length of first time series
  * @param n Length of second time series
  * @param gamma SoftDTW smoothing parameter
+ * @param bandwidth Maximum warping distance from the diagonal to consider for
+ * optimal path calculation (Sakoe-Chiba band). Default = 0 = unlimited.
  */
 __global__ void softdtw_naive_kernel_multi(float *D, float *R, float *cost,
-                                           uint nD, uint m, uint n, float gamma)
+                                           uint nD, uint m, uint n, float gamma,
+                                           uint bandwidth)
 {
     const uint tx = threadIdx.x;
     const uint bx = blockIdx.x;
@@ -34,15 +37,19 @@ __global__ void softdtw_naive_kernel_multi(float *D, float *R, float *cost,
         uint jj = max(0, min(p - tx, n - 1));
         uint i = tx + 1;
         uint j = jj + 1;
-
-        if (tx + jj == p && (tx < m && jj < n))
+        bool is_in_band =
+            std::abs((int)i - (int)j) < bandwidth || bandwidth == 0;
+        if (is_in_band)
         {
-            float c = D[bD + (i - 1) * n + j - 1];
-            float r1 = R[bD2 + (i - 1) * (n + 2) + j];
-            float r2 = R[bD2 + i * (n + 2) + j - 1];
-            float r3 = R[bD2 + (i - 1) * (n + 2) + j - 1];
-            double prev_min = softmin(r1, r2, r3, gamma);
-            R[bD2 + i * (n + 2) + j] = c + prev_min;
+            if (tx + jj == p && (tx < m && jj < n))
+            {
+                float c = D[bD + (i - 1) * n + j - 1];
+                float r1 = R[bD2 + (i - 1) * (n + 2) + j];
+                float r2 = R[bD2 + i * (n + 2) + j - 1];
+                float r3 = R[bD2 + (i - 1) * (n + 2) + j - 1];
+                double prev_min = softmin(r1, r2, r3, gamma);
+                R[bD2 + i * (n + 2) + j] = c + prev_min;
+            }
         }
         __syncthreads();
     }

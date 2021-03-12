@@ -75,13 +75,17 @@ __host__ void softdtw_grad_cuda_naive(float *D, float *R, float *E, uint m,
  * @param m Length of first time series
  * @param n Length of second time series
  * @param gamma SoftDTW smoothing parameter
+ * @param bandwidth Maximum warping distance from the diagonal to consider for
+ * optimal path calculation (Sakoe-Chiba band). Default = 0 = unlimited.
  */
 __host__ void softdtw_cuda_naive_multi(float *D, float *R, float *costs,
-                                       uint nD, uint m, uint n, float gamma);
+                                       uint nD, uint m, uint n, float gamma,
+                                       uint bandwidth = 0);
 
-__host__ void soft_dtw_tiled(float *da, float *db, float *D_, 
-                             uint tile_width, uint total_tiles_waves,uint total_tiles_columns,
-                             uint total_tiles_rows, uint min_tiles,float gamma  );
+__host__ void soft_dtw_tiled(float *da, float *db, float *D_, uint tile_width,
+                             uint total_tiles_waves, uint total_tiles_columns,
+                             uint total_tiles_rows, uint min_tiles,
+                             float gamma);
 
 /** Host function for computing Soft DTW on pairwise Euclidean distance matrix
  * for multivariate time series with CUDA.
