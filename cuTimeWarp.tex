@@ -135,7 +135,7 @@ results on un-normalized data due to drift that ``may be caused by patient
 movement, dirty lead wires/electrodes, loose electrodes, and so on,'' and which
 ``does not have any medical significance.'' Z-normalization also tends to make
 the iterative process of minimizing the cost function through gradient descent
-or Newtonian methods more efficient because its hyperplane is not
+or quasi-Newtonian methods more efficient because its hyperplane is not
 disproportionately stretched in any one dimension, so the step size in any
 direction is the same relative to the scale of that dimension. (TODO: explain
 this better, find a citation)
@@ -178,8 +178,12 @@ for computing the SoftDTW on CPU and GPU.
 Given a set of many multivariate time series of the same length and number of
 variables, we can compute the Soft-DTW distance between every time series and
 every other time series in the set by computing, in parallel for each pair, a
-pairwise squared Euclidian matrix, then applying the Soft-DTW
-calculation on the distance matrix.
+pairwise squared Euclidian matrix, then applying the Soft-DTW calculation on the
+distance matrix. This computation, however, also has an $O(n^2)$ complexity and
+can potentially take longer than the DTW computation itself. For univariate time
+series, we can save this cost by compute the DTW cost matrix on the two input
+time series directly, computing the absolute distance between each pair of
+values from the two time series within the nested loop of the DTW procedure.
 
 \subsection{Optimization Techniques}
 
