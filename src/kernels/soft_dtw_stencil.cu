@@ -1,6 +1,5 @@
 #include "helper_functions.cuh"
 #include "soft_dtw_stencil.cuh"
-#include <stdio.h>
 
 /** Kernel function for computing Soft DTW on pairwise Euclidean
  * distance matrix for multivariate time series with CUDA.
@@ -51,7 +50,8 @@ __global__ void softdtw_stencil(float *D, float *R, float *cost, uint nD,
         uint prev_idx = (pp + 1) % 3 * (blockDim.x);
         uint prev2_idx = pp % 3 * (blockDim.x);
         bool is_in_wave = tx + jj == pp && tx < m + 2 && jj < n + 2;
-        if (is_in_wave)
+        bool is_in_band = check_sakoe_chiba_band(m + 1, n + 1, i, j, bandwidth);
+        if (is_in_wave && is_in_band)
         {
             // load a diagonal into shared memory
             if (p == 0 && tx == 0)
@@ -72,12 +72,7 @@ __global__ void softdtw_stencil(float *D, float *R, float *cost, uint nD,
         prev2_idx = pp % 3 * (blockDim.x);
         // check if this thread is on the current diagonal and in-bounds
         is_in_wave = tx + jj == pp && (tx < m + 1 && jj < n + 1);
-        bool is_in_band = true; // check_sakoe_chiba_band(m, n, i, j, 2);
-
-        // if (blockIdx.x == 0 && is_in_wave && !is_in_band)
-        // {
-        //     printf("out of band: pp %d i %d j %d\n", pp, i, j);
-        // }
+        is_in_band = check_sakoe_chiba_band(m + 1, n + 1, i, j, bandwidth);
 
         if (is_in_wave && is_in_band)
         {

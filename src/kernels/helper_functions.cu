@@ -1,5 +1,8 @@
+/** Helper functions shared across CUDA kernels
+ *  @file helper_functions.cu
+ */
 #include "helper_functions.cuh"
-#include <stdio.h>
+
 /** Host function for retrieving the number of SMs on the GPU device
  *  Useful for limiting the # of threadblocks to the # of SMs in a kernel launch
  *  @param device_num The device number, default 0

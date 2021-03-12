@@ -96,6 +96,34 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
     std::cout << "softdtw_cuda_stencil_multi " << duration << std::endl;
+    memset(costs, 0, nX * nY * sizeof(float));
+
+    // the softdtw cuda stencil kernel execution .....timing....
+    start = high_resolution_clock::now();
+    softdtw_cuda_stencil(dD, dR, costs, nX * nY, m, n, gamma, 80);
+    cudaDeviceSynchronize();
+    end = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(end - start).count();
+    std::cout << "softdtw_cuda_stencil_multi_80 " << duration << std::endl;
+    memset(costs, 0, nX * nY * sizeof(float));
+
+    // the softdtw cuda stencil kernel execution .....timing....
+    start = high_resolution_clock::now();
+    softdtw_cuda_stencil(dD, dR, costs, nX * nY, m, n, gamma, 60);
+    cudaDeviceSynchronize();
+    end = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(end - start).count();
+    std::cout << "softdtw_cuda_stencil_multi_60 " << duration << std::endl;
+    memset(costs, 0, nX * nY * sizeof(float));
+
+    // the softdtw cuda stencil kernel execution .....timing....
+    start = high_resolution_clock::now();
+    softdtw_cuda_stencil(dD, dR, costs, nX * nY, m, n, gamma, 40);
+    cudaDeviceSynchronize();
+    end = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(end - start).count();
+    std::cout << "softdtw_cuda_stencil_multi_40 " << duration << std::endl;
+    memset(costs, 0, nX * nY * sizeof(float));
 
     delete[] costs;
     cudaFree(dX);

@@ -869,57 +869,56 @@ TEST_CASE("soft dtw cuda multi nX is 1 nY is 1 Sakoe-chiba band 2")
     cudaFree(R);
 }
 
-// TEST_CASE("soft dtw cuda stencil nX is 1 nY is 1 Sakoe-chiba band")
-// {
-//     int m = 5;
-//     int k = 1;
-//     int n = 8;
-//     float gamma = 0.1;
-//     float *a = new float[m]{1.0, 2.0, 3.0, 3.0, 5.0};
-//     float *b = new float[n]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0};
-//     // device arrays
-//     float *D;
-//     float *da;
-//     float *db;
-//     cudaMalloc(&da, m * sizeof(float));
-//     cudaMalloc(&db, n * sizeof(float));
-//     cudaMalloc(&D, m * n * sizeof(float));
-//     cudaMemset(D, 0, m * n * sizeof(float));
-//     cudaMemcpy(da, a, m * sizeof(float), cudaMemcpyHostToDevice);
-//     cudaMemcpy(db, b, n * sizeof(float), cudaMemcpyHostToDevice);
+TEST_CASE("soft dtw cuda stencil nX is 1 nY is 1 Sakoe-chiba band")
+{
+    int m = 5;
+    int k = 1;
+    int n = 8;
+    float gamma = 0.1;
+    float *a = new float[m]{1.0, 2.0, 3.0, 3.0, 5.0};
+    float *b = new float[n]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0};
+    // device arrays
+    float *D;
+    float *da;
+    float *db;
+    cudaMalloc(&da, m * sizeof(float));
+    cudaMalloc(&db, n * sizeof(float));
+    cudaMalloc(&D, m * n * sizeof(float));
+    cudaMemset(D, 0, m * n * sizeof(float));
+    cudaMemcpy(da, a, m * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(db, b, n * sizeof(float), cudaMemcpyHostToDevice);
 
-//     float *R;
-//     size_t m2n2 = (m + 2) * (n + 2);
-//     size_t sz_R = m2n2 * sizeof(float);
-//     cudaMalloc(&R, sz_R);
+    float *R;
+    size_t m2n2 = (m + 2) * (n + 2);
+    size_t sz_R = m2n2 * sizeof(float);
+    cudaMalloc(&R, sz_R);
 
-//     sq_euclid_dist(da, db, D, m, n, k);
+    sq_euclid_dist(da, db, D, m, n, k);
 
-//     float costs = 0;
-//     // test sakoe-chiba bandwidth = 1
-//     printf("sakoe-chiba:\n");
-//     softdtw_cuda_stencil(D, R, &costs, 1, m, n, gamma, 1);
-//     /*
-//       R expected:
-//       0 inf inf inf inf inf inf inf inf inf
-//       inf 0 1 2 3 4 inf inf inf inf
-//       inf 1 -9.08334e-06 -1.36251e-05 -1.36251e-05 -1.36251e-05 -1.36251e-05
-//       inf inf inf inf inf 0.999986 0.930672 0.930667 0.930667 0.930667
-//       0.999977 inf inf inf inf
-//       inf 1.89013 1.86135 1.86135 1.86135 1.89011 1.99996 inf inf inf inf
-//       inf 10.8054 10.792 10.792 10.8054 2.86134 inf inf inf inf inf inf inf
-//       inf inf inf inf
-//     */
-//     // std::cout << "cost: " << costs << std::endl;
-//     // float hR[m2n2]{0};
-//     // cudaMemcpy(hR, R, m2n2 * sizeof(float), cudaMemcpyDeviceToHost);
-//     // print_matrix(hR, (m + 2), n + 2);
-//     // banding will change the cost result slightly
-//     REQUIRE(is_close(2.8613, costs));
-//     delete[] a;
-//     delete[] b;
-//     cudaFree(D);
-//     cudaFree(da);
-//     cudaFree(db);
-//     cudaFree(R);
-// }
+    float costs = 0;
+    // test sakoe-chiba bandwidth = 1
+
+    softdtw_cuda_stencil(D, R, &costs, 1, m, n, gamma, 2);
+    /*
+      R expected:
+      0 inf inf inf inf inf inf inf inf inf
+      inf 0 1 2 3 4 inf inf inf inf
+      inf 1 -9.08334e-06 -1.36251e-05 -1.36251e-05 -1.36251e-05 -1.36251e-05
+      inf inf inf inf inf 0.999986 0.930672 0.930667 0.930667 0.930667
+      0.999977 inf inf inf inf
+      inf 1.89013 1.86135 1.86135 1.86135 1.89011 1.99996 inf inf inf inf
+      inf 10.8054 10.792 10.792 10.8054 2.86134 inf inf inf inf inf inf inf
+      inf inf inf inf
+    */
+    // std::cout << "cost: " << costs << std::endl;
+    // float hR[m2n2]{0};
+    // cudaMemcpy(hR, R, m2n2 * sizeof(float), cudaMemcpyDeviceToHost);
+    // print_matrix(hR, (m + 2), n + 2);
+    REQUIRE(is_close(2.792, costs));
+    delete[] a;
+    delete[] b;
+    cudaFree(D);
+    cudaFree(da);
+    cudaFree(db);
+    cudaFree(R);
+}
