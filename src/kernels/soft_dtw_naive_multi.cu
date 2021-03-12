@@ -37,10 +37,10 @@ __global__ void softdtw_naive_kernel_multi(float *D, float *R, float *cost,
         uint jj = max(0, min(p - tx, n - 1));
         uint i = tx + 1;
         uint j = jj + 1;
-        int width = abs((int)m - (int)n) + (int)bandwidth;
-        int lower = max(1, (int)i - (int)bandwidth);
+        int width = abs((int)m - (int)n) + bandwidth;
+        int lower = max(1, i - bandwidth);
         int upper = min(max((int)m, (int)n), (int)i + width) + 1;
-        bool is_in_lower = m > n ? (int)i >= lower : (int)j >= lower;
+        bool is_in_lower = m > n ? i >= lower : j >= lower;
         bool is_in_upper = m > n ? i < upper : j < upper;
         bool is_in_band = bandwidth == 0 || (is_in_lower && is_in_upper);
         if (tx + jj == p && is_in_band && tx < m && jj < n)
