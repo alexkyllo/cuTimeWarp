@@ -139,18 +139,22 @@ __host__ void sq_euclid_dist_multi(const float *X, const float *Y, float *D,
     uint block_size_n = min(n, 1024);
     uint grid_size_n = (n + block_size_n - 1) / block_size_n;
     // compute squared euclidean norm of X
-    // is a loop the best way to do this or can we write one kernel to compute
-    // multiple norms in parallel?
-    // Need to use cudaStreamCreate to run kernels in the loop in parallel?
+
+    const int num_streams = 32;
+    cudaStream_t streams[num_streams];
+    for (uint i = 0; i < num_streams; i++)
+        cudaStreamCreate(&streams[i]);
     for (uint i = 0; i < m; i++)
     {
-        sq_euclid_norm<<<grid_size_m, block_size_m>>>(m, k, &X[i * (m * k)],
-                                                      &XX[i * m]);
+        uint stream_num = i % num_streams;
+        sq_euclid_norm<<<grid_size_m, block_size_m, 0, streams[stream_num]>>>(
+            m, k, &X[i * (m * k)], &XX[i * m]);
     }
     for (uint i = 0; i < n; i++)
     {
-        sq_euclid_norm<<<block_size_n, grid_size_n>>>(n, k, &Y[i * (n * k)],
-                                                      &YY[i * n]);
+        uint stream_num = i % num_streams;
+        sq_euclid_norm<<<block_size_n, grid_size_n, 0, streams[stream_num]>>>(
+            n, k, &Y[i * (n * k)], &YY[i * n]);
     }
     cudaDeviceSynchronize();
     const float beta = 0.0;
@@ -162,6 +166,8 @@ __host__ void sq_euclid_dist_multi(const float *X, const float *Y, float *D,
     {
         for (uint j = 0; j < nY; j++)
         {
+            uint stream_num = (i * nY + j) % num_streams;
+            cublasSetStream(handle, streams[stream_num]);
             // call cuBLAS to multiply transposed matrices B^T * A
             // (input is row-major but cublas expects column major)
             cublasSgemm(handle,                    // cublas handle
@@ -180,11 +186,13 @@ __host__ void sq_euclid_dist_multi(const float *X, const float *Y, float *D,
                         n                          // stride of result matrix
             );
             // compute XX + YY - 2XY for each pair of X and Y
-            euclid_dist<<<block_size_m, grid_size_m>>>(
+            euclid_dist<<<block_size_m, grid_size_m, 0, streams[stream_num]>>>(
                 m, n, &XX[i * m], &YY[j * n], &XY[(i * nY + j) * m * n],
                 &D[(i * nY + j) * m * n]);
         }
     }
+    for (uint i = 0; i < num_streams; i++)
+        cudaStreamDestroy(streams[i]);
     cublasDestroy(handle);
     cudaFree(XX);
     cudaFree(YY);
@@ -306,12 +314,12 @@ __host__ void softdtw_grad_cuda_naive(float *D, float *R, float *E, uint m,
  * @param total_tiles_waves the total number of tiles
  * @param total_tiles_columns the total number of tiles in one column
  * @param total_tiles_rows the total number of tiles in one row
- * @param min_tiles the minimum number of possible tiles 
- *    
+ * @param min_tiles the minimum number of possible tiles
+ *
  */
-__host__ void soft_dtw_tiled(float *da, float *db, float *D_, 
-                             uint tile_width, uint total_tiles_waves,uint total_tiles_columns,
-                             uint total_tiles_rows, uint min_tiles ,float gamma )
+__host__ void soft_dtw_tiled(float *da, float *db, float *D_, uint tile_width,
+                             uint total_tiles_waves, uint total_tiles_columns,
+                             uint total_tiles_rows, uint min_tiles, float gamma)
 {
     // uint total_tiles_columns = (m + tile_width - 1) / tile_width;
     // uint total_tiles_rows = (n + tile_width - 1) / tile_width;
@@ -354,12 +362,12 @@ __host__ void soft_dtw_tiled(float *da, float *db, float *D_,
 
         softdtw_global_tiled<<<blockPerGrid, threadPerBlock>>>(
             da, db, D_, waveId, total_tiles_rows, total_tiles_columns,
-            tile_width,gamma);
+            tile_width, gamma);
 
         cudaDeviceSynchronize();
     }
     // copy back data to host
-    //cudaMemcpy(D, D_, mn_size, cudaMemcpyDeviceToDevice);
+    // cudaMemcpy(D, D_, mn_size, cudaMemcpyDeviceToDevice);
 
     // TODO: result verification here
 }

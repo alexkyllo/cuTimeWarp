@@ -142,13 +142,6 @@ this better, find a citation)
 
 \subsection{Related Work}
 
-One important optimization we can apply is the use of Sakoe-Chiba bands, which
-prune the warping path search space, allowing path finding in subquadratic time.
-While this technique produces an approximation of the optimal path, in practice
-it has been shown to improve task performance by preventing pathological
-alignments where a very small portion of one time series maps onto a large
-portion of another \cite{keogh_exact_2002}.
-
 Utilizing indexing to construct lower bounds on warping distance is an
 optimization technique for speeding up nearest neighbor search via early removal
 of poor candidates \cite{keogh_exact_2002}. Shen and Chi (2021) proposes an
@@ -187,6 +180,74 @@ variables, we can compute the Soft-DTW distance between every time series and
 every other time series in the set by computing, in parallel for each pair, a
 pairwise squared Euclidian matrix, then applying the Soft-DTW
 calculation on the distance matrix.
+
+\subsection{Optimization Techniques}
+
+\subsubsection{Shared memory stencil computation}
+
+As the program iterates diagonally across the distance matrix to find the
+optimal warping path, each cell in the path utilizes the previously computed
+results of three previous neighboring cells; if the iteration is visualized as
+proceeding from the upper left to the lower right corner of the matrix, the cost
+value in each cell depends on the (soft) minimmum of the costs in the cell
+above, the cell to the left, and the cell to the diagonal upper-left, which were
+computed in the previous two iterations (Figure \ref{cost_deps}). If the cost
+matrix \verb|R| resides in global memory, then non-contiguous accesses to
+\verb|R[i-1][j]|, \verb|R[i][j-1]| and \verb|R[i-1][j-1]| will result in cache
+misses, incurring a significant performance cost. Since each element of \verb|R|
+will be referenced up to three times in the computation of dependent cells,
+these cache misses can be avoided via a stencil computation using shared memory
+in CUDA. The stencil serves as a cache for the current and previous two
+diagonals; once a diagonal is no longer in use, its elements are written back to
+the cost matrix \verb|R| in device global memory.
+
+\begin{figure}[htbp]
+\includegraphics[height=2in]{img/cost_dependencies.png}
+\centering
+\caption{Data dependency direction between cells of the cost matrix}
+\label{cost_deps}
+\end{figure}
+
+\FloatBarrier
+The algorithm can be modified to use shared memory as follows: 
+
+\begin{verbatim}
+D is a squared euclidean distance matrix of two time series
+R is a cost matrix initialized to positive infinity except for R[0, 0] = 0
+for each anti-diagonal of R starting from R[0, 0]
+    if the current thread index < length of the current anti-diagonal
+        copy R[i][j] from global memory into the stencil array
+        read R[i-1][j], R[i][j-1] and R[i-1][j-1] from the stencil array
+        compute cost as softmin(R[i-1][j], R[i][j-1], R[i-1][j-1]) + D[i-1][j-1]
+        write the cost back to the stencil
+        copy the cost in R[i-1][j-1] from the stencil back to global memory
+\end{verbatim}
+\FloatBarrier
+
+\subsubsection{Sakoe-Chiba bands}
+
+Sakoe-Chiba bands, proposed by Sakoe and Chiba in their 1978 paper "Dynamic
+programming algorithm optimization for spoken word recognition," introduce a
+"slope constraint" to the warping path to limit the maximum allowed warping
+distance beyond which a pair will not be considered in the optimal path
+calculation \cite{sakoe_dynamic_1978}. Pruning the search space by removing some
+of the extreme diagonals from consideration yields an approximation of the
+optimal warping path that can be calculated in sub-quadratic time.
+
+This optimization is simple to implement by checking that the absolute
+difference between the loop counter variables \verb|i| and \verb|j| does not
+exceed a fixed bandwidth threshold value. In a parallel programming environment
+such as CUDA, this allows for the computation of the warping path using fewer
+threads.
+
+While this technique produces only an approximation of the optimal path, in
+practice it has been shown to improve task performance by preventing
+pathological alignments where a very small portion of one time series maps onto
+a large portion of the other \cite{keogh_exact_2002}. The width of the band
+can be a tunable hyperparameter for time series classification tasks.
+
+TODO: add a figure with visualization of Sakoe-Chiba bands here
+
 
 \subsection{Test Data}
 

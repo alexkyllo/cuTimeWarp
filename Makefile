@@ -52,6 +52,10 @@ obj/%.o: src/kernels/%.cu
 run: bin/soft_dtw_perf
 	./$< data/ECG200/ECG200_TRAIN.txt output/ECG200/PERFORMANCE.csv
 
+## Run multi-distance experiments
+run_multi: bin/soft_dtw_perf_multi
+	./$< data/ECG200/ECG200_TRAIN.txt
+
 ## Build and run unit tests
 test: test_softdtw_cpu test_softdtw_cuda
 
