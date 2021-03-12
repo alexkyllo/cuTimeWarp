@@ -61,7 +61,9 @@ __host__ void comparison(std::vector<float> X, int time_series_lenght,
             float *b = &X[j];
             const int n = time_series_lenght;
             float *E  = (float*) malloc(m * n * sizeof(float));
-
+            float *D_naive  = (float*) malloc(m * n * sizeof(float));
+            
+            
             // device arrays
             float *da;
             cudaMalloc(&da, m * sizeof(float));
@@ -121,6 +123,8 @@ __host__ void comparison(std::vector<float> X, int time_series_lenght,
                     softdtw_cuda_naive_end - softdtw_cuda_naive_start)
                     .count();
 
+            cudaMemcpy(D_naive, D, m * n * sizeof(float), cudaMemcpyDeviceToHost);
+
             // the softdtw grad cuda naive kernel execution.....timing....
             std::cout << "STARTING softdtw grad cuda naive" << std::endl;
             auto softdtw_grad_cuda_naive_start =
@@ -156,7 +160,7 @@ __host__ void comparison(std::vector<float> X, int time_series_lenght,
             //TODO: I need to remove the memcopy from the soft_dtw to here
             //for timing 
 
-            uint tile_width = 16;
+            uint tile_width = 512;
 
             uint total_tiles_columns = (m + tile_width - 1) / tile_width;
             uint total_tiles_rows = (n + tile_width - 1) / tile_width;
@@ -195,6 +199,8 @@ __host__ void comparison(std::vector<float> X, int time_series_lenght,
             soft_dtw_tiled(da,db,D_,tile_width,total_tiles_waves,total_tiles_columns
                 ,total_tiles_rows,min_tiles,gamma);
 
+            cudaDeviceSynchronize();
+
             auto softdtw_tiled_end =
                 std::chrono::high_resolution_clock::now();
             std::cout << "FINISHED softdtw tiled" << std::endl;
@@ -219,7 +225,7 @@ __host__ void comparison(std::vector<float> X, int time_series_lenght,
             //error checking
 
             //for (int i=0 ; i < m*n ;i++) 
-            //    std::cout<< E[i]  << " , " << D_tiled[i] <<std::endl;
+            //    std::cout<< D_naive[i]  << " , " << D_tiled[i] <<std::endl;
                     
 
 
