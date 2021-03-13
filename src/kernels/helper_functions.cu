@@ -48,10 +48,10 @@ __device__ bool check_sakoe_chiba_band(int m, int n, int i, int j,
         return true;
     }
     int width = abs(m - n) + bandwidth;
-    int lower = max(1, i - bandwidth);
-    int upper = min(max(m, n), i + width) + 1;
-    bool is_in_lower = m > n ? i >= lower : j >= lower;
-    bool is_in_upper = m > n ? i < upper : j < upper;
+    int lower = max(1, (m > n ? j : i) - bandwidth);
+    int upper = min(max(m, n), (m > n ? j : i) + width) + 1;
+    bool is_in_lower = (m > n ? i : j) >= lower;
+    bool is_in_upper = (m > n ? i : j) < upper;
     return is_in_lower && is_in_upper;
 }
 
