@@ -940,43 +940,43 @@ void print_diag(const float *X, const uint m, const uint n)
     }
 }
 
-// TEST_CASE("test convert diagonal major")
-// {
-//     const uint m = 5;
-//     const uint n = 8;
-//     float D[m * n]{0,  1, 1, 1, 1, 1, 1, 9, // dist(X[0], Y[0])
-//                    1,  0, 0, 0, 0, 0, 0, 4, //
-//                    4,  1, 1, 1, 1, 1, 1, 1, //
-//                    4,  1, 1, 1, 1, 1, 1, 1, //
-//                    16, 9, 9, 9, 9, 9, 9, 1};
-//     float DD[m * (m + n - 1)]{0};
-//     float DE[m * (m + n - 1)]{0,  0, 0, 0, 0, //
-//                               1,  1, 0, 0, 0, //
-//                               4,  0, 1, 0, 0, //
-//                               4,  1, 0, 1, 0, //
-//                               16, 1, 1, 0, 1, //
-//                               9,  1, 1, 0, 1, //
-//                               9,  1, 1, 0, 1, //
-//                               9,  1, 1, 0, 9, //
-//                               9,  1, 1, 4, 0, //
-//                               9,  1, 1, 0, 0, //
-//                               9,  1, 0, 0, 0, //
-//                               1,  0, 0, 0, 0};
-//     float *dD;
-//     float *dDD;
-//     uint szD = m * n * sizeof(float);
-//     uint szDD = m * (m + n - 1) * sizeof(float);
-//     cudaMalloc(&dD, szD);
-//     cudaMalloc(&dDD, szDD);
-//     cudaMemcpy(dD, D, szD, cudaMemcpyDeviceToHost);
-//     cudaMemset(dDD, 0, szDD);
-//     convert_diagonal_major(dD, dDD, m, n);
-//     cudaMemcpy(DD, dDD, szDD, cudaMemcpyHostToDevice);
-//     print_matrix(DD, (m + n - 2), m);
-//     for (uint i = 0; i < m * (m + n - 2); i++)
-//     {
-//         REQUIRE(DD[i] == DE[i]);
-//     }
-//     cudaFree(dD);
-//     cudaFree(dDD);
-// }
+TEST_CASE("test convert diagonal major")
+{
+    const uint m = 5;
+    const uint n = 8;
+    float D[m * n]{0,  1, 1, 1, 1, 1, 1, 9, // dist(X[0], Y[0])
+                   1,  0, 0, 0, 0, 0, 0, 4, //
+                   4,  1, 1, 1, 1, 1, 1, 1, //
+                   4,  1, 1, 1, 1, 1, 1, 1, //
+                   16, 9, 9, 9, 9, 9, 9, 1};
+    float DD[m * (m + n - 1)]{0};
+    float DE[m * (m + n - 1)]{0,  0, 0, 0, 0, //
+                              1,  1, 0, 0, 0, //
+                              4,  0, 1, 0, 0, //
+                              4,  1, 0, 1, 0, //
+                              16, 1, 1, 0, 1, //
+                              9,  1, 1, 0, 1, //
+                              9,  1, 1, 0, 1, //
+                              9,  1, 1, 0, 9, //
+                              9,  1, 1, 4, 0, //
+                              9,  1, 1, 0, 0, //
+                              9,  1, 0, 0, 0, //
+                              1,  0, 0, 0, 0};
+    float *dD;
+    float *dDD;
+    uint szD = m * n * sizeof(float);
+    uint szDD = m * (m + n - 1) * sizeof(float);
+    cudaMalloc(&dD, szD);
+    cudaMalloc(&dDD, szDD);
+    cudaMemcpy(dD, D, szD, cudaMemcpyHostToDevice);
+    cudaMemset(dDD, 0, szDD);
+    convert_diagonal_major(dD, dDD, m, n);
+    cudaErrchk(cudaMemcpy(DD, dDD, szDD, cudaMemcpyDeviceToHost));
+    print_matrix(DD, (m + n - 1), m);
+    for (uint i = 0; i < m * (m + n - 1); i++)
+    {
+        REQUIRE(DD[i] == DE[i]);
+    }
+    cudaFree(dD);
+    cudaFree(dDD);
+}

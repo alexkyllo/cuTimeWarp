@@ -53,7 +53,11 @@ void print_diag(const char *X, const uint m, const uint n)
             uint i = k - j;
             if (i < m && j < n)
             {
-                std::cout << X[i * n + j] << " ";
+                uint new_j = j - (k / n * (k % n + 1));
+                // std::cout << X[i * n + j] << " ";
+                printf("X[%d * %d + %d] = %c ", i, n, j, X[i * n + j]);
+                printf("old ij = [%d, %d] (%d), new ij = [%d, %d]\n", i, j,
+                       i * n + j, k, new_j);
             }
         }
         std::cout << "\n";
@@ -116,7 +120,7 @@ float softdtw_stencil(float *D, float *R, uint m, uint n, float gamma)
     return cost;
 }
 
-int main()
+int _main()
 {
     int m = 5;
     // int k = 1;
@@ -143,7 +147,7 @@ int main()
     return 0;
 }
 
-int _main()
+int __main()
 {
     const uint dim = 5;
     char ch = 'A';
@@ -154,5 +158,46 @@ int _main()
     }
     print_matrix((char *)&array, 5, 5);
     print_diag((char *)&array, 5, 5);
+    return 0;
+}
+
+void convert_diagonal(float *D, float *DD, uint m, uint n)
+{
+    for (uint tx = 0; tx < m * n; tx++)
+    {
+        uint i = tx / n;
+        uint j = tx % n;
+        // printf("%d, %d\n", i, j);
+        uint dest_i = i + j;
+        uint dest_j = (dest_i / m) * (dest_i % m + 1);
+        printf("DD[%d, %d] = D[%d, %d]\n", dest_i, dest_j, i, j);
+        DD[dest_i * m + dest_j] = D[i * n + j];
+    }
+}
+
+int main()
+{
+    const uint m = 5;
+    const uint n = 8;
+    float D[m * n]{0,  1, 1, 1, 1, 1, 1, 9, // dist(X[0], Y[0])
+                   1,  0, 0, 0, 0, 0, 0, 4, //
+                   4,  1, 1, 1, 1, 1, 1, 1, //
+                   4,  1, 1, 1, 1, 1, 1, 1, //
+                   16, 9, 9, 9, 9, 9, 9, 1};
+    float DD[m * (m + n - 1)]{0};
+    float DE[m * (m + n - 1)]{0,  0, 0, 0, 0, //
+                              1,  1, 0, 0, 0, //
+                              4,  0, 1, 0, 0, //
+                              4,  1, 0, 1, 0, //
+                              16, 1, 1, 0, 1, //
+                              9,  1, 1, 0, 1, //
+                              9,  1, 1, 0, 1, //
+                              9,  1, 1, 0, 9, //
+                              9,  1, 1, 4, 0, //
+                              9,  1, 1, 0, 0, //
+                              9,  1, 0, 0, 0, //
+                              1,  0, 0, 0, 0};
+    convert_diagonal(D, DD, m, n);
+    print_matrix(DD, m + n - 1, m);
     return 0;
 }

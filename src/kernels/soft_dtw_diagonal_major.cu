@@ -3,7 +3,7 @@
 #include <stdio.h>
 void print_diag(const char *X, const uint m, const uint n)
 {
-    for (uint k = 0; k <= m + n - 2; k++)
+    for (uint k = 0; k < m + n - 1; k++)
     {
         for (uint j = 0; j <= k; j++)
         {
@@ -24,7 +24,8 @@ __global__ void convert_diagonal(float *D, float *DD, uint m, uint n)
     // elememnts where i+j is equal are on the same diagonal of the input
     // and same row of the output
     uint dest_i = i + j;
-    // DD[dest_i] = D[i];
+    uint dest_j = (dest_i / m) * (dest_i % m + 1);
+    DD[dest_i * m + dest_j] = D[i * n + j];
 }
 
 #define cudaErrchk(ans)                                                        \
