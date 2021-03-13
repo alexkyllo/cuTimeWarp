@@ -204,7 +204,7 @@ latency in the computation of the warping path matrix.
 \section{Methods}
 
 To evaluate various performance optimizations on the Soft-DTW computation, we
-implemented a C++ and CUDA library called cuTimeWarp, which includes functions
+implemented a C++ and CUDA library called cuTimeWarp, which includes functions 
 for computing the SoftDTW on CPU and GPU.
 
 Given a set of many multivariate time series of the same length and number of
@@ -220,6 +220,20 @@ values from the two time series within the nested loop of the DTW procedure.
 \subsection{Optimization Techniques}
 
 \subsubsection{Wavefront Tiling}
+Wavefront parallelism is one of the useful methods to overcome the dependencies of nested loops 
+by multiple processing units. The idea is to re-order the loop iterations in such a way that 
+form diagonal wave and each wave can be computed in parallel. Barriers will be utilized to control 
+the data dependencies among consecutive waves. Elements inside the wave grouped together using tiled 
+technique to enhance data locality and performance. This methodology presents a second degree of parallelism 
+where tiles can be computed in parallel by separating with a global variable.
+
+GPU and specifically CUDA can accelerate the process of wavefront. Each tile assigns 
+to a block to be process in parallel by SM. On the other hand, the iteration along diagonals within a tile are also
+parallelized. In order to enforce the dependencies, the global barriers used among the tiles and within every tiles.     
+
+In our Soft DTW implementation we utilized the wavefront technique to manage the dependencies of neighboring cells for 
+computing the minimum warp path. In our algorithm this value depends on the minimum cost of the upper, 
+left and upper-left diagonal cell cost.
 
 \subsubsection{Diagonal-major layout}
 
