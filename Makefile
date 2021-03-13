@@ -7,7 +7,7 @@ NVCC = nvcc
 NVCC_FLAGS = -g -G -maxrregcount=64 -Xcompiler "$(CFLAGS)"
 CU_LDFLAGS = -lcublas
 .PHONY = default build clean test fmt report
-FIGS =
+FIGS = img/cost_dependencies.png img/sakoe_chiba.png
 
 # list the CUDA kernel object files
 CU_OBJ = obj/euclid_dist.o obj/helper_functions.o obj/soft_dtw.o \

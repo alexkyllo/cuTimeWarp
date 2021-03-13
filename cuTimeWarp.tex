@@ -238,12 +238,17 @@ calculation \cite{sakoe_dynamic_1978}. Pruning the search space by removing some
 of the extreme diagonals from consideration yields an approximation of the
 optimal warping path that can be calculated in sub-quadratic time.
 
-This optimization is simple to implement by checking that the absolute
-difference between the loop counter variables \verb|i| and \verb|j| does not
-exceed a fixed bandwidth threshold value. In a parallel programming environment
-such as CUDA, this allows for the computation of the warping path using fewer
-threads. (NOTE: only works for square matrices i.e. equal length ts. need to
-describe algorithm for rectangular)
+This optimization is simple to implement for square matrices (i.e. DTW on time
+series of equal length) by checking that the absolute difference between the
+loop counter variables \verb|i| and \verb|j| does not exceed a fixed bandwidth
+threshold value (Figure \ref{sakoe_chiba}). For rectangular matrices, since the
+leading diagonal does not end at the lower right corner, the implementation must
+be modified slightly to ensure that the counter variable along the longer of the
+two dimensions stays within a defined radius.
+
+In a parallel programming environment such as CUDA, this optimization can also
+allow for the computation of the warping path using fewer threads, as threads
+assigned to cost matrix cells outside the band would go unused.
 
 While this technique produces only an approximation of the optimal path, in
 practice it has been shown to improve task performance by preventing
@@ -251,7 +256,12 @@ pathological alignments where a very small portion of one time series maps onto
 a large portion of the other \cite{keogh_exact_2002}. The width of the band
 can be a tunable hyperparameter for time series classification tasks.
 
-TODO: add a figure with visualization of Sakoe-Chiba bands here
+\begin{figure}[htbp]
+\includegraphics[height=2in]{img/sakoe_chiba.png}
+\centering
+\caption{Illustration of an optimal DTW path through a 5x8 distance matrix with radius = 1}
+\label{sakoe_chiba}
+\end{figure}
 
 
 \subsection{Test Data}
