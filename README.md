@@ -20,7 +20,10 @@ Based on algorithms described in:
 - [x] Implement pairwise squared Euclidean distance in CUDA
 - [x] Implement soft DTW gradient in CUDA
 - [ ] Implement soft DTW barycenter estimation in CUDA
-- [ ] Implement optimizations for soft DTW in CUDA
+- [x] Tiling
+- [x] Shared memory stencil
+- [x] Sakoe-Chiba bands
+- [ ] Contiguous diagonal-major array storage layout
 - [ ] Run benchmark experiments
 - [ ] Analysis of experiment results
 
