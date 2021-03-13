@@ -1,4 +1,4 @@
-\documentclass[11pt, letterpaper]{article}
+\documentclass[12pt, letterpaper]{article}
 \usepackage[margin=2cm]{geometry}
 \usepackage{fourier}
 \usepackage[T1]{fontenc}
@@ -55,19 +55,33 @@ series machine learning.
 
 \subsection{Background}
 
-TODO: add an intuitive explanation of what time series data is
-The purpose of dynamic Time wrapping (DTW) is to perform a transformation function that wrap
-the time to align two time series. Preferably we tend this alignment to be optimum and satisfy
-our requirements.\cite{deriso_general_nodate}
+\subsubsection{Time series data}
 
-DTW is a widely used tool employed in many areas of science,
-including biology, technology, economics, and finance. It calculates the practical
-distance between two signals typically by taking the distance between them when one is
-time warped, or it can be the minimum wrapping required to align signals with each other
-by applying some sort of fidelity.
-Dynamic time wrapping can be used to identify hidden pattern or searching within
-signals databases to find the matching one.\cite{keogh_derivative_2001} it is utilized in machine learning
-platforms that depends on signals like clustering, regression, and classification.
+Time series data generally refers to data containing quantitative measurements
+collected from the same subject or process at multiple points in time, and it
+exhibits several peculiarities in comparison to time-independent data.  Time
+series data can exhibit autocorrelation, meaning that the value at any point in
+time can exhibit correlation to the value at a previous point in time, with some
+delay or \emph{lag} in between. Time series data can also exhibit
+\emph{seasonality} or cyclical patterns as well as \emph{trend} which is a
+tendency for the average value (over some rolling time window) to increase or
+decrease as a function of time. Due to these characteristics, time series data
+does not conform to the I.I.D. (independent and identically distributed)
+assumption that typically applies in the study of random variables, and
+therefore it requires special techniques for analysis and modeling.
+
+Time series data can be either univariate or multivariate. For example, a set of
+electrocardiogram (ECG) measurements has a single variable (heart voltage)
+collected over time, but if the dataset also included the patient's blood
+pressure and oxygen levels measured at each time point, that would constitute a
+multivariate time series, and correlations between the different variables could
+be studied in addition to the autocorrelation within each of the variables.
+
+\subsubsection{Time series distance and dissimilarity measures}
+
+A fundamental capability that enables analysis of and learning from data is the
+ability to quantify a measure of distance or dissimilarity between observations.
+For time-independent data, (TODO)
 
 There are multiple valid ways to compute a measure of dissimliarity between two
 time series; the simplest is Euclidean distance, which is the square root of the
@@ -81,6 +95,9 @@ d(x, y) = \sqrt{\sum_{t=1}^{n}(x_t-y_t)^2}
 The drawback of Euclidean distance in time series applications is that two
 structurally similar time series will produce a large distance if they are
 different speeds or out of phase (TODO: Add a figure to illustrate this).
+
+\subsubsection{Dynamic Time Warping}
+
 Dynamic Time Warping (DTW) was devised in the 1960s as an alternative time
 series dissimilarity measure to address this shortcoming. (TODO: find a
 historical citation). DTW is a nonlinear mapping of from each point in one time
@@ -89,6 +106,21 @@ not considered a ``distance'' because it does not conform to the triangle
 inequality, and therefore we refer to it as a ``dissimilarity'' instead, it can
 be used in place of Euclidean distance or other distance measures for many
 applications of time series data.
+
+The purpose of (DTW) is to perform a transformation
+function that wrap the time to align two time series. Preferably we tend this
+alignment to be optimum and satisfy our
+requirements.\cite{deriso_general_nodate}
+
+DTW is a widely used tool employed in many areas of science, including biology,
+technology, economics, and finance. It calculates the practical distance between
+two signals typically by taking the distance between them when one is time
+warped, or it can be the minimum wrapping required to align signals with each
+other by applying some sort of fidelity.  Dynamic time wrapping can be used to
+identify hidden pattern or searching within signals databases to find the
+matching one.\cite{keogh_derivative_2001} it is utilized in machine learning
+platforms that depends on signals like clustering, regression, and
+classification.
 
 The basic algorithm for DTW is to use Bellman’s recursion, a dynamic programming
 technique, to find the lowest-cost path diagonally across a pairwise distance
@@ -186,6 +218,20 @@ input time series directly, computing the absolute distance between each pair of
 values from the two time series within the nested loop of the DTW procedure.
 
 \subsection{Optimization Techniques}
+
+\subsubsection{Wavefront Tiling}
+
+\subsubsection{Diagonal-major layout}
+
+Because the data dependency structure of the DTW algorithm results in elements
+of the distance and cost matrices on the same antidiagonal being processed in
+parallel, storing these matrices in row-major or column major order will cause a
+performance impact from cache misses and non-coalesced accesses to global
+memory.
+
+If the data is first rearranged into an antidiagonal-major layout, then at each
+iteration of the wavefront loop, processor threads will make coalesced accesses
+to data elements that are laid out contiguously in memory.
 
 \subsubsection{Shared memory stencil computation}
 
