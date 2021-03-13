@@ -53,7 +53,9 @@ void print_diag(const char *X, const uint m, const uint n)
             uint i = k - j;
             if (i < m && j < n)
             {
-                uint new_j = j - (k / n * (k % n + 1));
+                // uint new_j = j; // - (k / n * (k % n + 1));
+                // uint new_j = k > m ? j - (k % m) - 1 : j;
+                uint new_j = j - max(0, (int)k - (int)m + 1);
                 // std::cout << X[i * n + j] << " ";
                 printf("X[%d * %d + %d] = %c ", i, n, j, X[i * n + j]);
                 printf("old ij = [%d, %d] (%d), new ij = [%d, %d]\n", i, j,
@@ -61,6 +63,21 @@ void print_diag(const char *X, const uint m, const uint n)
             }
         }
         std::cout << "\n";
+    }
+}
+
+void convert_diagonal(float *D, float *DD, uint m, uint n)
+{
+    for (uint tx = 0; tx < m * n; tx++)
+    {
+        uint j = tx % n;
+        uint i = (tx - j) / n;
+        // printf("%d, %d\n", i, j);
+        uint dest_i = i + j;
+        uint dest_j = j - max(0, (int)dest_i - (int)m + 1);
+        // printf("DD[%d, %d] = D[%d, %d]\n", dest_i, dest_j, i, j);
+        printf("old ij %d %d new ij %d %d\n", i, j, dest_i, dest_j);
+        DD[dest_i * m + dest_j] = D[i * n + j];
     }
 }
 
@@ -159,20 +176,6 @@ int __main()
     print_matrix((char *)&array, 5, 5);
     print_diag((char *)&array, 5, 5);
     return 0;
-}
-
-void convert_diagonal(float *D, float *DD, uint m, uint n)
-{
-    for (uint tx = 0; tx < m * n; tx++)
-    {
-        uint i = tx / n;
-        uint j = tx % n;
-        // printf("%d, %d\n", i, j);
-        uint dest_i = i + j;
-        uint dest_j = (dest_i / m) * (dest_i % m + 1);
-        printf("DD[%d, %d] = D[%d, %d]\n", dest_i, dest_j, i, j);
-        DD[dest_i * m + dest_j] = D[i * n + j];
-    }
 }
 
 int main()

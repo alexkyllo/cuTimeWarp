@@ -19,12 +19,11 @@ void print_diag(const char *X, const uint m, const uint n)
 
 __global__ void convert_diagonal(float *D, float *DD, uint m, uint n)
 {
-    const uint i = blockIdx.x * blockDim.x + threadIdx.x;
-    const uint j = i % n;
-    // elememnts where i+j is equal are on the same diagonal of the input
-    // and same row of the output
+    const uint tx = blockIdx.x * blockDim.x + threadIdx.x;
+    uint j = tx % n;
+    uint i = (tx - j) / n;
     uint dest_i = i + j;
-    uint dest_j = (dest_i / m) * (dest_i % m + 1);
+    uint dest_j = j - max(0, (int)dest_i - (int)m + 1);
     DD[dest_i * m + dest_j] = D[i * n + j];
 }
 

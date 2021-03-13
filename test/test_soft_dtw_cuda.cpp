@@ -972,7 +972,7 @@ TEST_CASE("test convert diagonal major")
     cudaMemset(dDD, 0, szDD);
     convert_diagonal_major(dD, dDD, m, n);
     cudaErrchk(cudaMemcpy(DD, dDD, szDD, cudaMemcpyDeviceToHost));
-    print_matrix(DD, (m + n - 1), m);
+    // print_matrix(DD, (m + n - 1), m);
     for (uint i = 0; i < m * (m + n - 1); i++)
     {
         REQUIRE(DD[i] == DE[i]);
