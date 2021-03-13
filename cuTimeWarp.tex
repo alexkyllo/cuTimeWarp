@@ -180,9 +180,9 @@ variables, we can compute the Soft-DTW distance between every time series and
 every other time series in the set by computing, in parallel for each pair, a
 pairwise squared Euclidian matrix, then applying the Soft-DTW calculation on the
 distance matrix. This computation, however, also has an $O(n^2)$ complexity and
-can potentially take longer than the DTW computation itself. For univariate time
-series, we can save this cost by compute the DTW cost matrix on the two input
-time series directly, computing the absolute distance between each pair of
+can potentially even take longer than the DTW computation itself. For univariate
+time series, we can save this cost by computing the DTW cost matrix on the two
+input time series directly, computing the absolute distance between each pair of
 values from the two time series within the nested loop of the DTW procedure.
 
 \subsection{Optimization Techniques}
@@ -208,7 +208,9 @@ the cost matrix \verb|R| in device global memory.
 \begin{figure}[htbp]
 \includegraphics[height=2in]{img/cost_dependencies.png}
 \centering
-\caption{Data dependency direction between cells of the cost matrix}
+\caption{Data dependency direction between cells of the cost matrix.
+Each cell's cost computation depends on the costs of the three adjacent cells
+above, to the left, and to the upper-left.}
 \label{cost_deps}
 \end{figure}
 
@@ -243,12 +245,16 @@ series of equal length) by checking that the absolute difference between the
 loop counter variables \verb|i| and \verb|j| does not exceed a fixed bandwidth
 threshold value (Figure \ref{sakoe_chiba}). For rectangular matrices, since the
 leading diagonal does not end at the lower right corner, the implementation must
-be modified slightly to ensure that the counter variable along the longer of the
-two dimensions stays within a defined radius.
+be slightly modified to ensure that the counter variable along the longer of the
+two dimensions stays within a defined radius. Either way the result is a
+diagonal band matrix.
 
 In a parallel programming environment such as CUDA, this optimization can also
 allow for the computation of the warping path using fewer threads, as threads
-assigned to cost matrix cells outside the band would go unused.
+assigned to cost matrix cells outside the band would go unused. Space savings
+can also be obtained if the bandwidth is known in advance, by storing the
+distance matrix and cost matrix in band storage format, omitting the zeroes
+in the corners.
 
 While this technique produces only an approximation of the optimal path, in
 practice it has been shown to improve task performance by preventing
@@ -259,7 +265,8 @@ can be a tunable hyperparameter for time series classification tasks.
 \begin{figure}[htbp]
 \includegraphics[height=2in]{img/sakoe_chiba.png}
 \centering
-\caption{Illustration of an optimal DTW path through a 5x8 distance matrix with radius = 1}
+\caption{Illustration of one possible optimal DTW path for a length 5 series and
+a length 8 series with Sakoe-Chiba band radius = 1.}
 \label{sakoe_chiba}
 \end{figure}
 

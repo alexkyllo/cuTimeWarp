@@ -15,6 +15,7 @@ obj/soft_dtw_naive.o \
 obj/soft_dtw_naive_multi.o \
 obj/soft_dtw_stencil.o \
 obj/soft_dtw_tiled.o \
+obj/soft_dtw_diagonal_major.o \
 
 $(shell mkdir -p bin/ obj/)
 

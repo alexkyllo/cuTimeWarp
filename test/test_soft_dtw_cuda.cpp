@@ -1,3 +1,4 @@
+#include "../src/kernels/soft_dtw_diagonal_major.cuh"
 #include "../src/soft_dtw.cuh"
 #include "catch.h"
 #include <cmath>
@@ -922,3 +923,60 @@ TEST_CASE("soft dtw cuda stencil nX is 1 nY is 1 Sakoe-chiba band")
     cudaFree(db);
     cudaFree(R);
 }
+
+void print_diag(const float *X, const uint m, const uint n)
+{
+    for (uint k = 0; k <= m + n - 2; k++)
+    {
+        for (uint j = 0; j <= k; j++)
+        {
+            uint i = k - j;
+            if (i < m && j < n)
+            {
+                std::cout << X[i * n + j] << ", ";
+            }
+        }
+        std::cout << "\n";
+    }
+}
+
+// TEST_CASE("test convert diagonal major")
+// {
+//     const uint m = 5;
+//     const uint n = 8;
+//     float D[m * n]{0,  1, 1, 1, 1, 1, 1, 9, // dist(X[0], Y[0])
+//                    1,  0, 0, 0, 0, 0, 0, 4, //
+//                    4,  1, 1, 1, 1, 1, 1, 1, //
+//                    4,  1, 1, 1, 1, 1, 1, 1, //
+//                    16, 9, 9, 9, 9, 9, 9, 1};
+//     float DD[m * (m + n - 1)]{0};
+//     float DE[m * (m + n - 1)]{0,  0, 0, 0, 0, //
+//                               1,  1, 0, 0, 0, //
+//                               4,  0, 1, 0, 0, //
+//                               4,  1, 0, 1, 0, //
+//                               16, 1, 1, 0, 1, //
+//                               9,  1, 1, 0, 1, //
+//                               9,  1, 1, 0, 1, //
+//                               9,  1, 1, 0, 9, //
+//                               9,  1, 1, 4, 0, //
+//                               9,  1, 1, 0, 0, //
+//                               9,  1, 0, 0, 0, //
+//                               1,  0, 0, 0, 0};
+//     float *dD;
+//     float *dDD;
+//     uint szD = m * n * sizeof(float);
+//     uint szDD = m * (m + n - 1) * sizeof(float);
+//     cudaMalloc(&dD, szD);
+//     cudaMalloc(&dDD, szDD);
+//     cudaMemcpy(dD, D, szD, cudaMemcpyDeviceToHost);
+//     cudaMemset(dDD, 0, szDD);
+//     convert_diagonal_major(dD, dDD, m, n);
+//     cudaMemcpy(DD, dDD, szDD, cudaMemcpyHostToDevice);
+//     print_matrix(DD, (m + n - 2), m);
+//     for (uint i = 0; i < m * (m + n - 2); i++)
+//     {
+//         REQUIRE(DD[i] == DE[i]);
+//     }
+//     cudaFree(dD);
+//     cudaFree(dDD);
+// }
