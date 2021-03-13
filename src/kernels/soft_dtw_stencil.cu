@@ -23,9 +23,9 @@ __global__ void softdtw_stencil(float *D, float *R, float *cost, uint nD,
 {
     // dynamic shared memory diagonal buffer array for caching the previous
     // diagonals.
-    // length is (max(m,n) + 2) * 3 because it needs to store three
-    // diagonals of R and the longest diagonal is (max(m,n)+2)
-    // there should be max(m+2,n+2) threads
+    // length is (min(m,n) + 2) * 3 because it needs to store three
+    // diagonals of R and the longest diagonal is (min(m,n)+2)
+    // there should be min(m,n)+2 threads
     extern __shared__ float stencil[];
     const uint tx = threadIdx.x;
     const uint bx = blockIdx.x;
@@ -33,8 +33,8 @@ __global__ void softdtw_stencil(float *D, float *R, float *cost, uint nD,
     uint bD2 = bx * (m + 2) * (n + 2);
 
     // block size = max(m+2, n+2) (length of longest diagonal of R)
-    // number of antidiagonals is 2 * max(m,n) - 1
-    const uint passes = 2 * max(m, n); // 2 * blockDim.x - 1;
+    // number of antidiagonals is m+2+n+2-1
+    const uint passes = m + n + 3;
 
     // each pass is one diagonal of the distance matrix
     for (uint p = 0; p < passes; p++)
@@ -49,7 +49,7 @@ __global__ void softdtw_stencil(float *D, float *R, float *cost, uint nD,
         uint cur_idx = (pp + 2) % 3 * (blockDim.x);
         uint prev_idx = (pp + 1) % 3 * (blockDim.x);
         uint prev2_idx = pp % 3 * (blockDim.x);
-        bool is_in_wave = tx + jj == pp && tx < m + 2 && jj < n + 2;
+        bool is_in_wave = tx + jj == pp && tx < m + 1 && jj < n + 1;
         bool is_in_band = check_sakoe_chiba_band(m + 1, n + 1, i, j, bandwidth);
         if (is_in_wave && is_in_band)
         {

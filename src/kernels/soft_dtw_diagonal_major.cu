@@ -22,7 +22,9 @@ __global__ void convert_diagonal(float *D, float *DD, uint m, uint n)
     const uint tx = blockIdx.x * blockDim.x + threadIdx.x;
     uint j = tx % n;
     uint i = (tx - j) / n;
+    // new i is the antidiagonal ordinal, sum of i and j
     uint dest_i = i + j;
+    // new j = j if in upper left half, else j-dist from leading antidiagonal
     uint dest_j = j - max(0, (int)dest_i - (int)m + 1);
     DD[dest_i * m + dest_j] = D[i * n + j];
 }
@@ -57,6 +59,11 @@ __host__ void convert_diagonal_major(float *D, float *DD, uint m, uint n)
 /** Kernel function for computing "naive" Soft DTW on pairwise Euclidean
  * distance matrix for multivariate time series with CUDA. Input D should be a
  * __device__ array.
+ * This version assumes D is a diagonal-major array where m and n are the
+ * dimensions of the original row-major array. m x n becomes (m+n-1) x max(m,n).
+ * It also assumes R is a diagonal-major array where (m+2) and (n+2) are the
+ * dimensions of the original row-major array.
+ * (m+2) x (n+2) becomes (m+n+3) x max(m+2,n+2)
  * This naive version only works for sequence lengths <= 1024 i.e. can fit in
  * a single threadblock.
  * Assumes only a single threadblock in the kernel launch.
@@ -73,14 +80,19 @@ __global__ void softdtw_diagonal_kernel(float *D, float *R, float *cost, uint m,
 {
     const uint tx = threadIdx.x;
     // block size = max(m, n) (length of longest diagonal)
-    // number of antidiagonals is 2 * max(m,n) - 1
-    const uint passes = 2 * blockDim.x - 2;
+    // number of antidiagonals is m+n-1
+    const uint passes = m + n - 1;
 
     for (uint p = 0; p < passes; p++)
     {
-        uint jj = max(0, min(p - tx, n - 1));
+        // uint jj = max(0, min(p - tx, n - 1));
+        uint jj = tx % max(m, n);
         uint i = tx + 1;
         uint j = jj + 1;
+
+        if (jj < max(m, n))
+        {
+        }
 
         if (tx + jj == p && (tx < m && jj < n))
         {

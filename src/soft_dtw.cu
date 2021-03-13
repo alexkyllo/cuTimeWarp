@@ -222,7 +222,8 @@ __host__ float softdtw_cuda_naive(float *D, float *R, uint m, uint n,
         R, m + 2, n + 2, std::numeric_limits<float>::infinity());
 
     dim3 B = dim3(1);
-    dim3 TPB = dim3(max(m, n));
+    // length of the longest antidiagonal is the smaller of the two dims
+    dim3 TPB = dim3(min(m, n));
     float path_cost;
     float *d_path_cost;
     cudaMalloc(&d_path_cost, sizeof(float));
@@ -291,7 +292,7 @@ __host__ void softdtw_grad_cuda_naive(float *D, float *R, float *E, uint m,
     cudaMemset(&D[m * (n + 1) + n], 0, sizeof(float));
 
     dim3 B = dim3(1);
-    dim3 TPB = dim3(max(m, n));
+    dim3 TPB = dim3(min(m, n));
     softdtw_grad_naive_kernel<<<B, TPB>>>(D_, R, E_, m, n, gamma);
 
     // Copy E_ back to E without the first and last row and column
@@ -375,8 +376,8 @@ __host__ void softdtw_cuda_naive_multi(float *D, float *R, float *costs,
         R, (m + 2) * (n + 2), nD, std::numeric_limits<float>::infinity());
 
     dim3 B = dim3(nD);
-    uint max_mn = max(m, n);
-    uint threads = max_mn;
+    uint min_mn = min(m, n);
+    uint threads = min_mn;
     assert(threads < 1025);
     dim3 TPB = dim3(threads);
     float *d_path_cost;
@@ -416,8 +417,8 @@ __host__ void softdtw_cuda_stencil(float *D, float *R, float *costs, uint nD,
         R, (m + 2) * (n + 2), nD, std::numeric_limits<float>::infinity());
 
     dim3 B = dim3(nD);
-    dim3 TPB = dim3(max(m + 2, n + 2));
-    uint SMEM = nD * (max(m, n) + 2) * 3 * sizeof(float);
+    dim3 TPB = dim3(min(m, n) + 2);
+    uint SMEM = nD * (min(m, n) + 2) * 3 * sizeof(float);
     float *d_path_cost;
     cudaMalloc(&d_path_cost, nD * sizeof(float));
     // Launch the kernel
