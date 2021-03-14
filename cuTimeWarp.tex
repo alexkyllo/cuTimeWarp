@@ -231,30 +231,44 @@ values from the two time series within the nested loop of the DTW procedure.
 \subsection{Optimization Techniques}
 
 \subsubsection{Wavefront Tiling}
-Wavefront parallelism is one of the useful methods to overcome the dependencies of nested loops
-by multiple processing units. The idea is to re-order the loop iterations in such a way that
-form diagonal wave and each wave can be computed in parallel. Barriers will be utilized to control
-the data dependencies among consecutive waves. Elements inside the wave grouped together using tiled
-technique to enhance data locality and performance. This methodology presents a second degree of parallelism
+Wavefront parallelism is one of the useful methods to overcome the dependencies of nested loops 
+by multiple processing units. The idea is to re-order the loop iterations in such a way that 
+form diagonal wave and each wave can be computed in parallel. Barriers will be utilized to control 
+the data dependencies among consecutive waves. Elements inside the wave grouped together using tiled 
+technique to enhance data locality and performance. This methodology presents a second degree of parallelism 
 where tiles can be computed in parallel by separating with a global variable.
 
-GPU and specifically CUDA can accelerate the process of wavefront. Each tile assigns
+GPU and specifically CUDA can accelerate the process of wavefront. Each tile assigns 
 to a block to be process in parallel by SM. On the other hand, the iteration along diagonals within a tile are also
-pluralized. In order to enforce the dependencies, the global barriers used among the tiles and within every tiles.\cite{belviranli_peerwave_2015}
+pluralized. In order to enforce the dependencies, the global barriers used among the tiles and within every tiles.\cite{belviranli_peerwave_2015}     
 
-In our Soft DTW implementation, we utilized the wavefront technique to manage the dependencies of neighboring cells for
-computing the minimum warp path. In our algorithm this value depends on the minimum cost of the upper,
-left and upper-left diagonal cell cost.
+In our Soft DTW implementation, we utilized the wavefront technique to manage the dependencies of neighboring cells for 
+computing the minimum warp path. In our algorithm this value depends on the minimum cost of the upper, 
+left and upper-left diagonal cell cost. Figure \ref{DTW_dependency} show this dependencies clearly.Each D(i,j) depends on the up, left and up-left neighbor cost. 
 
+\begin{figure}[htbp]
+\includegraphics[height=2in]{img/tiling_dependencies.png}
+\centering
+\caption{computation dependencies for DTW.}
+\label{DTW_dependency}
+\end{figure}
 
-\begin{equation*}
+Wavefront process split to three major steps:
+
+\begin{itemize}
+  \item Populating the dependencies managing by loop. In this step, we keep the global variable WaveId to sperate the process of waves. Wavelength is increasing one by one on each loop iterations until reaching the total number of tiles. The primary kernel softdtw global tiled called with the wavelength number of blocks and thread size of tile width.
+  \item In this kernel, the row and column index for each tile is calculating and passing as a global variable to the corresponding kernel for the tiles’ computation.
+  \item The third step is the main kernel to process inter-tiles in parallel. Shared memory employed to keep the tile within the cache and improve the overall performance. As we mentioned earlier, we need to calculate the soft-min for the dependent cells. Therefore, the soft-min calculated for the up, left and diagonal upper left index.(equation \ref{dependencies})
+\end{itemize}
+
+\begin{equation} \label{dependencies}
   D (i,j) = Soft-min
   \begin{cases}
         D(i-1,j) \\
         D(i,j-1)\\
-        D(i-1,j-1)
+        D(i-1,j-1)   
   \end{cases}
-\end{equation*}
+\end{equation}
 \subsubsection{Diagonal-major layout}
 
 Because the data dependency structure of the DTW algorithm results in elements
