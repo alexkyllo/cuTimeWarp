@@ -29,7 +29,6 @@ __global__ void softdtw_global_tiled(float *a, float *b, float *D, int waveId,
  * @param m Length of first time series
  * @param n Length of second time series
  * @param D The pairwise distance array of two time series
- * @param waveId the ID for the wave
  * @param total_tiles_rows
  * @param total_tiles_columns
  * @param tile_width
