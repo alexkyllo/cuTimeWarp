@@ -229,12 +229,21 @@ where tiles can be computed in parallel by separating with a global variable.
 
 GPU and specifically CUDA can accelerate the process of wavefront. Each tile assigns 
 to a block to be process in parallel by SM. On the other hand, the iteration along diagonals within a tile are also
-parallelized. In order to enforce the dependencies, the global barriers used among the tiles and within every tiles.     
+pluralized. In order to enforce the dependencies, the global barriers used among the tiles and within every tiles.\cite{belviranli_peerwave_2015}     
 
-In our Soft DTW implementation we utilized the wavefront technique to manage the dependencies of neighboring cells for 
+In our Soft DTW implementation, we utilized the wavefront technique to manage the dependencies of neighboring cells for 
 computing the minimum warp path. In our algorithm this value depends on the minimum cost of the upper, 
 left and upper-left diagonal cell cost.
 
+
+\begin{equation*}
+  D (i,j) = Soft-min
+  \begin{cases}
+        D(i-1,j) \\
+        D(i,j-1)\\
+        D(i-1,j-1)   
+  \end{cases}
+\end{equation*}
 \subsubsection{Diagonal-major layout}
 
 Because the data dependency structure of the DTW algorithm results in elements
