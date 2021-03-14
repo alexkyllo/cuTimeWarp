@@ -362,7 +362,7 @@ TEST_CASE("Test squared Euclidan distance multi")
     cudaFree(dD);
 }
 
-TEST_CASE("Test squared Euclidan distance multi nX is 2 ny is 1")
+TEST_CASE("Test squared Euclidian distance multi nX is 2 ny is 1")
 {
     const int m = 5;
     const int n = 8;
@@ -979,3 +979,69 @@ TEST_CASE("test convert diagonal major")
     cudaFree(dD);
     cudaFree(dDD);
 }
+
+// TEST_CASE("soft dtw cuda diagonal nX is 1 nY is 1")
+// {
+//     int m = 5;
+//     int k = 1;
+//     int n = 8;
+//     float gamma = 0.1;
+//     float *a = new float[m]{1.0, 2.0, 3.0, 3.0, 5.0};
+//     float *b = new float[n]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0};
+//     // device arrays
+//     float *D;
+//     float *da;
+//     float *db;
+//     cudaMalloc(&da, m * sizeof(float));
+//     cudaMalloc(&db, n * sizeof(float));
+//     cudaMalloc(&D, m * n * sizeof(float));
+//     cudaMemset(D, 0, m * n * sizeof(float));
+//     cudaMemcpy(da, a, m * sizeof(float), cudaMemcpyHostToDevice);
+//     cudaMemcpy(db, b, n * sizeof(float), cudaMemcpyHostToDevice);
+
+//     float *R;
+//     size_t m2n2 = (m + 2) * (n + 2);
+//     size_t sz_R = m2n2 * sizeof(float);
+//     cudaMalloc(&R, sz_R);
+//     cudaMemset(R, 0, sz_R);
+
+//     // transform D and R into diagonal-major layout
+//     float *DD;
+//     uint nDD = std::min(m, n) * (m + n - 1);
+//     uint szDD = nDD * sizeof(float);
+//     cudaMalloc(&DD, szDD);
+//     cudaMemset(DD, 0, szDD);
+//     float *RD;
+//     uint nRD = (std::min(m, n) + 2) * (m + n + 3);
+//     uint szRD = nRD * sizeof(float);
+//     cudaMalloc(&RD, szRD);
+//     cudaMemset(RD, 0, szRD);
+
+//     sq_euclid_dist(da, db, D, m, n, k);
+
+//     float cost = softdtw_cuda_diagonal(D, R, DD, RD, m, n, gamma);
+//     /*
+// R expected:
+// [0. inf     inf     inf     inf     inf     inf     inf       inf inf] [inf
+// 0.      1.      2.      3.      4.      5.      6.       15.         inf]
+// [inf  1.     -0.     -0.     -0.     -0.     -0.     -0.        4. inf]
+// [inf  5.      1.      0.9307  0.9307  0.9307  0.9307  0.9307    1. inf]
+// [inf  9.      2.      1.8901  1.8614  1.8613  1.8613  1.8613    1.8901 inf]
+// [inf 25.     11.     10.8614 10.8054 10.792  10.792  10.792     2.8054 inf]
+// [inf inf     inf     inf     inf     inf     inf     inf           inf inf]
+//     */
+//     float hDD[nDD]{0};
+//     cudaMemcpy(hDD, DD, szDD, cudaMemcpyDeviceToHost);
+//     print_matrix(hDD, (m + n - 1), std::min(m, n));
+//     std::cout << "cost: " << cost << std::endl;
+//     float hRD[nRD]{0};
+//     cudaMemcpy(hRD, RD, szRD, cudaMemcpyDeviceToHost);
+//     print_matrix(hRD, (m + n + 3), std::min(m, n) + 2);
+//     REQUIRE(is_close(2.80539, cost));
+//     delete[] a;
+//     delete[] b;
+//     cudaFree(D);
+//     cudaFree(da);
+//     cudaFree(db);
+//     cudaFree(R);
+// }

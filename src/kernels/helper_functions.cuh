@@ -4,7 +4,7 @@
 #define __host__
 #define __global__
 #endif
-
+#include <iostream>
 typedef unsigned int uint;
 /** Take the softmin of 3 elements
  * @param a The first element
@@ -36,3 +36,21 @@ __global__ void fill_matrix_inf(float *A, int width, int height, float val);
  */
 __device__ bool check_sakoe_chiba_band(int m, int n, int i, int j,
                                        int bandwidth);
+
+#define cudaErrchk(ans)                                                        \
+    {                                                                          \
+        GPUAssert((ans), __FILE__, __LINE__);                                  \
+    }
+inline void GPUAssert(cudaError_t code, const char *file, int line,
+                      bool abort = true)
+{
+    if (code != cudaSuccess)
+    {
+        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file,
+                line);
+        if (abort)
+        {
+            exit(code);
+        }
+    }
+}
