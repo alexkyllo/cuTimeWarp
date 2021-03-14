@@ -36,7 +36,7 @@ __global__ void softdtw_global_tiled(float *da, float *db, float *D, int waveId,
         tile_Column = waveId - tile_Row;
     }
 
-    softdtw_tiled_wavefront(da, db, D, waveId, total_tiles_rows,
+    softdtw_tiled_wavefront(da, db, D, total_tiles_rows,
                             total_tiles_columns, tile_width, tile_Row,
                             tile_Column,gamma);
 }
@@ -49,7 +49,6 @@ __global__ void softdtw_global_tiled(float *da, float *db, float *D, int waveId,
  * @param m Length of first time series
  * @param n Length of second time series
  * @param D The pairwise distance array of two time series
- * @param waveId the ID for the wave
  * @param total_tiles_rows The total number of tiles within the row
  * @param total_tiles_columns The total number of tiles within the column
  * @param tile_width  The tile width
@@ -58,8 +57,8 @@ __global__ void softdtw_global_tiled(float *da, float *db, float *D, int waveId,
  * @param gamma SoftDTW smoothing parameter
  */
 
-__device__ void softdtw_tiled_wavefront(float *a, float *b, float *D,
-                                        int waveId, uint total_tiles_rows,
+__device__ void softdtw_tiled_wavefront(float *a, float *b, float *D
+                                        , uint total_tiles_rows,
                                         uint total_tiles_columns,
                                         uint tile_width, uint tileRow,
                                         uint tileColumn, float gamma)
@@ -100,13 +99,14 @@ __device__ void softdtw_tiled_wavefront(float *a, float *b, float *D,
             float left = 0;
             float up = 0;
 
-            // LEFT & UP
-            if (tileColumn > 0 || column > 0) // left
+            // LEFT index
+            if (tileColumn > 0 || column > 0) 
             {
                 const int leftIndex = index - tile_width;
                 left = D[leftIndex] - 1;
             }
 
+            //UP index
             if (tileRow > 0 || row > 0)
             {
                 int upIndex = index - 1;

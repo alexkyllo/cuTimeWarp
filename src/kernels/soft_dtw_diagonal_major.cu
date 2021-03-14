@@ -79,30 +79,29 @@ __global__ void _softdtw_diagonal_kernel(float *D, float *R, float *cost,
         uint old_j = jj + 1;
 
         uint i = old_i + old_j;
-        uint dj = old_j - max(0, (int)i - (int)(m + 1));
-        uint rj = old_j - max(0, (int)i - (int)(m + 3));
+        uint j = old_j - max(0, (int)i - (int)(m + 3));
 
-        if (tx + jj == p && (tx < m && dj < n))
+        if (tx + jj == p && (tx < m && jj < n))
         {
-            float cost = D[(i - 2) * bx + dj - 1];     // 1,0
-            float r1 = R[(i - 1) * (bx + 2) + rj];     // 1,1
-            float r2 = R[(i - 2) * (bx + 2) + rj - 1]; // 2, 0
-            float r3 = R[(i - 1) * (bx + 2) + rj - 1];
+            float cost = D[(i - 2) * bx + j - 1];     // 1,0
+            float r1 = R[(i - 1) * (bx + 2) + j];     // 1,1
+            float r2 = R[(i - 2) * (bx + 2) + j - 1]; // 2, 0
+            float r3 = R[(i - 1) * (bx + 2) + j - 1];
             double prev_min = softmin(r1, r2, r3, gamma);
-            R[i * (bx + 2) + rj] = cost + prev_min;
+            R[i * (bx + 2) + j] = cost + prev_min;
             if (tx == 0)
             {
                 printf("pass %d tid %d reading %.2f from D[%d, %d]\n", p, tx,
-                       cost, i - 2, dj - 1);
+                       cost, i - 2, j - 1);
                 printf("pass %d tid %d reading %.2f from R[%d, %d]\n", p, tx,
-                       r1, i - 1, rj);
+                       r1, i - 1, j);
                 printf("pass %d tid %d reading %.2f from R[%d, %d]\n", p, tx,
-                       r2, i - 2, rj - 1);
+                       r2, i - 2, j - 1);
                 printf("pass %d tid %d reading %.2f from R[%d, %d]\n", p, tx,
-                       r3, i - 1, rj - 1);
+                       r3, i - 1, j - 1);
                 printf(
                     "pass %d tx %d jj %d i %d j %d writing %.2f to R[%d, %d]\n",
-                    p, tx, jj, i, rj, cost + prev_min, i, rj);
+                    p, tx, jj, i, j, cost + prev_min, i, j);
             }
         }
         __syncthreads();
