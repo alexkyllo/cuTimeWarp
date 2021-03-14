@@ -269,6 +269,12 @@ Wavefront process split to three major steps:
         D(i-1,j-1)   
   \end{cases}
 \end{equation}
+Drawbacks:
+Due to the usage of global barriers, there would be lower utilization for the GPU. 
+Fewer threads would be available at the beginning and at the end of each tiles process. 
+Also, less tiles are accessible toward the beginning and end of wave iterations. 
+Therefore, device SM remain idle during the initiation and end of the process. 
+
 \subsubsection{Diagonal-major layout}
 
 Because the data dependency structure of the DTW algorithm results in elements
