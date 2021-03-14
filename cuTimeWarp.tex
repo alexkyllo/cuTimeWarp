@@ -172,6 +172,17 @@ disproportionately stretched in any one dimension, so the step size in any
 direction is the same relative to the scale of that dimension. (TODO: explain
 this better, find a citation)
 
+\subsubsection{Parallelizing DTW}
+
+A naive, sequential implementation of DTW would involve a nested loop to iterate
+over each row/column of the cost matrix to update its cost based on the three
+neighboring cells' costs, hence the $O(n^2)$ time complexity. But because each
+cell has a data dependency on the three cells to the top, left, and top-left,
+there is no dependency between cells that are on the same antidiagonal of
+the matrix, therefore computation of these cells can be handled by parallel
+threads. One thread computes the upper-leftmost cell, then two threads compute
+the next antidiagonal, then three threads compute the next, and so on.
+
 \subsection{Related Work}
 
 Utilizing indexing to construct lower bounds on warping distance is an
@@ -204,7 +215,7 @@ latency in the computation of the warping path matrix.
 \section{Methods}
 
 To evaluate various performance optimizations on the Soft-DTW computation, we
-implemented a C++ and CUDA library called cuTimeWarp, which includes functions 
+implemented a C++ and CUDA library called cuTimeWarp, which includes functions
 for computing the SoftDTW on CPU and GPU.
 
 Given a set of many multivariate time series of the same length and number of
@@ -220,19 +231,19 @@ values from the two time series within the nested loop of the DTW procedure.
 \subsection{Optimization Techniques}
 
 \subsubsection{Wavefront Tiling}
-Wavefront parallelism is one of the useful methods to overcome the dependencies of nested loops 
-by multiple processing units. The idea is to re-order the loop iterations in such a way that 
-form diagonal wave and each wave can be computed in parallel. Barriers will be utilized to control 
-the data dependencies among consecutive waves. Elements inside the wave grouped together using tiled 
-technique to enhance data locality and performance. This methodology presents a second degree of parallelism 
+Wavefront parallelism is one of the useful methods to overcome the dependencies of nested loops
+by multiple processing units. The idea is to re-order the loop iterations in such a way that
+form diagonal wave and each wave can be computed in parallel. Barriers will be utilized to control
+the data dependencies among consecutive waves. Elements inside the wave grouped together using tiled
+technique to enhance data locality and performance. This methodology presents a second degree of parallelism
 where tiles can be computed in parallel by separating with a global variable.
 
-GPU and specifically CUDA can accelerate the process of wavefront. Each tile assigns 
+GPU and specifically CUDA can accelerate the process of wavefront. Each tile assigns
 to a block to be process in parallel by SM. On the other hand, the iteration along diagonals within a tile are also
-pluralized. In order to enforce the dependencies, the global barriers used among the tiles and within every tiles.\cite{belviranli_peerwave_2015}     
+pluralized. In order to enforce the dependencies, the global barriers used among the tiles and within every tiles.\cite{belviranli_peerwave_2015}
 
-In our Soft DTW implementation, we utilized the wavefront technique to manage the dependencies of neighboring cells for 
-computing the minimum warp path. In our algorithm this value depends on the minimum cost of the upper, 
+In our Soft DTW implementation, we utilized the wavefront technique to manage the dependencies of neighboring cells for
+computing the minimum warp path. In our algorithm this value depends on the minimum cost of the upper,
 left and upper-left diagonal cell cost.
 
 
@@ -241,7 +252,7 @@ left and upper-left diagonal cell cost.
   \begin{cases}
         D(i-1,j) \\
         D(i,j-1)\\
-        D(i-1,j-1)   
+        D(i-1,j-1)
   \end{cases}
 \end{equation*}
 \subsubsection{Diagonal-major layout}
