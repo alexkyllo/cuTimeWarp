@@ -19,9 +19,9 @@ __global__ void softdtw_naive_kernel(float *D, float *R, float *cost, uint m,
                                      uint n, float gamma)
 {
     const uint tx = threadIdx.x;
-    // block size = max(m, n) (length of longest diagonal)
-    // number of antidiagonals is 2 * max(m,n) - 1
-    const uint passes = 2 * blockDim.x - 2;
+    // block size = min(m, n) (length of longest diagonal)
+    // number of antidiagonals is m+n-1
+    const uint passes = m + n - 1;
 
     for (uint p = 0; p < passes; p++)
     {
@@ -63,7 +63,7 @@ __global__ void softdtw_grad_naive_kernel(float *D, float *R, float *E, uint m,
                                           uint n, float gamma)
 {
     const uint tx = threadIdx.x;
-    const uint passes = 2 * blockDim.x - 1;
+    const uint passes = m + n - 1;
 
     for (uint p = 0; p < passes; p++)
     {

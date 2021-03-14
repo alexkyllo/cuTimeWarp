@@ -29,8 +29,8 @@ __global__ void softdtw_naive_kernel_multi(float *D, float *R, float *cost,
     uint bD2 = bx * (m + 2) * (n + 2);
 
     // block size = max(m, n) (length of longest diagonal)
-    // number of antidiagonals is 2 * max(m,n) - 1
-    const uint passes = 2 * blockDim.x - 2;
+    // number of antidiagonals is m+n-1
+    const uint passes = m + n - 1;
 
     for (uint p = 0; p < passes; p++)
     {

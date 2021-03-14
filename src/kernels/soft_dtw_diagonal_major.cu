@@ -19,31 +19,14 @@ void print_diag(const char *X, const uint m, const uint n)
 
 __global__ void convert_diagonal(float *D, float *DD, uint m, uint n)
 {
-    const uint i = blockIdx.x * blockDim.x + threadIdx.x;
-    const uint j = i % n;
-    // elememnts where i+j is equal are on the same diagonal of the input
-    // and same row of the output
+    const uint tx = blockIdx.x * blockDim.x + threadIdx.x;
+    uint j = tx % n;
+    uint i = (tx - j) / n;
+    // new i is the antidiagonal ordinal, sum of i and j
     uint dest_i = i + j;
-    uint dest_j = (dest_i / m) * (dest_i % m + 1);
+    // new j = j if in upper left half, else j-dist from leading antidiagonal
+    uint dest_j = j - max(0, (int)dest_i - (int)m + 1);
     DD[dest_i * m + dest_j] = D[i * n + j];
-}
-
-#define cudaErrchk(ans)                                                        \
-    {                                                                          \
-        GPUAssert((ans), __FILE__, __LINE__);                                  \
-    }
-inline void GPUAssert(cudaError_t code, const char *file, int line,
-                      bool abort = true)
-{
-    if (code != cudaSuccess)
-    {
-        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file,
-                line);
-        if (abort)
-        {
-            exit(code);
-        }
-    }
 }
 
 __host__ void convert_diagonal_major(float *D, float *DD, uint m, uint n)
@@ -58,6 +41,11 @@ __host__ void convert_diagonal_major(float *D, float *DD, uint m, uint n)
 /** Kernel function for computing "naive" Soft DTW on pairwise Euclidean
  * distance matrix for multivariate time series with CUDA. Input D should be a
  * __device__ array.
+ * This version assumes D is a diagonal-major array where m and n are the
+ * dimensions of the original row-major array. m x n becomes (m+n-1) x min(m,n).
+ * It also assumes R is a diagonal-major array where (m+2) and (n+2) are the
+ * dimensions of the original row-major array.
+ * (m+2) x (n+2) becomes (m+n+3) x min(m+2,n+2)
  * This naive version only works for sequence lengths <= 1024 i.e. can fit in
  * a single threadblock.
  * Assumes only a single threadblock in the kernel launch.
@@ -73,29 +61,32 @@ __global__ void softdtw_diagonal_kernel(float *D, float *R, float *cost, uint m,
                                         uint n, float gamma)
 {
     const uint tx = threadIdx.x;
-    // block size = max(m, n) (length of longest diagonal)
-    // number of antidiagonals is 2 * max(m,n) - 1
-    const uint passes = 2 * blockDim.x - 2;
+    // block size = min(m, n) (length of longest diagonal)
+    const uint bx = blockDim.x;
+    // number of antidiagonals and length of diagonal-major matrix is m+n-1
+    const uint passes = m + n - 1;
+    // width of diagonal-major matrix
 
-    for (uint p = 0; p < passes; p++)
+    for (uint ii = 0; ii < passes; ii++)
     {
-        uint jj = max(0, min(p - tx, n - 1));
-        uint i = tx + 1;
+        // uint jj = max(0, min(p - tx, n - 1));
+        uint jj = tx;
+        uint i = ii + 2;
         uint j = jj + 1;
 
-        if (tx + jj == p && (tx < m && jj < n))
+        if (jj < min(m, n))
         {
-            float cost = D[(i - 1) * n + j - 1];
-            float r1 = R[(i - 1) * (n + 2) + j];
-            float r2 = R[i * (n + 2) + j - 1];
-            float r3 = R[(i - 1) * (n + 2) + j - 1];
+            float cost = D[(i - 2) * bx + j];
+            float r1 = R[(i - 1) * bx + j];
+            float r2 = R[(i - 1) * bx + (j - 1)];
+            float r3 = R[(i - 2) * bx + j];
             double prev_min = softmin(r1, r2, r3, gamma);
-            R[i * (n + 2) + j] = cost + prev_min;
+            R[i * bx + j] = cost + prev_min;
         }
         __syncthreads();
     }
     if (tx == 0)
     {
-        *cost = R[m * (n + 2) + n];
+        *cost = R[(passes - 1) * (bx + 2) + bx];
     }
 }

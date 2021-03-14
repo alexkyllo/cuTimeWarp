@@ -105,3 +105,6 @@ __host__ void soft_dtw_tiled(float *da, float *db, float *D_, uint tile_width,
 __host__ void softdtw_cuda_stencil(float *D, float *R, float *costs, uint nD,
                                    uint m, uint n, float gamma,
                                    uint bandwidth = 0);
+
+__host__ float softdtw_cuda_diagonal(float *D, float *R, float *DD, float *RD,
+                                     uint m, uint n, float gamma);
