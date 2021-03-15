@@ -1032,13 +1032,13 @@ R expected:
 [inf 25.     11.     10.8614 10.8054 10.792  10.792  10.792     2.8054 inf]
 [inf inf     inf     inf     inf     inf     inf     inf           inf inf]
     */
-    float hDD[nDD]{0};
-    cudaMemcpy(hDD, DD, szDD, cudaMemcpyDeviceToHost);
-    print_matrix(hDD, (m + n - 1), std::min(m, n));
-    std::cout << "cost: " << cost << std::endl;
-    float hRD[nRD]{0};
-    cudaMemcpy(hRD, RD, szRD, cudaMemcpyDeviceToHost);
-    print_matrix(hRD, (m + n + 3), std::min(m, n) + 2);
+    // float hDD[nDD]{0};
+    // cudaMemcpy(hDD, DD, szDD, cudaMemcpyDeviceToHost);
+    // print_matrix(hDD, (m + n - 1), std::min(m, n));
+    // std::cout << "cost: " << cost << std::endl;
+    // float hRD[nRD]{0};
+    // cudaMemcpy(hRD, RD, szRD, cudaMemcpyDeviceToHost);
+    // print_matrix(hRD, (m + n + 3), std::min(m, n) + 2);
     REQUIRE(is_close(2.80539, cost));
     delete[] a;
     delete[] b;
