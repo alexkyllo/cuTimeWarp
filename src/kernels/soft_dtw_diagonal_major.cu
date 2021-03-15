@@ -36,54 +36,6 @@ __global__ void convert_diagonal(float *D, float *DD, uint m, uint n)
     DD[dest_i * m + dest_j] = D[i * n + j];
 }
 
-/** Host function for converting a matrix from row major to antidiagonal-major
- * layout.
- *  @param D The input matrix of dimension m x n
- *  @param DD The output matrix of dimension (m+n-1) x min(m,n)
- *  @param m The height of the input matrix (rows)
- *  @param n The width of the input matrix (columns)
- */
-__host__ void convert_diagonal_major(float *D, float *DD, uint m, uint n)
-{
-    uint T = m * n;
-    uint TPB = min(T, 1024);
-    uint B = (T + TPB - 1) / TPB;
-    convert_diagonal<<<B, TPB>>>(D, DD, m, n);
-    cudaErrchk(cudaDeviceSynchronize());
-}
-
-/** Host function for converting a 3D tensor of m x n matrices from row major to
- * antidiagonal-major layout.
- *  @param D The input matrix of dimension m x n
- *  @param DD The output matrix of dimension (m+n-1) x min(m,n)
- *  @param nD The number of mxn matrices in D
- *  @param m The height of the input matrix (rows)
- *  @param n The width of the input matrix (columns)
- */
-__host__ void convert_diagonal_major_multi(float *D, float *DD, uint nD, uint m,
-                                           uint n)
-{
-    uint T = m * n;
-    uint TPB = min(T, 1024);
-    uint B = (T + TPB - 1) / TPB;
-
-    // run concurrently with streams
-    const int num_streams = min((int)nD, 32);
-    cudaStream_t streams[num_streams];
-    for (uint i = 0; i < num_streams; i++)
-        cudaStreamCreate(&streams[i]);
-    for (uint i = 0; i < nD; i++)
-    {
-        uint stream_num = i % num_streams;
-        convert_diagonal<<<B, TPB, 0, streams[stream_num]>>>(
-            &D[i * m * n], &DD[i * (m + n - 1) * min(m, n)], m, n);
-    }
-
-    for (uint i = 0; i < num_streams; i++)
-        cudaStreamDestroy(streams[i]);
-    cudaErrchk(cudaDeviceSynchronize());
-}
-
 /** Kernel function for computing "naive" Soft DTW on pairwise Euclidean
  * distance matrix for multivariate time series with CUDA. Input D should be a
  * __device__ array.

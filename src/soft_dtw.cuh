@@ -106,6 +106,26 @@ __host__ void softdtw_cuda_stencil(float *D, float *R, float *costs, uint nD,
                                    uint m, uint n, float gamma,
                                    uint bandwidth = 0);
 
+/** Host function for converting a matrix from row major to antidiagonal-major
+ * layout.
+ *  @param D The input matrix of dimension m x n
+ *  @param DD The output matrix of dimension (m+n-1) x min(m,n)
+ *  @param m The height of the input matrix (rows)
+ *  @param n The width of the input matrix (columns)
+ */
+__host__ void convert_diagonal_major(float *D, float *DD, uint m, uint n);
+
+/** Host function for converting a 3D tensor of m x n matrices from row major to
+ * antidiagonal-major layout.
+ *  @param D The input matrix of dimension m x n
+ *  @param DD The output matrix of dimension (m+n-1) x min(m,n)
+ *  @param nD The number of mxn matrices in D
+ *  @param m The height of the input matrix (rows)
+ *  @param n The width of the input matrix (columns)
+ */
+__host__ void convert_diagonal_major_multi(float *D, float *DD, uint nD, uint m,
+                                           uint n);
+
 __host__ float softdtw_cuda_diagonal(float *DD, float *RD, uint m, uint n,
                                      float gamma);
 

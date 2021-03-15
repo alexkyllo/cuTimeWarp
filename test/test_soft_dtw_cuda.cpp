@@ -1,4 +1,3 @@
-#include "../src/kernels/soft_dtw_diagonal_major.cuh"
 #include "../src/soft_dtw.cuh"
 #include "catch.h"
 #include <cmath>
@@ -1145,7 +1144,7 @@ TEST_CASE("soft dtw cuda diagonal multi nX is 1 nY is 1")
     uint szRD = nRD * sizeof(float);
     cudaMalloc(&RD, szRD);
     cudaMemset(RD, 0, szRD);
-    convert_diagonal_major_multi(R, RD, nX * nY, m + 2, n + 2);
+    // convert_diagonal_major_multi(R, RD, nX * nY, m + 2, n + 2);
 
     float costs[nX * nY]{0};
     softdtw_cuda_diagonal_multi(DD, RD, (float *)&costs, nX * nY, m, n, gamma);

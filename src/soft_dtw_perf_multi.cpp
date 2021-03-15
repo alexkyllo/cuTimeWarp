@@ -125,6 +125,36 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     std::cout << "softdtw_cuda_stencil_multi_40 " << duration << std::endl;
     memset(costs, 0, nX * nY * sizeof(float));
 
+    // converting D from row-major to diagonal-major format
+    float *dDD;
+    uint nDD = std::min(m, n) * nX * nY * (m + n - 1);
+    uint szDD = nDD * sizeof(float);
+    cudaMalloc(&dDD, szDD);
+    cudaMemset(dDD, 0, szDD);
+    start = high_resolution_clock::now();
+    convert_diagonal_major_multi(dD, dDD, nX * nY, m, n);
+    cudaDeviceSynchronize();
+    end = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(end - start).count();
+    std::cout << "convert_diagonal_multi " << duration << std::endl;
+
+    // transform R into diagonal-major layout
+    float *dRD;
+    uint nRD = (std::min(m, n) + 2) * nX * nY * (m + n + 3);
+    uint szRD = nRD * sizeof(float);
+    cudaMalloc(&dRD, szRD);
+    cudaMemset(dRD, 0, szRD);
+    // convert_diagonal_major_multi(R, RD, nX * nY, m + 2, n + 2);
+
+    // the softdtw cuda stencil kernel execution .....timing....
+    start = high_resolution_clock::now();
+    softdtw_cuda_diagonal_multi(dDD, dRD, costs, nX * nY, m, n, gamma);
+    cudaDeviceSynchronize();
+    end = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(end - start).count();
+    std::cout << "softdtw_cuda_diagonal_multi " << duration << std::endl;
+    memset(costs, 0, nX * nY * sizeof(float));
+
     delete[] costs;
     cudaFree(dX);
     cudaFree(dY);
