@@ -285,7 +285,20 @@ memory.
 
 If the data is first rearranged into an antidiagonal-major layout, then at each
 iteration of the wavefront loop, processor threads will make coalesced accesses
-to data elements that are laid out contiguously in memory.
+to data elements that are laid out contiguously in memory. As illustrated in
+Figure \ref{diagonal_layout}, this transforms an $m x n$ matrix that must be
+iterated over diagonally, into a $(m+n-1) x (min(m,n))$ matrix that can be
+iterated from top to bottom, with one thread assigned to each column. At each
+iteration step (i.e. each row of the diagonal-major matrix), contiguous array
+elements are read from memory into cache and written from cache back to memory,
+resulting in coalesced accesses and fewer cache misses.
+
+\begin{figure}[htbp]
+  \includegraphics[height=2.5in]{img/diagonal_layout.png}
+  \centering
+  \caption{Illustration of cost matrix transformation to antidiagonal-major layout}
+  \label{diagonal_layout}
+  \end{figure}
 
 \subsubsection{Shared memory stencil computation}
 
