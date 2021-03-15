@@ -61,7 +61,7 @@ __global__ void _softdtw_diagonal_kernel(float *D, float *R, float *cost,
                                          uint m, uint n, float gamma)
 {
     const uint tx = threadIdx.x;
-    const uint bx = blockDim.x;
+    const uint bd = blockDim.x;
     // block size = min(m, n) (length of longest diagonal)
     // number of antidiagonals is m+n-1
     const uint passes = m + n - 1;
@@ -83,12 +83,12 @@ __global__ void _softdtw_diagonal_kernel(float *D, float *R, float *cost,
 
         if (tx + jj == p && (tx < m && jj < n))
         {
-            float cost = D[(i - 2) * bx + j - 1];     // 1,0
-            float r1 = R[(i - 1) * (bx + 2) + j];     // 1,1
-            float r2 = R[(i - 2) * (bx + 2) + j - 1]; // 2, 0
-            float r3 = R[(i - 1) * (bx + 2) + j - 1];
+            float cost = D[(i - 2) * bd + j - 1];     // 1,0
+            float r1 = R[(i - 1) * (bd + 2) + j];     // 1,1
+            float r2 = R[(i - 2) * (bd + 2) + j - 1]; // 2, 0
+            float r3 = R[(i - 1) * (bd + 2) + j - 1];
             double prev_min = softmin(r1, r2, r3, gamma);
-            R[i * (bx + 2) + j] = cost + prev_min;
+            R[i * (bd + 2) + j] = cost + prev_min;
             if (tx == 0)
             {
                 printf("pass %d tid %d reading %.2f from D[%d, %d]\n", p, tx,
@@ -108,7 +108,7 @@ __global__ void _softdtw_diagonal_kernel(float *D, float *R, float *cost,
     }
     if (tx == 0)
     {
-        *cost = R[m * (bx + 2) + n];
+        *cost = R[m * (bd + 2) + n];
     }
 }
 
@@ -116,7 +116,7 @@ __global__ void softdtw_diagonal_kernel(float *D, float *R, float *cost, uint m,
                                         uint n, float gamma)
 {
     const uint tx = threadIdx.x;
-    const uint bx = blockDim.x;
+    const uint bd = blockDim.x;
     // block size = min(m, n) (length of longest diagonal)
     // number of antidiagonals is m+n-1
     // D is now (m+n-1) x min(m,n)
@@ -126,7 +126,7 @@ __global__ void softdtw_diagonal_kernel(float *D, float *R, float *cost, uint m,
     for (uint p = 0; p < passes; p++)
     {
         uint ii = max(0, (int)p - (int)tx);
-        uint past_mid = max(0, (int)p - (int)bx + 1);
+        uint past_mid = max(0, (int)p - (int)bd + 1);
         uint i = ii + 1 - past_mid;
         uint j = tx + 1 + past_mid;
 
@@ -145,28 +145,93 @@ __global__ void softdtw_diagonal_kernel(float *D, float *R, float *cost, uint m,
 
             // If we are past the antidiagonal, need to increment the previous
             // cell references
-            if (p >= bx)
+            if (p >= bd)
             {
                 r1j++;
                 r2j++;
                 r3j++;
             }
-            if (p > bx)
+            if (p > bd)
             {
                 r1j++;
             }
 
-            float cost = D[di * bx + dj];
-            float r1 = R[di * (bx + 2) + r1j];
-            float r2 = R[(ri - 1) * (bx + 2) + r2j];
-            float r3 = R[(ri - 1) * (bx + 2) + r3j];
+            float cost = D[di * bd + dj];
+            float r1 = R[di * (bd + 2) + r1j];
+            float r2 = R[(ri - 1) * (bd + 2) + r2j];
+            float r3 = R[(ri - 1) * (bd + 2) + r3j];
             double prev_min = softmin(r1, r2, r3, gamma);
-            R[ri * (bx + 2) + rj] = cost + prev_min;
+            R[ri * (bd + 2) + rj] = cost + prev_min;
         }
         __syncthreads();
-        if (tx == 0)
+    }
+    if (tx == 0)
+    {
+        *cost = R[(m + n) * (bd + 2) + 1];
+    }
+}
+
+__global__ void softdtw_diagonal_kernel_multi(float *D, float *R, float *cost,
+                                              uint nD, uint m, uint n,
+                                              float gamma)
+{
+    const uint tx = threadIdx.x;
+    const uint bd = blockDim.x;
+    const uint bx = blockIdx.x;
+    const uint bD = bx * m * n;
+    const uint bD2 = bx * (m + 2) * (n + 2);
+
+    // block size = min(m, n) (length of longest diagonal)
+    // number of antidiagonals is m+n-1
+
+    // D is now (m+n-1) x min(m,n)
+    // R is now (m+n+3) x min(m+1,n+1)
+    const uint passes = m + n - 1;
+
+    for (uint p = 0; p < passes; p++)
+    {
+        uint ii = max(0, (int)p - (int)tx);
+        uint past_mid = max(0, (int)p - (int)bd + 1);
+        uint i = ii + 1 - past_mid;
+        uint j = tx + 1 + past_mid;
+
+        if (tx + ii <= p && j <= n)
         {
-            *cost = R[(m + n) * (bx + 2) + 1];
+            // convert i,j to diagonal-major coordinates
+            // new j = j if in upper left half, else j-dist from leading
+            // antidiagonal
+            uint di = (i - 1) + (j - 1);
+            uint dj = j - 1 - past_mid;
+            uint ri = i + j;
+            uint rj = j - past_mid;
+            uint r1j = rj - 1;
+            uint r2j = rj - 1;
+            uint r3j = rj;
+
+            // If we are past the antidiagonal, need to increment the previous
+            // cell references
+            if (p >= bd)
+            {
+                r1j++;
+                r2j++;
+                r3j++;
+            }
+            if (p > bd)
+            {
+                r1j++;
+            }
+
+            float cost = D[bD + di * bd + dj];
+            float r1 = R[bD2 + di * (bd + 2) + r1j];
+            float r2 = R[bD2 + (ri - 1) * (bd + 2) + r2j];
+            float r3 = R[bD2 + (ri - 1) * (bd + 2) + r3j];
+            double prev_min = softmin(r1, r2, r3, gamma);
+            R[bD2 + ri * (bd + 2) + rj] = cost + prev_min;
         }
+        __syncthreads();
+    }
+    if (tx == 0)
+    {
+        cost[bx] = R[bD2 + (m + n) * (bd + 2) + 1];
     }
 }

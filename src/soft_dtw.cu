@@ -477,6 +477,8 @@ __host__ float softdtw_cuda_diagonal(float *D, float *R, float *DD, float *RD,
     return path_cost;
 }
 
+// TODO: Add a wrapper for diagonal multi kernel
+
 // TODO: Barycenter computation (average time series under SoftDTW geometry)
 // through gradient descent with SoftDTW as loss function
 // TODO: 1-nearest neighbor classification function

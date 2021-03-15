@@ -9,3 +9,6 @@ __global__ void convert_diagonal(float *D, float *DD, uint m, uint n);
 __host__ void convert_diagonal_major(float *D, float *DD, uint m, uint n);
 __global__ void softdtw_diagonal_kernel(float *D, float *R, float *cost, uint m,
                                         uint n, float gamma);
+__global__ void softdtw_diagonal_kernel_multi(float *D, float *R, float *cost,
+                                              uint nD, uint m, uint n,
+                                              float gamma);

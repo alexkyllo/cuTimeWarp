@@ -1047,3 +1047,5 @@ R expected:
     cudaFree(db);
     cudaFree(R);
 }
+
+// TODO: write a test for SoftDTW diagonal multi kernel
