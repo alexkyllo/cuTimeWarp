@@ -139,28 +139,23 @@ __global__ void softdtw_diagonal_kernel(float *D, float *R, float *cost, uint m,
             uint dj = j - 1 - past_mid;
             uint ri = i + j;
             uint rj = j - past_mid;
-            uint r1j;
-            uint r2j;
-            uint r3j;
+            uint r1j = rj - 1;
+            uint r2j = rj - 1;
+            uint r3j = rj;
 
-            if (p < bx)
+            // If we are past the antidiagonal, need to increment the previous
+            // cell references
+            if (p >= bx)
             {
-                r1j = rj - 1;
-                r2j = rj - 1;
-                r3j = rj;
+                r1j++;
+                r2j++;
+                r3j++;
             }
-            else if (p == bx)
+            if (p > bx)
             {
-                r1j = rj;
-                r2j = rj;
-                r3j = rj + 1;
+                r1j++;
             }
-            else if (p > bx)
-            {
-                r1j = rj + 1;
-                r2j = rj;
-                r3j = rj + 1;
-            }
+
             float cost = D[di * bx + dj];
             float r1 = R[di * (bx + 2) + r1j];
             float r2 = R[(ri - 1) * (bx + 2) + r2j];
