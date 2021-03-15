@@ -142,17 +142,18 @@ __host__ void sq_euclid_dist_multi(const float *X, const float *Y, float *D,
     uint grid_size_n = (n + block_size_n - 1) / block_size_n;
     // compute squared euclidean norm of X
 
-    const int num_streams = 32;
+    // allocate extra streams to try and get these to run concurrently
+    const int num_streams = min(max(nX, nY), 32);
     cudaStream_t streams[num_streams];
     for (uint i = 0; i < num_streams; i++)
         cudaStreamCreate(&streams[i]);
-    for (uint i = 0; i < m; i++)
+    for (uint i = 0; i < nX; i++)
     {
         uint stream_num = i % num_streams;
         sq_euclid_norm<<<grid_size_m, block_size_m, 0, streams[stream_num]>>>(
             m, k, &X[i * (m * k)], &XX[i * m]);
     }
-    for (uint i = 0; i < n; i++)
+    for (uint i = 0; i < nY; i++)
     {
         uint stream_num = i % num_streams;
         sq_euclid_norm<<<block_size_n, grid_size_n, 0, streams[stream_num]>>>(
@@ -431,8 +432,8 @@ __host__ void softdtw_cuda_stencil(float *D, float *R, float *costs, uint nD,
     cudaFree(d_path_cost);
 }
 
-__host__ float softdtw_cuda_diagonal(float *D, float *R, float *DD, float *RD,
-                                     uint m, uint n, float gamma)
+__host__ float softdtw_cuda_diagonal(float *DD, float *RD, uint m, uint n,
+                                     float gamma)
 {
     // size_t m2n2 = (m + 2) * (n + 2);
     // Launch a kernel to fill matrix R with infinity
@@ -450,9 +451,6 @@ __host__ float softdtw_cuda_diagonal(float *D, float *R, float *DD, float *RD,
     // uint szRD = (min(m, n) + 2) * (m + n + 3) * sizeof(float);
     // cudaMalloc(&RD, szRD);
     // cudaMemset(RD, 0, szRD);
-
-    convert_diagonal_major(D, DD, m, n);
-    convert_diagonal_major(R, RD, m + 2, n + 2);
 
     size_t nRD = (std::min(m, n) + 2) * (m + n + 3);
     const uint inf_blocks = (nRD + inf_tpb - 1) / nRD;

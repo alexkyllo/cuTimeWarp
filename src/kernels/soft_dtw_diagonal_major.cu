@@ -17,6 +17,13 @@ void print_diag(const char *X, const uint m, const uint n)
     }
 }
 
+/** Kernel function for converting a matrix from row major to antidiagonal-major
+ * layout.
+ *  @param D The input matrix of dimension m x n
+ *  @param DD The output matrix of dimension (m+n-1) x min(m,n)
+ *  @param m The height of the input matrix (rows)
+ *  @param n The width of the input matrix (columns)
+ */
 __global__ void convert_diagonal(float *D, float *DD, uint m, uint n)
 {
     const uint tx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -29,12 +36,51 @@ __global__ void convert_diagonal(float *D, float *DD, uint m, uint n)
     DD[dest_i * m + dest_j] = D[i * n + j];
 }
 
+/** Host function for converting a matrix from row major to antidiagonal-major
+ * layout.
+ *  @param D The input matrix of dimension m x n
+ *  @param DD The output matrix of dimension (m+n-1) x min(m,n)
+ *  @param m The height of the input matrix (rows)
+ *  @param n The width of the input matrix (columns)
+ */
 __host__ void convert_diagonal_major(float *D, float *DD, uint m, uint n)
 {
     uint T = m * n;
     uint TPB = min(T, 1024);
     uint B = (T + TPB - 1) / TPB;
     convert_diagonal<<<B, TPB>>>(D, DD, m, n);
+    cudaErrchk(cudaDeviceSynchronize());
+}
+
+/** Host function for converting a 3D tensor of m x n matrices from row major to
+ * antidiagonal-major layout.
+ *  @param D The input matrix of dimension m x n
+ *  @param DD The output matrix of dimension (m+n-1) x min(m,n)
+ *  @param nD The number of mxn matrices in D
+ *  @param m The height of the input matrix (rows)
+ *  @param n The width of the input matrix (columns)
+ */
+__host__ void convert_diagonal_major_multi(float *D, float *DD, uint nD, uint m,
+                                           uint n)
+{
+    uint T = m * n;
+    uint TPB = min(T, 1024);
+    uint B = (T + TPB - 1) / TPB;
+
+    // run concurrently with streams
+    const int num_streams = min((int)nD, 32);
+    cudaStream_t streams[num_streams];
+    for (uint i = 0; i < num_streams; i++)
+        cudaStreamCreate(&streams[i]);
+    for (uint i = 0; i < nD; i++)
+    {
+        uint stream_num = i % num_streams;
+        convert_diagonal<<<B, TPB, 0, streams[stream_num]>>>(
+            &D[i * m * n], &DD[i * (m + n - 1) * min(m, n)], m, n);
+    }
+
+    for (uint i = 0; i < num_streams; i++)
+        cudaStreamDestroy(streams[i]);
     cudaErrchk(cudaDeviceSynchronize());
 }
 
@@ -57,61 +103,6 @@ __host__ void convert_diagonal_major(float *D, float *DD, uint m, uint n)
  * @param n Length of second time series
  * @param gamma SoftDTW smoothing parameter
  */
-__global__ void _softdtw_diagonal_kernel(float *D, float *R, float *cost,
-                                         uint m, uint n, float gamma)
-{
-    const uint tx = threadIdx.x;
-    const uint bd = blockDim.x;
-    // block size = min(m, n) (length of longest diagonal)
-    // number of antidiagonals is m+n-1
-    const uint passes = m + n - 1;
-
-    for (uint p = 0; p < passes; p++)
-    {
-        // uint jj = max(0, min(p - tx, n - 1));
-        // uint dest_i = tx + jj;
-        // uint dest_j = jj - max(0, (int)dest_i - (int)(m + 3));
-        // uint i = dest_i + 1;
-        // uint j = dest_j + 1;
-
-        uint jj = max(0, min(p - tx, n - 1));
-        uint old_i = tx + 1;
-        uint old_j = jj + 1;
-
-        uint i = old_i + old_j;
-        uint j = old_j - max(0, (int)i - (int)(m + 3));
-
-        if (tx + jj == p && (tx < m && jj < n))
-        {
-            float cost = D[(i - 2) * bd + j - 1];     // 1,0
-            float r1 = R[(i - 1) * (bd + 2) + j];     // 1,1
-            float r2 = R[(i - 2) * (bd + 2) + j - 1]; // 2, 0
-            float r3 = R[(i - 1) * (bd + 2) + j - 1];
-            double prev_min = softmin(r1, r2, r3, gamma);
-            R[i * (bd + 2) + j] = cost + prev_min;
-            if (tx == 0)
-            {
-                printf("pass %d tid %d reading %.2f from D[%d, %d]\n", p, tx,
-                       cost, i - 2, j - 1);
-                printf("pass %d tid %d reading %.2f from R[%d, %d]\n", p, tx,
-                       r1, i - 1, j);
-                printf("pass %d tid %d reading %.2f from R[%d, %d]\n", p, tx,
-                       r2, i - 2, j - 1);
-                printf("pass %d tid %d reading %.2f from R[%d, %d]\n", p, tx,
-                       r3, i - 1, j - 1);
-                printf(
-                    "pass %d tx %d jj %d i %d j %d writing %.2f to R[%d, %d]\n",
-                    p, tx, jj, i, j, cost + prev_min, i, j);
-            }
-        }
-        __syncthreads();
-    }
-    if (tx == 0)
-    {
-        *cost = R[m * (bd + 2) + n];
-    }
-}
-
 __global__ void softdtw_diagonal_kernel(float *D, float *R, float *cost, uint m,
                                         uint n, float gamma)
 {

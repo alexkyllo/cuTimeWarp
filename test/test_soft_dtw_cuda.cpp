@@ -1005,33 +1005,25 @@ TEST_CASE("soft dtw cuda diagonal nX is 1 nY is 1")
     cudaMalloc(&R, sz_R);
     cudaMemset(R, 0, sz_R);
 
+    sq_euclid_dist(da, db, D, m, n, k);
+
     // transform D into diagonal-major layout
     float *DD;
     uint nDD = std::min(m, n) * (m + n - 1);
     uint szDD = nDD * sizeof(float);
     cudaMalloc(&DD, szDD);
     cudaMemset(DD, 0, szDD);
+    convert_diagonal_major(D, DD, m, n);
 
     // transform R into diagonal-major layout
     float *RD;
     uint nRD = (std::min(m, n) + 2) * (m + n + 3);
     uint szRD = nRD * sizeof(float);
     cudaMalloc(&RD, szRD);
+    convert_diagonal_major(R, RD, m + 2, n + 2);
     // cudaMemset(RD, 0, szRD);
 
-    sq_euclid_dist(da, db, D, m, n, k);
-
-    float cost = softdtw_cuda_diagonal(D, R, DD, RD, m, n, gamma);
-    /*
-R expected:
-[0. inf     inf     inf     inf     inf     inf     inf       inf inf]
-[inf  0.      1.      2.      3.      4.      5.      6.       15. inf]
-[inf  1.     -0.     -0.     -0.     -0.     -0.     -0.        4. inf]
-[inf  5.      1.      0.9307  0.9307  0.9307  0.9307  0.9307    1. inf]
-[inf  9.      2.      1.8901  1.8614  1.8613  1.8613  1.8613    1.8901 inf]
-[inf 25.     11.     10.8614 10.8054 10.792  10.792  10.792     2.8054 inf]
-[inf inf     inf     inf     inf     inf     inf     inf           inf inf]
-    */
+    float cost = softdtw_cuda_diagonal(DD, RD, m, n, gamma);
     // float hDD[nDD]{0};
     // cudaMemcpy(hDD, DD, szDD, cudaMemcpyDeviceToHost);
     // print_matrix(hDD, (m + n - 1), std::min(m, n));
@@ -1043,9 +1035,130 @@ R expected:
     delete[] a;
     delete[] b;
     cudaFree(D);
+    cudaFree(R);
+    cudaFree(DD);
+    cudaFree(RD);
     cudaFree(da);
     cudaFree(db);
-    cudaFree(R);
+}
+
+TEST_CASE("test convert diagonal major multi")
+{
+    const uint m = 5;
+    const uint n = 8;
+    const uint nD = 2;
+    float D[m * n * nD]{0,  1, 1, 1, 1, 1, 1, 9, // dist(X[0], Y[0])
+                        1,  0, 0, 0, 0, 0, 0, 4, //
+                        4,  1, 1, 1, 1, 1, 1, 1, //
+                        4,  1, 1, 1, 1, 1, 1, 1, //
+                        16, 9, 9, 9, 9, 9, 9, 1,
+                        0,  1, 1, 1, 1, 1, 1, 9, // dist(X[0], Y[0])
+                        1,  0, 0, 0, 0, 0, 0, 4, //
+                        4,  1, 1, 1, 1, 1, 1, 1, //
+                        4,  1, 1, 1, 1, 1, 1, 1, //
+                        16, 9, 9, 9, 9, 9, 9, 1};
+    float DD[m * (m + n - 1) * nD]{0};
+    float DE[m * (m + n - 1) * nD]{0,  0, 0, 0, 0,                //
+                                   1,  1, 0, 0, 0,                //
+                                   4,  0, 1, 0, 0,                //
+                                   4,  1, 0, 1, 0,                //
+                                   16, 1, 1, 0, 1,                //
+                                   9,  1, 1, 0, 1,                //
+                                   9,  1, 1, 0, 1,                //
+                                   9,  1, 1, 0, 9,                //
+                                   9,  1, 1, 4, 0,                //
+                                   9,  1, 1, 0, 0,                //
+                                   9,  1, 0, 0, 0,                //
+                                   1,  0, 0, 0, 0, 0, 0, 0, 0, 0, //
+                                   1,  1, 0, 0, 0,                //
+                                   4,  0, 1, 0, 0,                //
+                                   4,  1, 0, 1, 0,                //
+                                   16, 1, 1, 0, 1,                //
+                                   9,  1, 1, 0, 1,                //
+                                   9,  1, 1, 0, 1,                //
+                                   9,  1, 1, 0, 9,                //
+                                   9,  1, 1, 4, 0,                //
+                                   9,  1, 1, 0, 0,                //
+                                   9,  1, 0, 0, 0,                //
+                                   1,  0, 0, 0, 0};
+    float *dD;
+    float *dDD;
+    uint szD = m * n * nD * sizeof(float);
+    uint szDD = m * (m + n - 1) * nD * sizeof(float);
+    cudaMalloc(&dD, szD);
+    cudaMalloc(&dDD, szDD);
+    cudaMemcpy(dD, D, szD, cudaMemcpyHostToDevice);
+    cudaMemset(dDD, 0, szDD);
+    convert_diagonal_major_multi(dD, dDD, 2, m, n);
+    cudaErrchk(cudaMemcpy(DD, dDD, szDD, cudaMemcpyDeviceToHost));
+    // print_matrix(DD, (m + n - 1), m);
+    for (uint i = 0; i < m * (m + n - 1) * nD; i++)
+    {
+        REQUIRE(DD[i] == DE[i]);
+    }
+    cudaFree(dD);
+    cudaFree(dDD);
 }
 
 // TODO: write a test for SoftDTW diagonal multi kernel
+// TEST_CASE("soft dtw cuda diagonal multi nX is 1 nY is 1")
+// {
+//     const int m = 5;
+//     const int k = 1;
+//     const int n = 8;
+//     const int nX = 2;
+//     const int nY = 1;
+//     float gamma = 0.1;
+//     float *a = new
+//     float[m]{1.0, 2.0, 3.0, 3.0, 5.0, 1.0, 2.0, 3.0, 3.0, 5.0}; float *b =
+//     new float[n]{1.0, 2.0, 2.0, 2.0, 2.0, 2.0, 2.0, 4.0};
+//     // device arrays
+//     float *D;
+//     float *da;
+//     float *db;
+//     cudaMalloc(&da, m * nX * sizeof(float));
+//     cudaMalloc(&db, n * nY * sizeof(float));
+//     cudaMalloc(&D, m * n * nX * nY * sizeof(float));
+//     cudaMemset(D, 0, m * n * nX * nY * sizeof(float));
+//     cudaMemcpy(da, a, m * nX * sizeof(float), cudaMemcpyHostToDevice);
+//     cudaMemcpy(db, b, n * nY * sizeof(float), cudaMemcpyHostToDevice);
+
+//     float *R;
+//     size_t m2n2 = nX * nY * (m + 2) * (n + 2);
+//     size_t sz_R = m2n2 * sizeof(float);
+//     cudaMalloc(&R, sz_R);
+//     cudaMemset(R, 0, sz_R);
+
+//     // transform D into diagonal-major layout
+//     float *DD;
+//     uint nDD = std::min(m, n) * nX * nY * (m + n - 1);
+//     uint szDD = nDD * sizeof(float);
+//     cudaMalloc(&DD, szDD);
+//     cudaMemset(DD, 0, szDD);
+//     convert_diagonal_major(D, DD, m, n);
+//     // transform R into diagonal-major layout
+//     float *RD;
+//     uint nRD = (std::min(m, n) + 2) * nX * nY * (m + n + 3);
+//     uint szRD = nRD * sizeof(float);
+//     cudaMalloc(&RD, szRD);
+//     convert_diagonal_major(R, RD, m + 2, n + 2);
+//     // cudaMemset(RD, 0, szRD);
+
+//     sq_euclid_dist_multi(da, db, D, nX, nY, m, n, k);
+
+//     float cost = softdtw_cuda_diagonal(D, R, DD, RD, m, n, gamma);
+//     // float hDD[nDD]{0};
+//     // cudaMemcpy(hDD, DD, szDD, cudaMemcpyDeviceToHost);
+//     // print_matrix(hDD, (m + n - 1), std::min(m, n));
+//     // std::cout << "cost: " << cost << std::endl;
+//     // float hRD[nRD]{0};
+//     // cudaMemcpy(hRD, RD, szRD, cudaMemcpyDeviceToHost);
+//     // print_matrix(hRD, (m + n + 3), std::min(m, n) + 2);
+//     REQUIRE(is_close(2.80539, cost));
+//     delete[] a;
+//     delete[] b;
+//     cudaFree(D);
+//     cudaFree(da);
+//     cudaFree(db);
+//     cudaFree(R);
+// }
