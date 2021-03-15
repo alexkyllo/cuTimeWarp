@@ -139,32 +139,55 @@ __global__ void softdtw_diagonal_kernel(float *D, float *R, float *cost, uint m,
             uint dj = j - 1 - past_mid;
             uint ri = i + j;
             uint rj = j - past_mid;
+            uint r1j;
+            uint r2j;
+            uint r3j;
+
+            if (p < bx)
+            {
+                r1j = rj - 1;
+                r2j = rj - 1;
+                r3j = rj;
+            }
+            else if (p == bx)
+            {
+                r1j = rj;
+                r2j = rj;
+                r3j = rj + 1;
+            }
+            else if (p > bx)
+            {
+                r1j = rj + 1;
+                r2j = rj;
+                r3j = rj + 1;
+            }
+
             // uint djm1 = (j - 1) - max(0, (int)di - (int)bx - 1);
 
-            float cost = D[di * bx + dj];               // D[0,0] this is right
-            float r1 = R[di * (bx + 2) + dj];           // R[0,0]
-            float r2 = R[(ri - 1) * (bx + 2) + rj - 1]; // R[1,0]
-            float r3 = R[(ri - 1) * (bx + 2) + rj];     // R[1,1]
+            float cost = D[di * bx + dj];            // D[0,0] this is right
+            float r1 = R[di * (bx + 2) + r1j];       // R[0,0]
+            float r2 = R[(ri - 1) * (bx + 2) + r2j]; // R[1,0]
+            float r3 = R[(ri - 1) * (bx + 2) + r3j]; // R[1,1]
             double prev_min = softmin(r1, r2, r3, gamma);
             R[ri * (bx + 2) + rj] = cost + prev_min; // R[2,1] this is right
-            // if (tx == 0)
+            if (tx == 0)
             {
-                // Printf("Pass %D Tid %D Reading %.2f From D[%D, %D]\N", P, Tx,
-                //        Cost, Di, Dj);
-                // Printf("Pass %D Tid %D Reading %.2f From R[%D, %D]\N", P, Tx,
-                //        R1, Ri - 2, Rj - 1);
-                // printf("pass %d tid %d reading %.2f from R[%d, %d]\n", p, tx,
-                //        r2, ri - 1, rj - 1);
-                // printf("pass %d tid %d reading %.2f from R[%d, %d]\n", p, tx,
-                //        r3, ri - 1, rj);
-                // printf("pass %d tid %d writing %.2f to R[%d, %d]\n", p, tx,
-                //        cost + prev_min, ri, rj);
+                printf("pass %d tid %d reading cost %.2f from D[%d, %d]\n", p,
+                       tx, cost, di, dj);
+                printf("pass %d tid %d reading r1 %.2f from R[%d, %d]\n", p, tx,
+                       r1, di, r1j);
+                printf("pass %d tid %d reading r2 %.2f from R[%d, %d]\n", p, tx,
+                       r2, ri - 1, r2j);
+                printf("pass %d tid %d reading r3 %.2f from R[%d, %d]\n", p, tx,
+                       r3, ri - 1, r3j);
+                printf("pass %d tid %d writing %.2f to R[%d, %d]\n", p, tx,
+                       cost + prev_min, ri, rj);
             }
         }
         __syncthreads();
-        // if (tx == 0)
-        // {
-        //     *cost = R[m * (bx + 2) + n];
-        // }
+        if (tx == 0)
+        {
+            *cost = R[(m + n) * (bx + 2) + 1];
+        }
     }
 }
