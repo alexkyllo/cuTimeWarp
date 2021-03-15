@@ -169,8 +169,8 @@ __global__ void softdtw_diagonal_kernel_multi(float *D, float *R, float *cost,
     const uint tx = threadIdx.x;
     const uint bd = blockDim.x;
     const uint bx = blockIdx.x;
-    const uint bD = bx * m * n;
-    const uint bD2 = bx * (m + 2) * (n + 2);
+    const uint bD = bx * (m + n - 1) * min(m, n);
+    const uint bD2 = bx * (m + n + 3) * min(m + 2, n + 2);
 
     // block size = min(m, n) (length of longest diagonal)
     // number of antidiagonals is m+n-1

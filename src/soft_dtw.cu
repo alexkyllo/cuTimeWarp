@@ -216,6 +216,7 @@ __host__ void sq_euclid_dist_multi(const float *X, const float *Y, float *D,
 __host__ float softdtw_cuda_naive(float *D, float *R, uint m, uint n,
                                   float gamma)
 {
+    assert(min(m, n) < 1025);
     size_t m2n2 = (m + 2) * (n + 2);
     // Launch a kernel to fill matrix R with infinity
     const int inf_tpb = 256;
@@ -370,6 +371,7 @@ __host__ void softdtw_cuda_naive_multi(float *D, float *R, float *costs,
                                        uint nD, uint m, uint n, float gamma,
                                        uint bandwidth)
 {
+    assert(min(m, n) < 1025);
     size_t m2n2 = nD * (m + 2) * (n + 2);
     // Launch a kernel to fill matrix R with infinity
     const int inf_tpb = 256;
@@ -411,6 +413,7 @@ __host__ void softdtw_cuda_naive_multi(float *D, float *R, float *costs,
 __host__ void softdtw_cuda_stencil(float *D, float *R, float *costs, uint nD,
                                    uint m, uint n, float gamma, uint bandwidth)
 {
+    assert(min(m, n) < 1025);
     size_t m2n2 = nD * (m + 2) * (n + 2);
     // Launch a kernel to fill matrix R with infinity
     const int inf_tpb = 256;
@@ -467,8 +470,7 @@ __host__ float softdtw_cuda_diagonal(float *DD, float *RD, uint m, uint n,
     // Launch the kernel
     softdtw_diagonal_kernel<<<B, TPB>>>(DD, RD, d_path_cost, m, n, gamma);
     // Copy the path cost back to host
-    cudaErrchk(cudaMemcpy(&path_cost, d_path_cost, sizeof(float),
-                          cudaMemcpyDeviceToHost));
+    cudaMemcpy(&path_cost, d_path_cost, sizeof(float), cudaMemcpyDeviceToHost);
     // cudaFree(DD);
     // cudaFree(RD);
 
@@ -476,6 +478,32 @@ __host__ float softdtw_cuda_diagonal(float *DD, float *RD, uint m, uint n,
 }
 
 // TODO: Add a wrapper for diagonal multi kernel
+
+__host__ void softdtw_cuda_diagonal_multi(float *DD, float *RD, float *costs,
+                                          uint nD, uint m, uint n, float gamma)
+{
+    assert(min(m, n) < 1025);
+    // Launch a kernel to fill matrix R with infinity
+    const int inf_tpb = 1024;
+
+    size_t nRD = (std::min(m, n) + 2) * (m + n + 3);
+    const uint inf_blocks = (nRD + inf_tpb - 1) / nRD;
+    fill_matrix_inf<<<inf_blocks, inf_tpb>>>(
+        RD, (min(m, n) + 2) * (m + n + 3), nD,
+        std::numeric_limits<float>::infinity());
+
+    dim3 B = dim3(nD);
+    // length of the longest antidiagonal is the smaller of the two dims
+    dim3 TPB = dim3(min(m, n));
+    float *d_path_cost;
+    cudaMalloc(&d_path_cost, nD * sizeof(float));
+    // Launch the kernel
+    softdtw_diagonal_kernel_multi<<<B, TPB>>>(DD, RD, d_path_cost, nD, m, n,
+                                              gamma);
+    // Copy the path cost back to host
+    cudaMemcpy(costs, d_path_cost, nD * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaFree(d_path_cost);
+}
 
 // TODO: Barycenter computation (average time series under SoftDTW geometry)
 // through gradient descent with SoftDTW as loss function

@@ -108,3 +108,6 @@ __host__ void softdtw_cuda_stencil(float *D, float *R, float *costs, uint nD,
 
 __host__ float softdtw_cuda_diagonal(float *DD, float *RD, uint m, uint n,
                                      float gamma);
+
+__host__ void softdtw_cuda_diagonal_multi(float *DD, float *RD, float *costs,
+                                          uint nD, uint m, uint n, float gamma);
