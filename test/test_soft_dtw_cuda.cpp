@@ -1149,14 +1149,14 @@ TEST_CASE("soft dtw cuda diagonal multi nX is 1 nY is 1")
 
     float costs[nX * nY]{0};
     softdtw_cuda_diagonal_multi(DD, RD, (float *)&costs, nX * nY, m, n, gamma);
-    float hDD[nDD]{0};
-    cudaMemcpy(hDD, DD, szDD, cudaMemcpyDeviceToHost);
-    print_matrix(hDD, (m + n - 1) * nX * nY, std::min(m, n));
-    float hRD[nRD]{0};
-    cudaMemcpy(hRD, RD, szRD, cudaMemcpyDeviceToHost);
-    print_matrix(hRD, (m + n + 3) * nX * nY, std::min(m, n) + 2);
-    printf("costs %d: %.4f\n", 0, costs[0]);
-    printf("costs %d: %.4f\n", 1, costs[1]);
+    // float hDD[nDD]{0};
+    // cudaMemcpy(hDD, DD, szDD, cudaMemcpyDeviceToHost);
+    // print_matrix(hDD, (m + n - 1) * nX * nY, std::min(m, n));
+    // float hRD[nRD]{0};
+    // cudaMemcpy(hRD, RD, szRD, cudaMemcpyDeviceToHost);
+    // print_matrix(hRD, (m + n + 3) * nX * nY, std::min(m, n) + 2);
+    // printf("costs %d: %.4f\n", 0, costs[0]);
+    // printf("costs %d: %.4f\n", 1, costs[1]);
     REQUIRE(is_close(2.80539, costs[0]));
     REQUIRE(is_close(2.80539, costs[1]));
     delete[] a;
