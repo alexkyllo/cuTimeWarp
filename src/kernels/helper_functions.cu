@@ -58,7 +58,7 @@ __device__ bool check_sakoe_chiba_band(int m, int n, int i, int j,
 /** Kernel to fill a matrix with infinity except for index 0 = 0.0
  *  to initialize the DTW cost matrix
  */
-__global__ void fill_matrix_inf(float *A, int width, int height, float val)
+__global__ void fill_matrix_inf(float *A, uint width, uint height, float val)
 {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
 

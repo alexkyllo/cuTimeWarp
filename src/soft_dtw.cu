@@ -74,9 +74,9 @@ __host__ void sq_euclid_dist(const float *X, const float *Y, float *D,
     size_t size_m = m * sizeof(float);
     size_t size_n = n * sizeof(float);
     size_t size_mn = n * size_m;
-    cudaMalloc(&XX, size_m);
-    cudaMalloc(&YY, size_n);
-    cudaMalloc(&XY, size_mn);
+    cudaErrchk(cudaMalloc(&XX, size_m));
+    cudaErrchk(cudaMalloc(&YY, size_n));
+    cudaErrchk(cudaMalloc(&XY, size_mn));
     cudaMemset(XX, 0, size_m);
     cudaMemset(YY, 0, size_n);
     cudaMemset(XY, 0, size_mn);
@@ -88,7 +88,7 @@ __host__ void sq_euclid_dist(const float *X, const float *Y, float *D,
     sq_euclid_norm<<<grid_size, block_size>>>(m, k, X, XX);
     block_size = min(n, 1024);
     grid_size = (n + block_size - 1) / block_size;
-    sq_euclid_norm<<<block_size, grid_size>>>(n, k, Y, YY);
+    sq_euclid_norm<<<grid_size, block_size>>>(n, k, Y, YY);
 
     // compute (2*X)*YT
     sgemm_cublas(X, Y, XY, m, k, n, 2.0);
@@ -128,9 +128,10 @@ __host__ void sq_euclid_dist_multi(const float *X, const float *Y, float *D,
     size_t size_mx = nX * m * sizeof(float);
     size_t size_ny = nY * n * sizeof(float);
     size_t size_mnxy = nX * m * size_ny;
-    cudaMalloc(&XX, size_mx);
-    cudaMalloc(&YY, size_ny);
-    cudaMalloc(&XY, size_mnxy);
+
+    cudaErrchk(cudaMalloc(&XX, size_mx));
+    cudaErrchk(cudaMalloc(&YY, size_ny));
+    cudaErrchk(cudaMalloc(&XY, size_mnxy));
     cudaMemset(XX, 0, size_mx);
     cudaMemset(YY, 0, size_ny);
     cudaMemset(XY, 0, size_mnxy);
@@ -141,7 +142,6 @@ __host__ void sq_euclid_dist_multi(const float *X, const float *Y, float *D,
     uint block_size_n = min(n, 1024);
     uint grid_size_n = (n + block_size_n - 1) / block_size_n;
     // compute squared euclidean norm of X
-
     // allocate extra streams to try and get these to run concurrently
     const int num_streams = min(max(nX, nY), 32);
     cudaStream_t streams[num_streams];
@@ -159,6 +159,7 @@ __host__ void sq_euclid_dist_multi(const float *X, const float *Y, float *D,
         sq_euclid_norm<<<block_size_n, grid_size_n, 0, streams[stream_num]>>>(
             n, k, &Y[i * (n * k)], &YY[i * n]);
     }
+
     cudaDeviceSynchronize();
     const float beta = 0.0;
     const float alpha = 2.0;
@@ -229,7 +230,7 @@ __host__ float softdtw_cuda_naive(float *D, float *R, uint m, uint n,
     dim3 TPB = dim3(min(m, n));
     float path_cost;
     float *d_path_cost;
-    cudaMalloc(&d_path_cost, sizeof(float));
+    cudaErrchk(cudaMalloc(&d_path_cost, sizeof(float)));
     // Launch the kernel
     softdtw_naive_kernel<<<B, TPB>>>(D, R, d_path_cost, m, n, gamma);
     // Copy the path cost back to host
@@ -252,7 +253,7 @@ __host__ void softdtw_grad_cuda_naive(float *D, float *R, float *E, uint m,
 {
     // Allocate larger temporary device arrays for D and E
     float *D_;
-    cudaMalloc(&D_, (m + 1) * (n + 1) * sizeof(float));
+    cudaErrchk(cudaMalloc(&D_, (m + 1) * (n + 1) * sizeof(float)));
     cudaMemset(D_, 0, (m + 1) * (n + 1) * sizeof(float));
     // Copy each row of D to D_
     for (uint i = 0; i < m; i++)
@@ -261,7 +262,7 @@ __host__ void softdtw_grad_cuda_naive(float *D, float *R, float *E, uint m,
                    cudaMemcpyDeviceToDevice);
     }
     float *E_;
-    cudaMalloc(&E_, (m + 2) * (n + 2) * sizeof(float));
+    cudaErrchk(cudaMalloc(&E_, (m + 2) * (n + 2) * sizeof(float)));
     cudaMemset(E_, 0, (m + 2) * (n + 2) * sizeof(float));
 
     // D_ is m+1 x n+1
@@ -374,18 +375,19 @@ __host__ void softdtw_cuda_naive_multi(float *D, float *R, float *costs,
     assert(min(m, n) < 1025);
     size_t m2n2 = nD * (m + 2) * (n + 2);
     // Launch a kernel to fill matrix R with infinity
-    const int inf_tpb = 256;
-    int inf_blocks = (m2n2 + inf_tpb - 1) / m2n2;
+    const size_t inf_tpb = 256;
+    size_t inf_blocks = (m2n2 + inf_tpb - 1) / inf_tpb;
+
     fill_matrix_inf<<<inf_blocks, inf_tpb>>>(
         R, (m + 2) * (n + 2), nD, std::numeric_limits<float>::infinity());
-
+    cudaErrchk(cudaDeviceSynchronize());
     dim3 B = dim3(nD);
     uint min_mn = min(m, n);
     uint threads = min_mn;
     assert(threads < 1025);
     dim3 TPB = dim3(threads);
     float *d_path_cost;
-    cudaMalloc(&d_path_cost, nD * sizeof(float));
+    cudaErrchk(cudaMalloc(&d_path_cost, nD * sizeof(float)));
     // Launch the kernel
     softdtw_naive_kernel_multi<<<B, TPB>>>(D, R, d_path_cost, nD, m, n, gamma,
                                            bandwidth);
@@ -425,7 +427,7 @@ __host__ void softdtw_cuda_stencil(float *D, float *R, float *costs, uint nD,
     dim3 TPB = dim3(min(m, n) + 2);
     uint SMEM = nD * (min(m, n) + 2) * 3 * sizeof(float);
     float *d_path_cost;
-    cudaMalloc(&d_path_cost, nD * sizeof(float));
+    cudaErrchk(cudaMalloc(&d_path_cost, nD * sizeof(float)));
     // Launch the kernel
     softdtw_stencil<<<B, TPB, SMEM>>>(D, R, d_path_cost, nD, m, n, gamma,
                                       bandwidth);
@@ -464,18 +466,21 @@ __host__ void convert_diagonal_major_multi(float *D, float *DD, uint nD, uint m,
 {
     uint T = m * n;
     uint TPB = min(T, 1024);
-    uint B = (T + TPB - 1) / TPB;
+    uint B = ((int)T + (int)TPB - 1) / (int)TPB;
 
     // run concurrently with streams
     const int num_streams = min((int)nD, 32);
     cudaStream_t streams[num_streams];
+
     for (uint i = 0; i < num_streams; i++)
         cudaStreamCreate(&streams[i]);
+
     for (uint i = 0; i < nD; i++)
     {
         uint stream_num = i % num_streams;
         convert_diagonal<<<B, TPB, 0, streams[stream_num]>>>(
             &D[i * m * n], &DD[i * (m + n - 1) * min(m, n)], m, n);
+        cudaErrchk(cudaDeviceSynchronize());
     }
 
     for (uint i = 0; i < num_streams; i++)
@@ -514,18 +519,17 @@ __host__ float softdtw_cuda_diagonal(float *DD, float *RD, uint m, uint n,
     dim3 TPB = dim3(min(m, n));
     float path_cost = 0;
     float *d_path_cost = 0;
-    cudaMalloc(&d_path_cost, sizeof(float));
+    cudaErrchk(cudaMalloc(&d_path_cost, sizeof(float)));
     // Launch the kernel
     softdtw_diagonal_kernel<<<B, TPB>>>(DD, RD, d_path_cost, m, n, gamma);
     // Copy the path cost back to host
-    cudaMemcpy(&path_cost, d_path_cost, sizeof(float), cudaMemcpyDeviceToHost);
+    cudaErrchk(cudaMemcpy(&path_cost, d_path_cost, sizeof(float),
+                          cudaMemcpyDeviceToHost));
     // cudaFree(DD);
     // cudaFree(RD);
 
     return path_cost;
 }
-
-// TODO: Add a wrapper for diagonal multi kernel
 
 __host__ void softdtw_cuda_diagonal_multi(float *DD, float *RD, float *costs,
                                           uint nD, uint m, uint n, float gamma)
@@ -544,15 +548,12 @@ __host__ void softdtw_cuda_diagonal_multi(float *DD, float *RD, float *costs,
     // length of the longest antidiagonal is the smaller of the two dims
     dim3 TPB = dim3(min(m, n));
     float *d_path_cost;
-    cudaMalloc(&d_path_cost, nD * sizeof(float));
+    cudaErrchk(cudaMalloc(&d_path_cost, nD * sizeof(float)));
     // Launch the kernel
     softdtw_diagonal_kernel_multi<<<B, TPB>>>(DD, RD, d_path_cost, nD, m, n,
                                               gamma);
     // Copy the path cost back to host
-    cudaMemcpy(costs, d_path_cost, nD * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaErrchk(cudaMemcpy(costs, d_path_cost, nD * sizeof(float),
+                          cudaMemcpyDeviceToHost));
     cudaFree(d_path_cost);
 }
-
-// TODO: Barycenter computation (average time series under SoftDTW geometry)
-// through gradient descent with SoftDTW as loss function
-// TODO: 1-nearest neighbor classification function

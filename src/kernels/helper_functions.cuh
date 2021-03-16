@@ -24,7 +24,7 @@ __host__ uint get_device_sm_count(uint device_num = 0);
 /** Kernel to fill a matrix with infinity except for index 0 = 0.0
  *  to initialize the DTW cost matrix
  */
-__global__ void fill_matrix_inf(float *A, int width, int height, float val);
+__global__ void fill_matrix_inf(float *A, uint width, uint height, float val);
 
 /** Check whether i,j are within the Sakoe-Chiba band
  *  @param m The length of the first time series

@@ -4,11 +4,31 @@
 #include <cuda_runtime.h>
 #include <fstream>
 #include <iostream>
+#include <random>
 #include <sstream>
 #include <vector>
 
 using namespace std::chrono;
 typedef unsigned int uint;
+
+#define cudaErrchk(ans)                                                        \
+    {                                                                          \
+        GPUAssert((ans), __FILE__, __LINE__);                                  \
+    }
+inline void GPUAssert(cudaError_t code, const char *file, int line,
+                      bool abort = true)
+{
+    if (code != cudaSuccess)
+    {
+        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file,
+                line);
+        if (abort)
+        {
+            exit(code);
+        }
+    }
+}
+
 /** Host function to record the performance of each kernel
  *  on a given dataset
  *  @param X A vector of time series dataset with lenght m
@@ -30,9 +50,9 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     float *dY;
     float *dD;
 
-    cudaMalloc(&dD, m * nX * n * nY * sizeof(float));
-    cudaMalloc(&dX, m * k * nX);
-    cudaMalloc(&dY, n * k * nY);
+    cudaErrchk(cudaMalloc(&dD, m * nX * n * nY * sizeof(float)));
+    cudaErrchk(cudaMalloc(&dX, m * k * nX));
+    cudaErrchk(cudaMalloc(&dY, n * k * nY));
     cudaMemset(dD, 0, m * nX * n * nY * sizeof(float));
     cudaMemcpy(dX, &X[0], m * k * nX * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(dY, &X[0], n * k * nX * sizeof(float), cudaMemcpyHostToDevice);
@@ -40,13 +60,13 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     float *dR;
     size_t m2n2 = count * count * (m + 2) * (n + 2);
     size_t sz_R = m2n2 * sizeof(float);
-    cudaMalloc(&dR, sz_R);
+    cudaErrchk(cudaMalloc(&dR, sz_R));
     cudaMemset(dR, 0, sz_R);
 
     // the pairwise squared Euclidean distances kernel execution
     auto start = high_resolution_clock::now();
     sq_euclid_dist_multi(dX, dY, dD, nX, nY, m, n, k);
-    cudaDeviceSynchronize();
+    cudaErrchk(cudaDeviceSynchronize());
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(end - start).count();
     std::cout << "sq_euclid_dist_multi " << duration << std::endl;
@@ -55,7 +75,7 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     float *costs = new float[nX * nY]{0};
     start = high_resolution_clock::now();
     softdtw_cuda_naive_multi(dD, dR, costs, nX * nY, m, n, gamma);
-    cudaDeviceSynchronize();
+    cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
     std::cout << "softdtw_cuda_naive_multi " << duration << std::endl;
@@ -65,7 +85,7 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     // the softdtw cuda naive kernel execution bandwidth = 80
     start = high_resolution_clock::now();
     softdtw_cuda_naive_multi(dD, dR, costs, nX * nY, m, n, gamma, 80);
-    cudaDeviceSynchronize();
+    cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
     std::cout << "softdtw_cuda_naive_multi_bw_80 " << duration << std::endl;
@@ -74,7 +94,7 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     // the softdtw cuda naive kernel execution bandwidth = 60
     start = high_resolution_clock::now();
     softdtw_cuda_naive_multi(dD, dR, costs, nX * nY, m, n, gamma, 60);
-    cudaDeviceSynchronize();
+    cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
     std::cout << "softdtw_cuda_naive_multi_bw_60 " << duration << std::endl;
@@ -83,7 +103,7 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     // the softdtw cuda naive kernel execution bandwidth = 40
     start = high_resolution_clock::now();
     softdtw_cuda_naive_multi(dD, dR, costs, nX * nY, m, n, gamma, 40);
-    cudaDeviceSynchronize();
+    cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
     std::cout << "softdtw_cuda_naive_multi_bw_40 " << duration << std::endl;
@@ -92,7 +112,7 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     // the softdtw cuda stencil kernel execution .....timing....
     start = high_resolution_clock::now();
     softdtw_cuda_stencil(dD, dR, costs, nX * nY, m, n, gamma);
-    cudaDeviceSynchronize();
+    cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
     std::cout << "softdtw_cuda_stencil_multi " << duration << std::endl;
@@ -101,7 +121,7 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     // the softdtw cuda stencil kernel execution .....timing....
     start = high_resolution_clock::now();
     softdtw_cuda_stencil(dD, dR, costs, nX * nY, m, n, gamma, 80);
-    cudaDeviceSynchronize();
+    cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
     std::cout << "softdtw_cuda_stencil_multi_80 " << duration << std::endl;
@@ -110,7 +130,7 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     // the softdtw cuda stencil kernel execution .....timing....
     start = high_resolution_clock::now();
     softdtw_cuda_stencil(dD, dR, costs, nX * nY, m, n, gamma, 60);
-    cudaDeviceSynchronize();
+    cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
     std::cout << "softdtw_cuda_stencil_multi_60 " << duration << std::endl;
@@ -119,7 +139,7 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     // the softdtw cuda stencil kernel execution .....timing....
     start = high_resolution_clock::now();
     softdtw_cuda_stencil(dD, dR, costs, nX * nY, m, n, gamma, 40);
-    cudaDeviceSynchronize();
+    cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
     std::cout << "softdtw_cuda_stencil_multi_40 " << duration << std::endl;
@@ -129,31 +149,31 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     float *dDD;
     uint nDD = std::min(m, n) * nX * nY * (m + n - 1);
     uint szDD = nDD * sizeof(float);
-    cudaMalloc(&dDD, szDD);
+    cudaErrchk(cudaMalloc(&dDD, szDD));
     cudaMemset(dDD, 0, szDD);
     start = high_resolution_clock::now();
     convert_diagonal_major_multi(dD, dDD, nX * nY, m, n);
-    cudaDeviceSynchronize();
+    cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
     std::cout << "convert_diagonal_multi " << duration << std::endl;
 
-    // transform R into diagonal-major layout
-    float *dRD;
-    uint nRD = (std::min(m, n) + 2) * nX * nY * (m + n + 3);
-    uint szRD = nRD * sizeof(float);
-    cudaMalloc(&dRD, szRD);
-    cudaMemset(dRD, 0, szRD);
-    // convert_diagonal_major_multi(R, RD, nX * nY, m + 2, n + 2);
+    // // transform R into diagonal-major layout
+    // float *dRD;
+    // uint nRD = (std::min(m, n) + 2) * nX * nY * (m + n + 3);
+    // uint szRD = nRD * sizeof(float);
+    // cudaMalloc(&dRD, szRD);
+    // cudaMemset(dRD, 0, szRD);
+    // // convert_diagonal_major_multi(R, RD, nX * nY, m + 2, n + 2);
 
-    // the softdtw cuda stencil kernel execution .....timing....
-    start = high_resolution_clock::now();
-    softdtw_cuda_diagonal_multi(dDD, dRD, costs, nX * nY, m, n, gamma);
-    cudaDeviceSynchronize();
-    end = high_resolution_clock::now();
-    duration = duration_cast<microseconds>(end - start).count();
-    std::cout << "softdtw_cuda_diagonal_multi " << duration << std::endl;
-    memset(costs, 0, nX * nY * sizeof(float));
+    // // the softdtw cuda stencil kernel execution .....timing....
+    // start = high_resolution_clock::now();
+    // softdtw_cuda_diagonal_multi(dDD, dRD, costs, nX * nY, m, n, gamma);
+    // cudaDeviceSynchronize();
+    // end = high_resolution_clock::now();
+    // duration = duration_cast<microseconds>(end - start).count();
+    // std::cout << "softdtw_cuda_diagonal_multi " << duration << std::endl;
+    // memset(costs, 0, nX * nY * sizeof(float));
 
     delete[] costs;
     cudaFree(dX);
@@ -162,25 +182,51 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     cudaFree(dR);
 }
 
+/** Fill a vector with n random floats drawn from unit normal distribution.
+ */
+void fill_random(std::vector<float> vec, uint n)
+{
+    std::default_random_engine gen;
+    std::normal_distribution<float> dist(0.0, 1.0);
+    for (uint i = 0; i < n; i++)
+    {
+        vec.push_back(dist(gen));
+    }
+}
+
 // To run as an example:
 // make build
 // ./bin/soft_dtw_perf data/ECG200/ECG200_TRAIN.txt
 // output/ECG200/PERFORMANCE.CSV
 int main(int argc, char **argv)
 {
-    // TODO
-    // Read in one or more input time series files (delimited format) into
-    // arrays and allocate / copy to device
-    // Launch function to calculate all soft-dtw pairwise distances and
-    // time execution
-    // Repeat for multiple input dataset sizes and univariate vs. multivariate
     if (argc < 2)
     {
-        std::cerr << "Usage: " << argv[0] << " INPUT_FILENAME\n";
+        std::cerr << "Usage: " << argv[0]
+                  << " [INPUT_FILENAME] | random [length] [count]\n";
         return 1;
     }
 
-    std::ifstream input_file(argv[1]);
+    std::vector<float> data_vec;
+    std::string filename = argv[1];
+    uint m = 0; // length of time series
+    uint n = 0; // number of time series
+
+    if (filename == "random")
+    {
+        if (argc < 4)
+        {
+            std::cerr << "Usage: " << argv[0] << " random [length] [count]\n";
+            return 1;
+        }
+        m = atol(argv[2]);
+        n = atol(argv[3]);
+        fill_random(data_vec, m * n);
+        comparison(data_vec, m, n);
+        return 0;
+    }
+
+    std::ifstream input_file(filename);
 
     if (!input_file.is_open())
     {
@@ -188,12 +234,10 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    std::vector<float> data_vec;
     std::string str_buf;
     std::stringstream ss;
     float float_buf;
-    uint m = 0; // length of time series
-    uint n = 0; // number of time series
+
     while (!input_file.eof())
     {
         getline(input_file, str_buf);

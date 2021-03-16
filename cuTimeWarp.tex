@@ -180,10 +180,11 @@ a tunable hyperparameter in machine learning model training applications.
 Practical applications of DTW include tasks such as:
 
 \begin{itemize}
-  \item Sound detection and classification
-  \item Handwriting and touch gesture recognition
-  \item Human activity recognition
-  \item Heart rhythm anomaly detection
+    \item Voice command recognition
+    \item Sound detection and classification
+    \item Handwriting and gesture recognition
+    \item Human activity recognition
+    \item Heart rhythm anomaly detection
 \end{itemize}
 
 As a differentiable time series dissimilarity measure, DTW can be applied as a
@@ -337,11 +338,11 @@ Wavefront process split to three major steps:
         D(i-1,j-1)
   \end{cases}
 \end{equation}
-Drawbacks:
-Due to the usage of global barriers, there would be lower utilization for the GPU.
-Fewer threads would be available at the beginning and at the end of each tiles process.
-Also, less tiles are accessible toward the beginning and end of wave iterations.
-Therefore, device SM remain idle during the initiation and end of the process.
+Drawbacks: Due to the usage of global barriers, there would be lower utilization
+for the GPU.  Fewer threads would be available at the beginning and at the end
+of each tiles process.  Also, less tiles are accessible toward the beginning and
+end of wave iterations.  Therefore, device SM remain idle during the initiation
+and end of the process.
 
 \subsubsection{Diagonal-major layout}
 
@@ -364,7 +365,8 @@ resulting in coalesced accesses and fewer cache misses.
 \begin{figure}[htbp]
   \includegraphics[height=2.5in]{img/diagonal_layout.png}
   \centering
-  \caption{Cost matrix transformation to antidiagonal-major layout (arrows show iteration direction)}
+  \caption{Cost matrix transformation to antidiagonal-major layout (arrows show
+    iteration direction)}
   \label{diagonal_layout}
   \end{figure}
 
@@ -457,6 +459,9 @@ a length 8 series with Sakoe-Chiba band radius = 1.}
 For performance testing we selected datasets from the UCR Time Series Archive
 \cite{dau_ucr_2019} and the UEA Multivariate Time Series Classification Archive
 \cite{bagnall_uea_2018}.
+
+We also generated sets of random unit normal data to test the performance impact
+of varying time series length and count.
 
 \section{Results}
 
