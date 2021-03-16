@@ -23,13 +23,14 @@ __host__ uint get_device_sm_count(uint device_num)
  */
 __device__ float softmin(float a, float b, float c, const float gamma)
 {
-    a /= -gamma;
-    b /= -gamma;
-    c /= -gamma;
+    float ng = -gamma;
+    a /= ng;
+    b /= ng;
+    c /= ng;
     float max_of = max(max(a, b), c);
     float sum = exp(a - max_of) + exp(b - max_of) + exp(c - max_of);
 
-    return -gamma * (log(sum) + max_of);
+    return ng * (log(sum) + max_of);
 }
 
 /** Check whether i,j are within the Sakoe-Chiba band

@@ -20,7 +20,7 @@ inline void GPUAssert(cudaError_t code, const char *file, int line,
 {
     if (code != cudaSuccess)
     {
-        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file,
+        fprintf(stderr, "GPUError: %s %s %d\n", cudaGetErrorString(code), file,
                 line);
         if (abort)
         {
@@ -63,13 +63,15 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     cudaErrchk(cudaMalloc(&dR, sz_R));
     cudaMemset(dR, 0, sz_R);
 
+    // std::cout << "kernel length count microseconds\n";
     // the pairwise squared Euclidean distances kernel execution
     auto start = high_resolution_clock::now();
     sq_euclid_dist_multi(dX, dY, dD, nX, nY, m, n, k);
     cudaErrchk(cudaDeviceSynchronize());
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(end - start).count();
-    std::cout << "sq_euclid_dist_multi " << duration << std::endl;
+    std::cout << "sq_euclid_dist_multi " << m << " " << nX << " " << duration
+              << std::endl;
 
     // the softdtw cuda naive kernel execution .....timing....
     float *costs = new float[nX * nY]{0};
@@ -78,35 +80,42 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
-    std::cout << "softdtw_cuda_naive_multi " << duration << std::endl;
+    std::cout << "softdtw_cuda_naive_multi " << m << " " << nX << " "
+              << duration << std::endl;
     // zero out costs so we can reuse it
     memset(costs, 0, nX * nY * sizeof(float));
 
-    // the softdtw cuda naive kernel execution bandwidth = 80
+    // the softdtw cuda naive kernel execution bandwidth = 80% of m
+    uint bw = floor(0.8 * m);
     start = high_resolution_clock::now();
-    softdtw_cuda_naive_multi(dD, dR, costs, nX * nY, m, n, gamma, 80);
+    softdtw_cuda_naive_multi(dD, dR, costs, nX * nY, m, n, gamma, bw);
     cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
-    std::cout << "softdtw_cuda_naive_multi_bw_80 " << duration << std::endl;
+    std::cout << "softdtw_cuda_naive_multi_bw_80 " << m << " " << nX << " "
+              << duration << std::endl;
     memset(costs, 0, nX * nY * sizeof(float));
 
-    // the softdtw cuda naive kernel execution bandwidth = 60
+    // the softdtw cuda naive kernel execution bandwidth = 60%
+    bw = floor(0.6 * m);
     start = high_resolution_clock::now();
-    softdtw_cuda_naive_multi(dD, dR, costs, nX * nY, m, n, gamma, 60);
+    softdtw_cuda_naive_multi(dD, dR, costs, nX * nY, m, n, gamma, bw);
     cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
-    std::cout << "softdtw_cuda_naive_multi_bw_60 " << duration << std::endl;
+    std::cout << "softdtw_cuda_naive_multi_bw_60 " << m << " " << nX << " "
+              << duration << std::endl;
     memset(costs, 0, nX * nY * sizeof(float));
 
-    // the softdtw cuda naive kernel execution bandwidth = 40
+    // the softdtw cuda naive kernel execution bandwidth = 40%
+    bw = floor(0.4 * m);
     start = high_resolution_clock::now();
-    softdtw_cuda_naive_multi(dD, dR, costs, nX * nY, m, n, gamma, 40);
+    softdtw_cuda_naive_multi(dD, dR, costs, nX * nY, m, n, gamma, bw);
     cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
-    std::cout << "softdtw_cuda_naive_multi_bw_40 " << duration << std::endl;
+    std::cout << "softdtw_cuda_naive_multi_bw_40 " << m << " " << nX << " "
+              << duration << std::endl;
     memset(costs, 0, nX * nY * sizeof(float));
 
     // the softdtw cuda stencil kernel execution .....timing....
@@ -115,7 +124,8 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
-    std::cout << "softdtw_cuda_stencil_multi " << duration << std::endl;
+    std::cout << "softdtw_cuda_stencil_multi " << m << " " << nX << " "
+              << duration << std::endl;
     memset(costs, 0, nX * nY * sizeof(float));
 
     // the softdtw cuda stencil kernel execution .....timing....
@@ -124,7 +134,8 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
-    std::cout << "softdtw_cuda_stencil_multi_80 " << duration << std::endl;
+    std::cout << "softdtw_cuda_stencil_multi_80 " << m << " " << nX << " "
+              << duration << std::endl;
     memset(costs, 0, nX * nY * sizeof(float));
 
     // the softdtw cuda stencil kernel execution .....timing....
@@ -133,7 +144,8 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
-    std::cout << "softdtw_cuda_stencil_multi_60 " << duration << std::endl;
+    std::cout << "softdtw_cuda_stencil_multi_60 " << m << " " << nX << " "
+              << duration << std::endl;
     memset(costs, 0, nX * nY * sizeof(float));
 
     // the softdtw cuda stencil kernel execution .....timing....
@@ -142,7 +154,8 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
-    std::cout << "softdtw_cuda_stencil_multi_40 " << duration << std::endl;
+    std::cout << "softdtw_cuda_stencil_multi_40 " << m << " " << nX << " "
+              << duration << std::endl;
     memset(costs, 0, nX * nY * sizeof(float));
 
     // converting D from row-major to diagonal-major format
@@ -156,24 +169,25 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
-    std::cout << "convert_diagonal_multi " << duration << std::endl;
+    std::cout << "convert_diagonal_multi " << m << " " << nX << " " << duration
+              << std::endl;
 
-    // // transform R into diagonal-major layout
-    // float *dRD;
-    // uint nRD = (std::min(m, n) + 2) * nX * nY * (m + n + 3);
-    // uint szRD = nRD * sizeof(float);
-    // cudaMalloc(&dRD, szRD);
-    // cudaMemset(dRD, 0, szRD);
-    // // convert_diagonal_major_multi(R, RD, nX * nY, m + 2, n + 2);
+    // transform R into diagonal-major layout
+    float *dRD;
+    uint nRD = (std::min(m, n) + 2) * nX * nY * (m + n + 3);
+    uint szRD = nRD * sizeof(float);
+    cudaErrchk(cudaMalloc(&dRD, szRD));
+    cudaMemset(dRD, 0, szRD);
+    // convert_diagonal_major_multi(R, RD, nX * nY, m + 2, n + 2);
 
-    // // the softdtw cuda stencil kernel execution .....timing....
-    // start = high_resolution_clock::now();
-    // softdtw_cuda_diagonal_multi(dDD, dRD, costs, nX * nY, m, n, gamma);
-    // cudaDeviceSynchronize();
-    // end = high_resolution_clock::now();
-    // duration = duration_cast<microseconds>(end - start).count();
-    // std::cout << "softdtw_cuda_diagonal_multi " << duration << std::endl;
-    // memset(costs, 0, nX * nY * sizeof(float));
+    // the softdtw cuda stencil kernel execution .....timing....
+    start = high_resolution_clock::now();
+    softdtw_cuda_diagonal_multi(dDD, dRD, costs, nX * nY, m, n, gamma);
+    cudaDeviceSynchronize();
+    end = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(end - start).count();
+    std::cout << "softdtw_cuda_diagonal_multi " << duration << std::endl;
+    memset(costs, 0, nX * nY * sizeof(float));
 
     delete[] costs;
     cudaFree(dX);

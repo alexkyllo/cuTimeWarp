@@ -355,8 +355,8 @@ memory.
 If the data is first rearranged into an antidiagonal-major layout, then at each
 iteration of the wavefront loop, processor threads will make coalesced accesses
 to data elements that are laid out contiguously in memory. As illustrated in
-Figure \ref{diagonal_layout}, this transforms an $m x n$ matrix that must be
-iterated over diagonally, into a $(m+n-1) x (min(m,n))$ matrix that can be
+Figure \ref{diagonal_layout}, this transforms an $m \times n$ matrix that must be
+iterated over diagonally, into a $(m+n-1) \times (min(m,n))$ matrix that can be
 iterated from top to bottom, with one thread assigned to each column. At each
 iteration step (i.e. each row of the diagonal-major matrix), contiguous array
 elements are read from memory into cache and written from cache back to memory,
@@ -453,6 +453,74 @@ a length 8 series with Sakoe-Chiba band radius = 1.}
 \label{sakoe_chiba}
 \end{figure}
 
+\subsection{Test Hardware Specifications}
+\FloatBarrier
+\begin{table}[htbp]
+  \centering
+  \caption{Device Hardware Specifications}
+  \label{specs}
+  \begin{tabular}{lr}
+      \toprule
+          Property                & Value                           \\
+          \midrule
+          Model                   & GeForce RTX 2060 Super          \\
+          Generation              & Turing                          \\
+          Compute Capability      & 7.5                             \\
+          SM Count                & 34                              \\
+          CUDA Cores              & 2176                            \\
+          Tensor Cores            & 272                             \\
+          CUDA Version            & 11.2                            \\
+          Driver Version          & 460.39                          \\
+          Clock Speed (MHz)       & 1470                            \\
+          Boost Speed (MHz)       & 1710                            \\
+          Memory Speed (Gbps)     & 14                              \\
+          Memory Size (GiB)       & 8                               \\
+          Memory Bandwidth (GB/s) & 448                             \\
+          L1 Cache (KiB) (per SM) & 64                              \\
+          L2 Cache (KiB)          & 4096                            \\
+          \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}
+  \centering
+  \caption{Host Hardware Specifications}
+  \label{hostspecs}
+  \begin{tabular}{lrr}
+      \toprule
+          {} & Desktop \\
+          \midrule
+          RAM Size:            & 64GB                               \\
+          Configuration:       & 16GB x 4                           \\
+          Type:                & DDR4                               \\
+          Speed:               & 2667 MT/s                          \\
+          Bandwidth:           & 16415 MiB/s                        \\
+          Architecture:        & x86\_64                            \\
+          CPU(s):              & 16                                 \\
+          Thread(s) per core:  & 2                                  \\
+          Core(s) per socket:  & 8                                  \\
+          Model name:          & AMD Ryzen 7 3700X 8-Core Processor \\
+          CPU MHz:             & 1862.571                           \\
+          CPU max MHz:         & 3600.0000                          \\
+          CPU min MHz:         & 2200.0000                          \\
+          BogoMIPS:            & 7187.14                            \\
+          L1d cache:           & 256 KiB                            \\
+          L1i cache:           & 256 KiB                            \\
+          L2 cache:            & 4 MiB                              \\
+          L3 cache:            & 32 MiB                             \\
+          \bottomrule
+  \end{tabular}
+\end{table}
+
+We tested the program on a single GeForce RTX 2060 Super GPU with the
+specifications detailed in table \ref{specs} \cite{techpowerup}. Per NVIDIA's
+documentation, ``The peak single precision floating point performance of a CUDA
+device is defined as the number of CUDA cores times the graphics clock frequency
+multiplied by two \cite{nvidia_flops}. For this device, the equation works out
+to $2176 \times 1.71 \times 2 = 7441.92$ GFLOPS.
+
+The GPU device is installed on a desktop computer running Ubuntu Linux 20.04
+with CPU and memory specifications detailed in Table \ref{hostspecs}.
 
 \subsection{Test Data}
 
@@ -463,7 +531,46 @@ For performance testing we selected datasets from the UCR Time Series Archive
 We also generated sets of random unit normal data to test the performance impact
 of varying time series length and count.
 
+\subsection{Complexity Analysis}
+
+Calculating a single cell of the cost matrix in Soft-DTW involves a softmin
+function of three real-valued arguments. The softmin function for three
+arguments is implemented in C++ as:
+
+\begin{verbatim}
+float softmin(float a, float b, float c, const float gamma)
+{
+    float ng = -gamma;
+    a /= ng;
+    b /= ng;
+    c /= ng;
+    float max_of = max(max(a, b), c);
+    float sum = exp(a - max_of) + exp(b - max_of) + exp(c - max_of);
+
+    return ng * (log(sum) + max_of);
+}
+\end{verbatim}
+
+This function contains 17 floating point operations:
+
+\begin{itemize}
+  \item 1 x negation
+  \item 3 x division
+  \item 2 x max
+  \item 3 x exponentiation
+  \item 3 x subtraction
+  \item 3 x addition
+  \item 1 x natural logarithm
+  \item 1 x multiplication
+\end{itemize}
+
+Additionally, the softmin of the previous 3 cell costs is added to the current
+cell cost, for a total of 18 floating point operations (FLOPs). Therefore
+Soft-DTW for a pair of time series of lengths $m$ and $n$ results in $18mn$
+FLOPs.
+
 \section{Results}
+
 
 \section{Discussion}
 

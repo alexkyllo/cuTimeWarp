@@ -491,23 +491,8 @@ __host__ void convert_diagonal_major_multi(float *D, float *DD, uint nD, uint m,
 __host__ float softdtw_cuda_diagonal(float *DD, float *RD, uint m, uint n,
                                      float gamma)
 {
-    // size_t m2n2 = (m + 2) * (n + 2);
     // Launch a kernel to fill matrix R with infinity
     const int inf_tpb = 1024;
-    // int inf_blocks = (m2n2 + inf_tpb - 1) / m2n2;
-    // fill_matrix_inf<<<inf_blocks, inf_tpb>>>(
-    // R, m + 2, n + 2, std::numeric_limits<float>::infinity());
-
-    // transform D and R into diagonal-major layout
-    // float *DD;
-    // uint szDD = min(m, n) * (m + n - 1) * sizeof(float);
-    // cudaMalloc(&DD, szDD);
-    // cudaMemset(DD, 0, szDD);
-    // float *RD;
-    // uint szRD = (min(m, n) + 2) * (m + n + 3) * sizeof(float);
-    // cudaMalloc(&RD, szRD);
-    // cudaMemset(RD, 0, szRD);
-
     size_t nRD = (std::min(m, n) + 2) * (m + n + 3);
     const uint inf_blocks = (nRD + inf_tpb - 1) / nRD;
     fill_matrix_inf<<<inf_blocks, inf_tpb>>>(
@@ -525,8 +510,6 @@ __host__ float softdtw_cuda_diagonal(float *DD, float *RD, uint m, uint n,
     // Copy the path cost back to host
     cudaErrchk(cudaMemcpy(&path_cost, d_path_cost, sizeof(float),
                           cudaMemcpyDeviceToHost));
-    // cudaFree(DD);
-    // cudaFree(RD);
 
     return path_cost;
 }
