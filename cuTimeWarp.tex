@@ -79,22 +79,31 @@ be studied in addition to the autocorrelation within each of the variables.
 
 \subsubsection{Time series distance and dissimilarity measures}
 
-A fundamental capability that enables analysis of and learning from data is the
-ability to quantify a measure of distance or dissimilarity between observations.
-For time-independent data, (TODO)
+A fundamental capability that enables learning from data is the ability to
+quantify a metric of distance or dissimilarity between observations, because
+this allows comparison among data observations as well as quantification of
+error between observed data and the predictions of an estimator model. For
+time-independent data, multiple valid notions of distance exist; the most
+commonly used is Euclidean distance, but others such as Manhattan distance,
+cosine distance, or Mahalanobis distance are often used depending on the problem
+domain.
 
-There are multiple valid ways to compute a measure of dissimliarity between two
-time series; the simplest is Euclidean distance, which is the square root of the
-sum of squared pairwise differences between two time series $x$ and $y$, each of
-length $n$ (equation \ref{euclid}).
+Likewise, there are multiple valid ways to compute a measure of dissimliarity
+between two sequences or time series; for real-valued time series measurements
+the simplest is also Euclidean distance, which is the square root of the sum of
+squared pairwise differences between two time series $x$ and $y$, each of length
+$n$ (equation \ref{euclid}).
 
 \begin{equation} \label{euclid}
 d(x, y) = \sqrt{\sum_{t=1}^{n}(x_t-y_t)^2}
 \end{equation}
 
-The drawback of Euclidean distance in time series applications is that two
-structurally similar time series will produce a large distance if they are
-different speeds or out of phase (TODO: Add a figure to illustrate this).
+However, a significant drawback of Euclidean distance in time series
+applications is that two structurally similar time series will produce a large
+distance if they are at different speeds or out of phase (TODO: Add a figure to
+illustrate this). In time series applications it is often desirable to produce a
+low dissimilarity for structurally similar time series despite variations in
+phase or speed, so an alternative method of quantifying dissimilarity is needed.
 
 \subsubsection{Dynamic Time Warping}
 
@@ -104,7 +113,7 @@ historical citation). DTW is a nonlinear mapping of from each point in one time
 series to the nearest point in a second time series. While DTW is technically
 not considered a ``distance'' because it does not conform to the triangle
 inequality, and therefore we refer to it as a ``dissimilarity'' instead, it can
-be used in place of Euclidean distance or other distance measures for many
+still be used in place of Euclidean distance or other distance measures for many
 applications of time series data.
 
 The purpose of (DTW) is to perform a transformation
@@ -147,11 +156,24 @@ called Soft-DTW by replacing the min function with a soft-min function
 Hence, Soft-DTW is parameterized by the smoothing constant gamma, which becomes
 a tunable hyperparameter in machine learning model training applications.
 
+\subsubsection{Applications}
+
+As a differentiable time series dissimilarity measure, DTW can be applied as a
+loss function or minimization objective in data modeling techniques such as:
+
+\begin{itemize}
+  \item \emph{k}-means Clustering
+  \item Hierarchical agglomerative clustering
+  \item Motif (similar subsequence) search
+  \item k-nearest neighbor or nearest centroid classification
+  \item Recurrent neural networks
+\end{itemize}
+
 A common technique in machine learning with Soft-DTW is the computation of
 barycenters, which are centroids within the space of a set of time series. The
 differentiability of Soft-DTW allows for barycenter finding via gradient
 descent, and then new observations can be classified by finding the nearest
-barycenter. Sequence prediction and generation of is also possible using
+barycenter. Sequence prediction and generation is also possible using
 recurrent neural networks with Soft-DTW as a loss function
 \cite{cuturi_soft-dtw_2018}.
 
@@ -242,9 +264,9 @@ GPU and specifically CUDA can accelerate the process of wavefront. Each tile ass
 to a block to be process in parallel by SM. On the other hand, the iteration along diagonals within a tile are also
 pluralized. In order to enforce the dependencies, the global barriers used among the tiles and within every tiles.\cite{belviranli_peerwave_2015}
 
-In our Soft DTW implementation, we utilized the wavefront technique to manage the dependencies of neighboring cells for 
-computing the minimum warp path. In our algorithm this value depends on the minimum cost of the upper, 
-left and upper-left diagonal cell cost. Figure \ref{DTW_dependency} show this dependencies clearly.Each D(i,j) depends on the up, left and up-left neighbor cost. 
+In our Soft DTW implementation, we utilized the wavefront technique to manage the dependencies of neighboring cells for
+computing the minimum warp path. In our algorithm this value depends on the minimum cost of the upper,
+left and upper-left diagonal cell cost. Figure \ref{DTW_dependency} show this dependencies clearly.Each D(i,j) depends on the up, left and up-left neighbor cost.
 
 \begin{figure}[htbp]
 \includegraphics[height=2in]{img/tiling_dependencies.png}
@@ -270,10 +292,10 @@ Wavefront process split to three major steps:
   \end{cases}
 \end{equation}
 Drawbacks:
-Due to the usage of global barriers, there would be lower utilization for the GPU. 
-Fewer threads would be available at the beginning and at the end of each tiles process. 
-Also, less tiles are accessible toward the beginning and end of wave iterations. 
-Therefore, device SM remain idle during the initiation and end of the process. 
+Due to the usage of global barriers, there would be lower utilization for the GPU.
+Fewer threads would be available at the beginning and at the end of each tiles process.
+Also, less tiles are accessible toward the beginning and end of wave iterations.
+Therefore, device SM remain idle during the initiation and end of the process.
 
 \subsubsection{Diagonal-major layout}
 
@@ -296,7 +318,7 @@ resulting in coalesced accesses and fewer cache misses.
 \begin{figure}[htbp]
   \includegraphics[height=2.5in]{img/diagonal_layout.png}
   \centering
-  \caption{Illustration of cost matrix transformation to antidiagonal-major layout}
+  \caption{Cost matrix transformation to antidiagonal-major layout (arrows show iteration direction)}
   \label{diagonal_layout}
   \end{figure}
 
