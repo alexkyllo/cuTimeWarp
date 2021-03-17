@@ -153,7 +153,7 @@ void comparison(std::vector<float> X, int time_series_len, int count,
             // TODO: I need to remove the memcopy from the soft_dtw to here
             // for timing
 
-            uint tile_width = 512;
+            uint tile_width = 32;
 
             uint total_tiles_columns = (m + tile_width - 1) / tile_width;
             uint total_tiles_rows = (n + tile_width - 1) / tile_width;

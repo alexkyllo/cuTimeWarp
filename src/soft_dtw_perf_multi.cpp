@@ -193,8 +193,8 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     //TODO: check with different tile_size and see the perfromance
     //TODO: just need to change the tile kernel ofr shared memory size
     // base on tile width and height defined here
-    uint tile_width = 512;
-    uint tile_height = 512;
+    uint tile_width = 16;
+    uint tile_height = 16;
     uint total_tiles_columns = (m + tile_width - 1) / tile_width;
     uint total_tiles_rows = (n + tile_width - 1) / tile_width;
     uint total_tiles_waves = total_tiles_columns + total_tiles_rows - 1;

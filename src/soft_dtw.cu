@@ -408,9 +408,9 @@ __host__ void soft_dtw_tiled_multi(float *da, float *db,  uint nX,  uint nY, flo
                     for (uint j = 0; j < nY; j++)
                     {
                         uint stream_num = (i * nY + j) % num_streams;
-                        softdtw_global_tiled<<<blockPerGrid, threadPerBlock, 0, streams[stream_num]>>>(
+                        softdtw_global_tiled_multi<<<blockPerGrid, threadPerBlock, 0, streams[stream_num]>>>(
                             &da[i * m ] , &db[j * n], &D_[(i * nY + j) * m * n], waveId, total_tiles_rows, total_tiles_columns,
-                            tile_width,tile, gamma);
+                            tile_width,tile_height, gamma);
 
                     }
                 }

@@ -73,8 +73,8 @@ __device__ void softdtw_tiled_wavefront(float *a, float *b, float *D
     const int nWaves = tile_width * 2 - 1;
 
     // TODO: check with 1024
-    __shared__ float seq1[512];
-    __shared__ float seq2[512];
+    __shared__ float seq1[16];
+    __shared__ float seq2[16];
 
     __syncthreads();
 
