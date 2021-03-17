@@ -118,6 +118,17 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
               << duration << std::endl;
     memset(costs, 0, nX * nY * sizeof(float));
 
+    // the softdtw cuda naive kernel execution bandwidth = 20%
+    bw = floor(0.2 * m);
+    start = high_resolution_clock::now();
+    softdtw_cuda_naive_multi(dD, dR, costs, nX * nY, m, n, gamma, bw);
+    cudaErrchk(cudaDeviceSynchronize());
+    end = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(end - start).count();
+    std::cout << "softdtw_cuda_naive_multi_bw_20 " << m << " " << nX << " "
+              << duration << std::endl;
+    memset(costs, 0, nX * nY * sizeof(float));
+
     // the softdtw cuda stencil kernel execution .....timing....
     start = high_resolution_clock::now();
     softdtw_cuda_stencil(dD, dR, costs, nX * nY, m, n, gamma);
@@ -129,8 +140,9 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     memset(costs, 0, nX * nY * sizeof(float));
 
     // the softdtw cuda stencil kernel execution .....timing....
+    bw = floor(0.8 * m);
     start = high_resolution_clock::now();
-    softdtw_cuda_stencil(dD, dR, costs, nX * nY, m, n, gamma, 80);
+    softdtw_cuda_stencil(dD, dR, costs, nX * nY, m, n, gamma, bw);
     cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
@@ -139,12 +151,35 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     memset(costs, 0, nX * nY * sizeof(float));
 
     // the softdtw cuda stencil kernel execution .....timing....
+    bw = floor(0.6 * m);
     start = high_resolution_clock::now();
-    softdtw_cuda_stencil(dD, dR, costs, nX * nY, m, n, gamma, 60);
+    softdtw_cuda_stencil(dD, dR, costs, nX * nY, m, n, gamma, bw);
     cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
     std::cout << "softdtw_cuda_stencil_multi_60 " << m << " " << nX << " "
+              << duration << std::endl;
+    memset(costs, 0, nX * nY * sizeof(float));
+
+    // the softdtw cuda stencil kernel execution .....timing....
+    bw = floor(0.4 * m);
+    start = high_resolution_clock::now();
+    softdtw_cuda_stencil(dD, dR, costs, nX * nY, m, n, gamma, bw);
+    cudaErrchk(cudaDeviceSynchronize());
+    end = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(end - start).count();
+    std::cout << "softdtw_cuda_stencil_multi_40 " << m << " " << nX << " "
+              << duration << std::endl;
+    memset(costs, 0, nX * nY * sizeof(float));
+
+    // the softdtw cuda stencil kernel execution .....timing....
+    bw = floor(0.2 * m);
+    start = high_resolution_clock::now();
+    softdtw_cuda_stencil(dD, dR, costs, nX * nY, m, n, gamma, bw);
+    cudaErrchk(cudaDeviceSynchronize());
+    end = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(end - start).count();
+    std::cout << "softdtw_cuda_stencil_multi_40 " << m << " " << nX << " "
               << duration << std::endl;
     memset(costs, 0, nX * nY * sizeof(float));
 
@@ -154,7 +189,7 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     cudaErrchk(cudaDeviceSynchronize());
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
-    std::cout << "softdtw_cuda_stencil_multi_40 " << m << " " << nX << " "
+    std::cout << "softdtw_cuda_stencil_multi_20 " << m << " " << nX << " "
               << duration << std::endl;
     memset(costs, 0, nX * nY * sizeof(float));
 
@@ -186,7 +221,8 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     cudaDeviceSynchronize();
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
-    std::cout << "softdtw_cuda_diagonal_multi " << duration << std::endl;
+    std::cout << "softdtw_cuda_diagonal_multi " << m << " " << nX << " "
+              << duration << std::endl;
     memset(costs, 0, nX * nY * sizeof(float));
 
     delete[] costs;
