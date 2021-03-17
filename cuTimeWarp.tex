@@ -13,7 +13,9 @@
 \usepackage{wrapfig}
 \usepackage{parskip}
 \usepackage{epstopdf}
+\usepackage{pgf}
 \usepackage[sorting=none,style=ieee]{biblatex}
+\usepackage[utf8]{inputenc}\DeclareUnicodeCharacter{2212}{-}
 \DeclareUnicodeCharacter{2009}{\,}
 \setcounter{secnumdepth}{-\maxdimen}
 
@@ -571,6 +573,14 @@ FLOPs.
 
 \section{Results}
 
+TODO: time the CPU implementation as well
+
+\begin{figure}
+    \begin{center}
+        \input{fig/plot_naive.pgf}
+    \end{center}
+    \caption{Naive kernel performance}
+\end{figure}
 
 \section{Discussion}
 
