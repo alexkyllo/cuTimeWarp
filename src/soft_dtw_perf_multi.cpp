@@ -218,12 +218,34 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     // the softdtw cuda stencil kernel execution .....timing....
     start = high_resolution_clock::now();
     softdtw_cuda_diagonal_multi(dDD, dRD, costs, nX * nY, m, n, gamma);
-    cudaDeviceSynchronize();
     end = high_resolution_clock::now();
     duration = duration_cast<microseconds>(end - start).count();
     std::cout << "softdtw_cuda_diagonal_multi " << m << " " << nX << " "
               << duration << std::endl;
     memset(costs, 0, nX * nY * sizeof(float));
+
+
+    //Start Soft DTW for tiled multi kernel
+    //TODO: check with different tile_size and see the perfromance
+    //TODO: just need to change the tile kernel ofr shared memory size
+    // base on tile width and height defined here
+    uint tile_width = 512;
+    uint tile_height = 512;
+    uint total_tiles_columns = (m + tile_width - 1) / tile_width;
+    uint total_tiles_rows = (n + tile_width - 1) / tile_width;
+    uint total_tiles_waves = total_tiles_columns + total_tiles_rows - 1;
+    uint min_tiles = std::min(total_tiles_columns, total_tiles_rows);
+    // the softdtw cuda multi tiled kernel execution .....timing....
+    start = high_resolution_clock::now();
+    soft_dtw_tiled_multi(dX, dY, nX ,nY ,dD, tile_width, tile_height, total_tiles_waves,
+                           total_tiles_columns, total_tiles_rows, min_tiles,
+                           gamma,m,n);
+    cudaDeviceSynchronize();
+    end = high_resolution_clock::now();
+    duration = duration_cast<microseconds>(end - start).count();
+    std::cout << "soft_dtw_tiled_multi " << duration << std::endl;
+    memset(costs, 0, nX * nY * sizeof(float));
+
 
     delete[] costs;
     cudaFree(dX);

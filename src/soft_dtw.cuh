@@ -87,6 +87,28 @@ __host__ void soft_dtw_tiled(float *da, float *db, float *D_, uint tile_width,
                              uint total_tiles_rows, uint min_tiles,
                              float gamma);
 
+
+/** Host function for computing soft DTW tiled and shared memory version for multivariate 
+ *  we consider the tile with as square, otherwise need to define tile width and
+ * height
+ * @param da The device array for the first time series data
+ * @param db The device array for the second time series data
+ * @param D_tiled The device array for the distance matrix
+ * @param tile_width the width of our tiled for taking the advantage of shared
+ * memory
+ * @param tile_height 
+ * @param total_tiles_waves the total number of tiles
+ * @param total_tiles_columns the total number of tiles in one column
+ * @param total_tiles_rows the total number of tiles in one row
+ * @param min_tiles the minimum number of possible tiles
+ *
+ */
+__host__ void soft_dtw_tiled_multi(float *da, float *db,  uint nX,  uint nY, float *D_, uint tile_width,uint tile_height,
+                             uint total_tiles_waves, uint total_tiles_columns,
+                             uint total_tiles_rows, uint min_tiles, float gamma,  uint m , uint n);
+
+
+
 /** Host function for computing Soft DTW on pairwise Euclidean distance matrix
  * for multivariate time series with CUDA.
  * Input D should be a __device__ array of dimension (nD x m x n).

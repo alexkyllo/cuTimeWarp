@@ -5,6 +5,10 @@
 #define __global__
 #endif
 #include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+using namespace std;
+
 typedef unsigned int uint;
 /** Take the softmin of 3 elements
  * @param a The first element
