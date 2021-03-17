@@ -7,9 +7,11 @@ NVCC = nvcc
 NVCC_FLAGS = -g -G -maxrregcount=64 -Xcompiler "$(CFLAGS)"
 CU_LDFLAGS = -lcublas
 .PHONY = default build clean test fmt report
-FIGS = img/cost_dependencies.png img/sakoe_chiba.png \
+IMGS = img/cost_dependencies.png img/sakoe_chiba.png \
 img/diagonal_layout.png  img/euclidean_dtw_matrix.png \
-img/tiling_dependencies.png
+img/tiling_dependencies.png \
+
+FIGS = fig/plot_multi.pgf
 
 # list the CUDA kernel object files
 CU_OBJ = obj/euclid_dist.o obj/helper_functions.o obj/soft_dtw.o \
@@ -18,6 +20,7 @@ obj/soft_dtw_naive_multi.o \
 obj/soft_dtw_stencil.o \
 obj/soft_dtw_tiled.o \
 obj/soft_dtw_diagonal_major.o \
+obj/soft_dtw_tiled_multi.o \
 
 $(shell mkdir -p bin/ obj/)
 
@@ -83,10 +86,16 @@ bin/soft_dtw_perf: obj/soft_dtw_perf_main.o $(CU_OBJ)
 bin/soft_dtw_perf_multi: obj/soft_dtw_perf_multi.o $(CU_OBJ)
 	$(NVCC) $^ -o $@ $(CU_LDFLAGS)
 
+## Run python script to generate plots
+plot: $(FIGS)
+
+fig/plot_multi.pgf: plot.py
+	python $<
+
 ## Compile the PDF report
 report: cuTimeWarp.pdf
 
-cuTimeWarp.pdf: cuTimeWarp.tex cuTimeWarp.bib $(FIGS)
+cuTimeWarp.pdf: cuTimeWarp.tex cuTimeWarp.bib $(FIGS) $(IMGS)
 	latexmk -pdf
 
 ## Delete binaries

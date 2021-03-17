@@ -353,17 +353,15 @@ __host__ void soft_dtw_tiled(float *da, float *db, float *D_, uint tile_width,
     // cudaMemcpy(D, D_, mn_size, cudaMemcpyDeviceToDevice);
 }
 
-
-
-/** Host function for computing soft DTW tiled and shared memory version for multivariate 
- *  we consider the tile with as square, otherwise need to define tile width and
- * height
+/** Host function for computing soft DTW tiled and shared memory version for
+ * multivariate we consider the tile with as square, otherwise need to define
+ * tile width and height
  * @param da The device array for the first time series data
  * @param db The device array for the second time series data
  * @param D_tiled The device array for the distance matrix
  * @param tile_width the width of our tiled for taking the advantage of shared
  * memory
- * @param tile_height 
+ * @param tile_height
  * @param total_tiles_waves the total number of tiles
  * @param total_tiles_columns the total number of tiles in one column
  * @param total_tiles_rows the total number of tiles in one row
@@ -372,9 +370,12 @@ __host__ void soft_dtw_tiled(float *da, float *db, float *D_, uint tile_width,
  * @param nY The number of time series in batch Y
  *
  */
-__host__ void soft_dtw_tiled_multi(float *da, float *db,  uint nX,  uint nY, float *D_, uint tile_width,uint tile_height,
-                             uint total_tiles_waves, uint total_tiles_columns,
-                             uint total_tiles_rows, uint min_tiles, float gamma,  uint m , uint n)
+__host__ void soft_dtw_tiled_multi(float *da, float *db, uint nX, uint nY,
+                                   float *D_, uint tile_width, uint tile_height,
+                                   uint total_tiles_waves,
+                                   uint total_tiles_columns,
+                                   uint total_tiles_rows, uint min_tiles,
+                                   float gamma, uint m, uint n)
 {
 
     const int num_streams = min(max(nX, nY), 32);
@@ -382,41 +383,37 @@ __host__ void soft_dtw_tiled_multi(float *da, float *db,  uint nX,  uint nY, flo
     for (uint i = 0; i < num_streams; i++)
         cudaStreamCreate(&streams[i]);
 
-    
-
-
     // compute squared euclidean norm of X
     // allocate extra streams to try and get these to run concurrently
 
-        
-            // start wave front process
-            // Populate dependency managed by loop
-            for (int waveId = 0; waveId < total_tiles_waves; waveId++)
+    // start wave front process
+    // Populate dependency managed by loop
+    for (int waveId = 0; waveId < total_tiles_waves; waveId++)
+    {
+        int wave_Len = waveId + 1;
+        if (wave_Len > min_tiles)
+            wave_Len = min(min_tiles, total_tiles_waves - waveId);
+
+        // call kernel
+        // for none squeare block size, we need to pass the min for
+        // threadsPerBlock value
+        dim3 blockPerGrid(wave_Len);
+        dim3 threadPerBlock(min(tile_width, tile_height));
+
+        for (uint i = 0; i < nX; i++)
+        {
+            for (uint j = 0; j < nY; j++)
             {
-                int wave_Len = waveId + 1;
-                if (wave_Len > min_tiles)
-                    wave_Len = min(min_tiles, total_tiles_waves - waveId);
-
-                // call kernel
-                // for none squeare block size, we need to pass the min for
-                // threadsPerBlock value
-                dim3 blockPerGrid(wave_Len);
-                dim3 threadPerBlock(min(tile_width, tile_height));
-
-                for (uint i = 0; i < nX; i++)
-                {
-                    for (uint j = 0; j < nY; j++)
-                    {
-                        uint stream_num = (i * nY + j) % num_streams;
-                        softdtw_global_tiled<<<blockPerGrid, threadPerBlock, 0, streams[stream_num]>>>(
-                            &da[i * m ] , &db[j * n], &D_[(i * nY + j) * m * n], waveId, total_tiles_rows, total_tiles_columns,
-                            tile_width,tile, gamma);
-
-                    }
-                }
-                cudaDeviceSynchronize();
-
+                uint stream_num = (i * nY + j) % num_streams;
+                softdtw_global_tiled_multi<<<blockPerGrid, threadPerBlock, 0,
+                                             streams[stream_num]>>>(
+                    &da[i * m], &db[j * n], &D_[(i * nY + j) * m * n], waveId,
+                    total_tiles_rows, total_tiles_columns, tile_width,
+                    tile_height, gamma);
             }
+        }
+        cudaDeviceSynchronize();
+    }
 
     for (uint i = 0; i < num_streams; i++)
         cudaStreamDestroy(streams[i]);
@@ -424,8 +421,6 @@ __host__ void soft_dtw_tiled_multi(float *da, float *db,  uint nX,  uint nY, flo
     // copy back data to host
     // cudaMemcpy(D, D_, mn_size, cudaMemcpyDeviceToDevice);
 }
-
-
 
 /** Host function for computing Soft DTW on pairwise Euclidean distance matrix
  * for multivariate time series with CUDA.
