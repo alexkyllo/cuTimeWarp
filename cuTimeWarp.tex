@@ -572,7 +572,7 @@ Soft-DTW for a pair of time series of lengths $m$ and $n$ results in $18mn$
 FLOPs.
 
 \section{Results}
-
+\FloatBarrier
 TODO: time the CPU implementation as well
 
 \begin{figure}
@@ -581,6 +581,17 @@ TODO: time the CPU implementation as well
     \end{center}
     \caption{Kernel performance at time series length = 100}
 \end{figure}
+
+
+\begin{figure}
+    \begin{center}
+        \input{fig/plot_naive_multi_bw.pgf}
+    \end{center}
+    \caption{Naive kernel performance by Sakoe-Chiba bandwidth at time series
+      length = 100}
+\end{figure}
+
+\section{Profiling}
 
 \section{Discussion}
 
