@@ -575,22 +575,35 @@ FLOPs.
 \FloatBarrier
 TODO: time the CPU implementation as well
 
-\begin{figure}
+\begin{figure}[htbp]
     \begin{center}
         \input{fig/plot_multi.pgf}
     \end{center}
     \caption{Kernel performance at time series length = 100}
+    \label{plot_multi}
 \end{figure}
 
+Both the diagonal data layout and the shared memory stencil brought significant
+performance improvements over the naive kernel, as seen in Figure
+\ref{plot_multi}. While the naive kernel achieved GFLOPs in the low 30s, the
+diagonal data layout transformation increased performance into the lower 40s,
+and the shared memory implementation reached almost 70 GFLOPs, essentially
+double the execution rate of the naive kernel, for time series length 100.
 
-\begin{figure}
+Sakoe-Chiba bands also improved performance \emph{even after} adjusting for the
+reduced number of total floating point operations; a bandwidth of 40 resulted in
+the highest execution rate, exceeding 60 GFLOPs, compared to low-30s when the
+bandwidth is set to 100 (Figure \ref{plot_bw}).
+
+\begin{figure}[htbp]
     \begin{center}
         \input{fig/plot_naive_multi_bw.pgf}
     \end{center}
     \caption{Naive kernel performance by Sakoe-Chiba bandwidth at time series
       length = 100}
+    \label{plot_bw}
 \end{figure}
-
+\FloatBarrier
 \section{Profiling}
 
 \section{Discussion}

@@ -44,7 +44,7 @@ multi_kernels = {
     "softdtw_cuda_naive_multi": "naive",
     "softdtw_cuda_stencil_multi": "stencil",
     "softdtw_cuda_diagonal_multi": "diagonal",
-    "soft_dtw_tiled_multi": "tiled",
+    # "soft_dtw_tiled_multi": "tiled",
 }
 
 df_multi = (
@@ -76,10 +76,18 @@ plt.savefig("fig/plot_multi.pgf")
 plt.clf()
 
 # Naive kernel by Sakoe-Chiba bandwidth
+# look up multiplier for flops since Sakoe-Chiba results in fewer FLOPs
+bw_pct = {
+    100: 1.0,
+    80: 0.962,
+    60: 0.844,
+    40: 0.646,
+    20: 0.368,
+}
 
 df_naive_bw = (
     df[
-        df.kernel.str.startswith("softdtw_cuda_naive_multi_bw")
+        df.kernel.str.startswith("softdtw_cuda_naive_multi")
         & (df.length == 100)
     ]
     .groupby(["kernel", "length", "count"])[["gflops", "microseconds"]]
@@ -87,7 +95,17 @@ df_naive_bw = (
     .reset_index()
 )
 
-df_naive_bw["bandwidth"] = df_naive_bw.kernel.str[-2:].astype(int)
+df_naive_bw["bandwidth"] = (
+    pd.to_numeric(df_naive_bw.kernel.str[-2:], errors="coerce")
+    .fillna(100)
+    .astype(int)
+)
+
+df_naive_bw["bw_pct"] = df_naive_bw["bandwidth"].apply(
+    lambda x: bw_pct.get(x, 100)
+)
+
+df_naive_bw["gflops"] = df_naive_bw["gflops"] * df_naive_bw["bw_pct"]
 
 plot_naive_bw = sns.lineplot(
     data=df_naive_bw,
@@ -101,40 +119,8 @@ plot_naive_bw = sns.lineplot(
     palette=PAL,
 )
 
-plot_multi.set_xlabel("Pairwise DTW calculations")
-plot_multi.set_ylabel("GFLOP/s")
+plot_naive_bw.set_xlabel("Pairwise DTW calculations")
+plot_naive_bw.set_ylabel("GFLOP/s")
 
 plt.savefig("fig/plot_naive_multi_bw.pgf")
-plt.clf()
-
-# Stencil kernel by Sakoe-Chiba bandwidth
-
-df_stencil_bw = (
-    df[
-        df.kernel.str.startswith("softdtw_cuda_stencil_multi_")
-        & (df.length == 100)
-    ]
-    .groupby(["kernel", "length", "count"])[["gflops", "microseconds"]]
-    .mean()
-    .reset_index()
-)
-
-df_stencil_bw["bandwidth"] = df_stencil_bw.kernel.str[-2:].astype(int)
-
-plot_stencil_bw = sns.lineplot(
-    data=df_stencil_bw,
-    x="count",
-    y="gflops",
-    style="bandwidth",
-    hue="bandwidth",
-    markers=True,
-    dashes=False,
-    ci=None,
-    # palette="husl",
-)
-
-plot_multi.set_xlabel("Pairwise DTW calculations")
-plot_multi.set_ylabel("GFLOP/s")
-
-plt.savefig("fig/plot_stencil_multi_bw.pgf")
 plt.clf()
