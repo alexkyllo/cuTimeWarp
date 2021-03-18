@@ -44,17 +44,18 @@ machine learning on time series datasets.
 Time series machine learning is a research area with countless useful
 applications such as recognizing sounds and gestures. Clustering or classifying
 large time series datasets is challenging partly because of the need to define a
-measure of dissimilarity between any two given time series. Furthermore,
-practical applications require finding common structure in time series despite
-different speeds or phases; for example, a word means the same whether spoken
-quickly or slowly. Another requirement for machine learning tasks is that the
-dissimilarity measure must be differentiable so that its gradient can be used as
-to minimize it as a loss function to find the best fit model. Finally, the
-measure must be efficient to calculate, because it will be calculated repeatedly
-many times during model fitting. To this end we will explore GPU acceleration of
-Soft Dynamic Time Warping (Soft-DTW) \cite{cuturi_soft-dtw_2018}, a
-differentiable sequence dissimilarity measure, to enable high performance time
-series machine learning.
+measure of dissimilarity between any two given time series, which is not as
+straightforward as computing distance between independent points in dimensional
+space. Furthermore, practical applications require finding common structure in
+time series despite different speeds or phases; for example, a word means the
+same whether spoken quickly or slowly. Another requirement for machine learning
+tasks is that the dissimilarity measure must be differentiable so that its
+gradient can be used as to minimize it as a loss function to find the best fit
+model. Finally, the measure must be efficient to calculate, because it will be
+calculated repeatedly many times during model fitting. To this end we will
+explore GPU acceleration of Soft Dynamic Time Warping (Soft-DTW)
+\cite{cuturi_soft-dtw_2018}, a differentiable sequence dissimilarity measure, to
+enable high performance time series machine learning.
 
 \subsection{Background}
 
@@ -101,12 +102,22 @@ $n$ (equation \ref{euclid}).
 d(x, y) = \sqrt{\sum_{t=1}^{n}(x_t-y_t)^2}
 \end{equation}
 
+\begin{wrapfigure}[12]{R}{0.3\textwidth}
+  \centering
+  \includegraphics[height=0.25\textwidth]{img/peaks.png}
+  \caption{Euclidean vs. DTW}
+  \label{peaks}
+\end{wrapfigure}  
+
 However, a significant drawback of Euclidean distance in time series
 applications is that two structurally similar time series will produce a large
-distance if they are at different speeds or out of phase (TODO: Add a figure to
-illustrate this). In time series applications it is often desirable to produce a
-low dissimilarity for structurally similar time series despite variations in
-phase or speed, so an alternative method of quantifying dissimilarity is needed.
+distance if they are at different speeds or out of phase. In time series
+applications it is often desirable to produce a low dissimilarity for
+structurally similar time series despite variations in phase or speed, so an
+alternative method of quantifying dissimilarity is needed. This is where Dynamic
+Time Warping (DTW) comes in, providing an optimal nonlinear pairwise matching
+path (Figure \ref{peaks})\cite{rakthanmanon_addressing_2013}.
+
 
 \subsubsection{Dynamic Time Warping}
 
