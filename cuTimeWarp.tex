@@ -244,7 +244,9 @@ of the matrix, therefore computation of these cells can be handled by parallel
 threads. One thread computes the upper-leftmost cell, then two threads compute
 the next antidiagonal, then three threads compute the next, and so on. Because
 the length of the longest antidiagonal of a matrix is $min(m,n)$ that is also
-the number of threads that can be utilized in computing parallel DTW.
+the number of threads that can be utilized in computing parallel DTW, and a
+subset of these threads will be inactive in computing antidiagonals that are
+shorter than the longest antidiagonal.
 
 \subsection{Related Work}
 
@@ -423,7 +425,7 @@ As the program iterates diagonally across the distance matrix to find the
 optimal warping path, each cell in the path utilizes the previously computed
 results of three previous neighboring cells; if the iteration is visualized as
 proceeding from the upper left to the lower right corner of the matrix, the cost
-value in each cell depends on the (soft) minimmum of the costs in the cell
+value in each cell depends on the (soft) minimum of the costs in the cell
 above, the cell to the left, and the cell to the diagonal upper-left, which were
 computed in the previous two iterations (Figure \ref{cost_deps}). If the cost
 matrix \verb|R| resides in global memory, then non-contiguous accesses to
@@ -662,7 +664,7 @@ double the execution rate of the naive kernel, for time series length 100.
 
 Our performance measurements for the diagonal kernel stop at a problem size of
 25000 pairwise DTW comparisons because the diagonal-major layout consumes more
-space than the row-major layout (($m+n-1) \times min(m,n) matrix$ vs. an $m \times n$
+space than the row-major layout (($m+n-1) \times min(m,n)$ matrix vs. an $m \times n$
 matrix), exceeding the 8 GiB device memory capacity of the test GPU hardware.
 
 Sakoe-Chiba bands also improved performance \emph{even after} adjusting for the
@@ -685,6 +687,8 @@ TODO perf plots for varying time series length and fixed count
 \section{Profiling}
 
 TODO
+
+\input{fig/prof_table.tex}
 
 \section{Discussion}
 

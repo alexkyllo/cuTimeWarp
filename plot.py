@@ -204,5 +204,44 @@ plot_cpu_gpu.set_ylim(0)
 plt.savefig("fig/plot_cpu_gpu.pgf")
 plt.clf()
 
-# Euclidean Distance kernel plot
-# TODO
+# Profiling data
+
+prof_kernels = {
+    "softdtw_naive_kernel_multi": "1 naive",
+    "softdtw_stencil": "3 stencil",
+    "softdtw_diagonal_kernel_multi": "2 diagonal",
+    # "soft_dtw_tiled_multi": "tiled",
+}
+
+metrics = {
+    "Achieved Occupancy": "Occupancy",
+    "Registers Per Thread": "Registers / Thread",
+    "L1/TEX Hit Rate": "L1 Cache Hit",
+    "L2 Hit Rate": "L2 Cache Hit",
+    "SM Busy": "SM Busy",
+    "Mem Busy": "Mem Busy",
+}
+
+df_prof = pd.read_csv("output/ncu_100_2.csv")
+
+df_prof["Kernel"] = df_prof["Kernel Name"].str.split("(", n=1, expand=True)[0]
+
+df_prof = df_prof[
+    (df_prof["Kernel"].isin(prof_kernels))
+    & (df_prof["Metric Name"].isin(metrics))
+]
+
+df_prof["Kernel"] = df_prof["Kernel"].apply(lambda x: prof_kernels[x])
+df_prof["Metric"] = df_prof["Metric Name"].apply(lambda x: metrics[x])
+
+df_prof["Metric Value"] = df_prof["Metric Value"].astype(float)
+df_prof_sum = (
+    df_prof.groupby(["Kernel", "Metric"])["Metric Value"]
+    .mean()
+    .round(2)
+    .reset_index()
+    .pivot_table(index="Kernel", columns=["Metric"])
+    .reset_index()
+)
+
+df_prof_sum.to_latex("fig/prof_table.tex", index=False)
