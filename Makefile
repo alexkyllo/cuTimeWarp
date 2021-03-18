@@ -1,7 +1,5 @@
 CC = g++
-CFLAGS = -std=c++11 -Wall -Wextra # --pedantic-errors \
-#-g -fsanitize=address -fsanitize=leak -fsanitize=undefined -fno-sanitize-recover
-#LDFLAGS = -L./inc/lbfgsb-gpu/build/culbfgsb/ -lcuLBFGSB -lblas
+CFLAGS = -std=c++11 -Wall -Wextra
 LDFLAGS = -lblas
 NVCC = nvcc
 NVCC_FLAGS = -g -G -maxrregcount=64 -Xcompiler "$(CFLAGS)"
@@ -76,9 +74,6 @@ bin/test_soft_dtw_cpu: test/test_soft_dtw_cpu.cpp obj/test.o src/soft_dtw_cpu.hp
 
 bin/test_soft_dtw_cuda: test/test_soft_dtw_cuda.cpp obj/test.o $(CU_OBJ)
 	$(NVCC) $(NVCC_FLAGS) $^ -o $@ $(CU_LDFLAGS)
-
-bin/lbfgs: src/lbfgs_main.cpp src/soft_dtw_cost.hpp
-	$(CC) -I./inc/Eigen -I./inc/ $(CFLAGS) src/lbfgs_main.cpp -o bin/lbfgs -lblas
 
 bin/soft_dtw_perf: obj/soft_dtw_perf_main.o $(CU_OBJ)
 	$(NVCC) $^ -o $@ $(CU_LDFLAGS)

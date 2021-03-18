@@ -1,4 +1,4 @@
-/** Naive CPU implmentation of DTW as a baseline and reference.
+/** Naive CPU implmentation of DTW as a reference.
  * @file timewarp.cpp
  * @author Alex Kyllo
  * @date 2020-02-12

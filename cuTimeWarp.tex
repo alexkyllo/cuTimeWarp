@@ -31,10 +31,10 @@
 
 \begin{abstract}
 
-This report explores techniques for optimizing the computation of Soft Dynamic
-Time Warping, a differentiable sequence dissimilarity measure, on graphics
-processing units (GPU), for the purpose of enabling high-performance machine
-learning on time series datasets.
+In this report we explore techniques for optimizing the parallel computation of
+Soft Dynamic Time Warping, a differentiable sequence dissimilarity measure, on
+graphics processing units (GPU), for the purpose of enabling high-performance
+machine learning on time series datasets.
 
 \end{abstract}
 
@@ -238,32 +238,54 @@ the next antidiagonal, then three threads compute the next, and so on.
 
 \subsection{Related Work}
 
-Utilizing indexing to construct lower bounds on warping distance is an
-optimization technique for speeding up nearest neighbor search via early removal
-of poor candidates \cite{keogh_exact_2002}. Shen and Chi (2021) proposes an
-optimization of nearest neighbor search of multivariate time series, leveraging
-the triangle inequality and quantization-based point clustering to restrict the
-search \cite{shen_tc-dtw_2021}.
+Because DTW has so many useful data mining applications but suffers from
+quadratic complexity, scholars have devised a wide variety of exact and
+approximate approaches to improve its performance.
+
+Dr. Eamonn Keogh and several others have utilized various indexing schemes to
+construct lower bounds on warping distance as an optimization technique for
+speeding up nearest neighbor search via early removal of poor candidates
+\cite{keogh_exact_2002}.
+
+Shen and Chi (2021) propose an optimization of nearest neighbor search of
+multivariate time series, leveraging the triangle inequality and
+quantization-based point clustering to restrict the search
+\cite{shen_tc-dtw_2021}.
 
 Xiao et al (2013) introduced a prefix computation technique for transforming the
 diagonal data dependence to improve parallel computation of the cost matrix on
-GPU \cite{xiao_parallelizing_2013}. Zhu et al (2018) demonstrates a method of
-optimizing  memory access by taking advantage of the diagonal data dependency to
-rearrange the matrix so that elements on the same diagonal are stored
-contiguously \cite{zhu_developing_2018}. A prior implementation of Soft-DTW on
-CUDA using PyTorch and Numba is capable of 100x performance improvement over the
-original Soft-DTW Cython code, but is limited to sequence lengths of 1024 (CUDA
-max block size) and leaves many opportunities for further CUDA optimizations
-such as the use of shared memory \cite{maghoumi_pytorch-softdtw-cuda_2021}. A
-2015 paper describes a tiling approach called \emph{PeerWave}, which utilizes
+GPU \cite{xiao_parallelizing_2013}.
+
+Zhu et al (2018) demonstrate a method of optimizing memory access by taking
+advantage of the diagonal data dependency to rearrange the matrix so that
+elements on the same diagonal are stored contiguously
+\cite{zhu_developing_2018}.
+
+Salvador and Chan (2004) \cite{salvador_fastdtw_2004} proposed a method of
+accelerating and approximation of DTW, dubbed FastDTW, by first downsampling the
+time series to a fraction of its length to find an approximate best path and
+then recursively upsampling and reapplying the algorithm, using the previous
+lower-resolution best path to construct upper and lower bounds for next
+pass. However, Wu and Keogh (2020) demonstrate that this method is generally
+slower than exact DTW on most realistic datasets.
+
+A prior implementation of Soft-DTW on CUDA using PyTorch and Numba claims to
+achieve 100x performance improvement over the original Soft-DTW reference
+implementation in Cython code, but is limited to sequence lengths of 1024 (CUDA
+maximum thread block size) and leaves many opportunities for further CUDA
+optimizations such as the use of shared memory
+\cite{maghoumi_pytorch-softdtw-cuda_2021}.
+
+A 2015 paper describes a tiling approach called \emph{PeerWave}, which utilizes
 direct synchronization between neighboring streaming multiprocessors (SMs) to
 handle the inter-tile data dependency without atomic operations, locks, or other
 global barriers, leading to improved load balance and scaling properties
-\cite{belviranli_peerwave_2015}.
+\cite{belviranli_peerwave_2015}. This tiling strategy also enables the PeerWave
+algorithm to handle longer time series than 1024.
 
-In our project we will focus on this area of opportunity, optimizing matrix
-structure and memory access patterns to maximize parallelism and minimize memory
-latency in the computation of the warping path matrix.
+In our work, we primarily focus on this general area of opportunity, optimizing
+DTW cost matrix structure and memory access patterns to increase parallelism and
+minimize memory latency in the computation of the warping path matrix.
 
 \section{Methods}
 

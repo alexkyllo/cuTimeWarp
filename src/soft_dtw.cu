@@ -386,39 +386,39 @@ __host__ void soft_dtw_tiled_multi(float *da, float *db, uint nX, uint nY,
     // compute squared euclidean norm of X
     // allocate extra streams to try and get these to run concurrently
 
-        
-            // start wave front process
-            // Populate dependency managed by loop
-            for (int waveId = 0; waveId < total_tiles_waves; waveId++)
-            {
-                int wave_Len = waveId + 1;
-                if (wave_Len > min_tiles)
-                    wave_Len = min(min_tiles, total_tiles_waves - waveId);
-
-                // call kernel
-                // for none squeare block size, we need to pass the min for
-                // threadsPerBlock value
-                dim3 blockPerGrid(wave_Len);
-                dim3 threadPerBlock(min(tile_width, tile_height));
-
-                for (uint i = 0; i < nX; i++)
-                {
-                    for (uint j = 0; j < nY; j++)
-                    {
-                        uint stream_num = (i * nY + j) % num_streams;
-                        softdtw_global_tiled_multi<<<blockPerGrid, threadPerBlock, 0, streams[stream_num]>>>(
-                            &da[i * m ] , &db[j * n], &D_[(i * nY + j) * m * n], waveId, total_tiles_rows, total_tiles_columns,
-                            tile_width,tile_height, gamma);
-
-                    }
-                }
-                cudaDeviceSynchronize();
+    // start wave front process
+    // Populate dependency managed by loop
+    for (int waveId = 0; waveId < total_tiles_waves; waveId++)
+    {
+        int wave_Len = waveId + 1;
+        if (wave_Len > min_tiles)
+            wave_Len = min(min_tiles, total_tiles_waves - waveId);
 
         // call kernel
         // for none squeare block size, we need to pass the min for
         // threadsPerBlock value
         dim3 blockPerGrid(wave_Len);
         dim3 threadPerBlock(min(tile_width, tile_height));
+
+        for (uint i = 0; i < nX; i++)
+        {
+            for (uint j = 0; j < nY; j++)
+            {
+                uint stream_num = (i * nY + j) % num_streams;
+                softdtw_global_tiled_multi<<<blockPerGrid, threadPerBlock, 0,
+                                             streams[stream_num]>>>(
+                    &da[i * m], &db[j * n], &D_[(i * nY + j) * m * n], waveId,
+                    total_tiles_rows, total_tiles_columns, tile_width,
+                    tile_height, gamma);
+            }
+        }
+        cudaDeviceSynchronize();
+
+        // call kernel
+        // for none squeare block size, we need to pass the min for
+        // threadsPerBlock value
+        blockPerGrid = dim3(wave_Len);
+        threadPerBlock = dim3(min(tile_width, tile_height));
 
         for (uint i = 0; i < nX; i++)
         {
