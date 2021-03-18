@@ -163,7 +163,7 @@ __host__ void compare_two_sequence(std::vector<float> X , std::vector<float> Y, 
     cudaDeviceSynchronize();
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(end - start).count();
-    std::cout << "soft_dtw_tiled " << m << " "<< n  << " " << duration << std::endl;
+    std::cout << "soft_dtw_tiled " << m *n  << " " << duration << std::endl;
     cudaMemcpy(d, dd, m * n * sizeof(float), cudaMemcpyDeviceToHost);
 
     delete[] d;
@@ -175,7 +175,7 @@ __host__ void compare_two_sequence(std::vector<float> X , std::vector<float> Y, 
 
 
 
-/** Fill a vector with n random floats drawn from unit normal distribution.
+/** Fill a vector with n random floats drawn f unit normal distribution.
  */
 std::vector<float> fill_random( std::vector<float> vec, uint n)
 {
@@ -239,9 +239,13 @@ int main(int argc, char **argv)
         for (int i =m ; i <= max ; i+=k )
           for (int j= i; j<= max ; j+=k)
           {
+            //int i =1000;
+            //int j =1000;
+        
             data_vec_a = fill_random(data_vec_a, i );
-            data_vec_b =fill_random(data_vec_b, j );
+            data_vec_b =fill_random(data_vec_b, j );          
             compare_two_sequence(data_vec_a , data_vec_b, i, j);
+
           }
         return 0;
     }
