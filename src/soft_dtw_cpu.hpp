@@ -403,28 +403,6 @@ T find_softdtw_barycenter(T *Z, const T *X, const uint m, const uint k,
             Z[i * k + j] = dist(gen);
         }
     }
-    // Euclidean mean init
-    // std::cout << "Z init: "
-    //           << "\n";
-    // for (uint i = 0; i < m; i++)
-    // {
-    //     for (uint j = 0; j < k; j++)
-    //     {
-    //         // Z[i * k + j] = dist(gen);
-    //         float avg = 0;
-    //         for (uint nn = 0; nn < n; nn++)
-    //         {
-    //             uint idx = nn * m + i + j;
-    //             avg += X[idx];
-    //             // std::cout << X[idx] << " ";
-    //         }
-
-    //         avg /= n;
-    //         Z[i * k + j] = avg;
-    //         // std::cout << Z[i * k + j] << " ";
-    //     }
-    // }
-    // std::cout << "\n";
     T cost = std::numeric_limits<float>::infinity();
     // Initialize array for gradient w.r.t. Z
     T *G = new float[m * k]{0};

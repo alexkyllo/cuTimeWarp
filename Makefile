@@ -29,7 +29,22 @@ fmt:
 	cd src && clang-format -i *.cpp *.hpp *.cu *.cuh *.hcu
 
 ## Build binaries
-build: bin/dtw_cpu bin/soft_dtw_perf bin/soft_dtw_perf_multi
+build: bin/dtw_cpu bin/soft_dtw_perf bin/soft_dtw_perf_multi bin/soft_dtw_perf_cpu
+
+bin/test_soft_dtw_cpu: test/test_soft_dtw_cpu.cpp obj/test.o src/soft_dtw_cpu.hpp
+	$(CC) $(CFLAGS) $< obj/test.o -o $@ $(LDFLAGS)
+
+bin/test_soft_dtw_cuda: test/test_soft_dtw_cuda.cpp obj/test.o $(CU_OBJ)
+	$(NVCC) $(NVCC_FLAGS) $^ -o $@ $(CU_LDFLAGS)
+
+bin/soft_dtw_perf: obj/soft_dtw_perf_main.o $(CU_OBJ)
+	$(NVCC) $^ -o $@ $(CU_LDFLAGS)
+
+bin/soft_dtw_perf_multi: obj/soft_dtw_perf_multi.o $(CU_OBJ)
+	$(NVCC) $^ -o $@ $(CU_LDFLAGS)
+
+bin/soft_dtw_perf_cpu: src/soft_dtw_perf_cpu.cpp
+	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
 
 bin/dtw_cpu: src/dtw_cpu.cpp
 	$(CC) $(CFLAGS) $^ -o $@
@@ -68,18 +83,6 @@ test_softdtw_cpu: bin/test_soft_dtw_cpu
 
 test_softdtw_cuda: bin/test_soft_dtw_cuda
 	./$<
-
-bin/test_soft_dtw_cpu: test/test_soft_dtw_cpu.cpp obj/test.o src/soft_dtw_cpu.hpp
-	$(CC) $(CFLAGS) $< obj/test.o -o $@ $(LDFLAGS)
-
-bin/test_soft_dtw_cuda: test/test_soft_dtw_cuda.cpp obj/test.o $(CU_OBJ)
-	$(NVCC) $(NVCC_FLAGS) $^ -o $@ $(CU_LDFLAGS)
-
-bin/soft_dtw_perf: obj/soft_dtw_perf_main.o $(CU_OBJ)
-	$(NVCC) $^ -o $@ $(CU_LDFLAGS)
-
-bin/soft_dtw_perf_multi: obj/soft_dtw_perf_multi.o $(CU_OBJ)
-	$(NVCC) $^ -o $@ $(CU_LDFLAGS)
 
 ## Run python script to generate plots
 plot: $(FIGS)

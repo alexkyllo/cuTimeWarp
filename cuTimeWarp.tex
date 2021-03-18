@@ -546,15 +546,6 @@ to $2176 \times 1.71 \times 2 = 7441.92$ GFLOPS.
 The GPU device is installed on a desktop computer running Ubuntu Linux 20.04
 with CPU and memory specifications detailed in Table \ref{hostspecs}.
 
-\subsection{Test Data}
-
-For performance testing we selected datasets from the UCR Time Series Archive
-\cite{dau_ucr_2019} and the UEA Multivariate Time Series Classification Archive
-\cite{bagnall_uea_2018}.
-
-We also generated sets of random unit normal data to test the performance impact
-of varying time series length and count.
-
 \subsection{Complexity Analysis}
 
 Calculating a single cell of the cost matrix in Soft-DTW involves a softmin
@@ -593,15 +584,37 @@ cell cost, for a total of 18 floating point operations (FLOPs). Therefore
 Soft-DTW for a pair of time series of lengths $m$ and $n$ results in $18mn$
 FLOPs.
 
+\subsection{Test Data}
+
+For performance testing we selected datasets from the UCR Time Series Archive
+\cite{dau_ucr_2019} and the UEA Multivariate Time Series Classification Archive
+\cite{bagnall_uea_2018}.
+
+We also wrote a performance testing program that generates sets of random unit
+normal data to test the performance impact of varying time series length and
+count to many different sizes.
+
 \section{Results}
 \FloatBarrier
-TODO: time the CPU implementation as well
+
+As a baseline, we timed the naive, sequential CPU implementation of SoftDTW.
+
+\begin{figure}[htbp]
+    \begin{center}
+        \input{fig/plot_cpu.pgf}
+    \end{center}
+    \caption{Sequential CPU performance on random unit normal time series length
+      = 100}
+    \label{plot_cpu}
+\end{figure}
+
 
 \begin{figure}[htbp]
     \begin{center}
         \input{fig/plot_multi.pgf}
     \end{center}
-    \caption{Kernel performance at time series length = 100}
+    \caption{Kernel performance on random unit normal time series length =
+      100}
     \label{plot_multi}
 \end{figure}
 
@@ -621,8 +634,8 @@ bandwidth is set to 100 (Figure \ref{plot_bw}).
     \begin{center}
         \input{fig/plot_naive_multi_bw.pgf}
     \end{center}
-    \caption{Naive kernel performance by Sakoe-Chiba bandwidth at time series
-      length = 100}
+    \caption{Naive kernel performance on random unit normal data by
+      Sakoe-Chiba bandwidth at time series length = 100}
     \label{plot_bw}
 \end{figure}
 \FloatBarrier

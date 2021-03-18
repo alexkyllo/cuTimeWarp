@@ -70,6 +70,7 @@ plot_multi = sns.lineplot(
 
 plot_multi.set_xlabel("Pairwise DTW calculations")
 plot_multi.set_ylabel("GFLOP/s")
+plot_multi.set_ylim(0)
 
 # plt.savefig("fig/plot_multi.png")
 plt.savefig("fig/plot_multi.pgf")
@@ -121,6 +122,49 @@ plot_naive_bw = sns.lineplot(
 
 plot_naive_bw.set_xlabel("Pairwise DTW calculations")
 plot_naive_bw.set_ylabel("GFLOP/s")
+plot_naive_bw.set_ylim(0)
 
 plt.savefig("fig/plot_naive_multi_bw.pgf")
+plt.clf()
+
+# CPU sequential program
+df_cpu = pd.read_csv(
+    "output/random_cpu.txt",
+    sep=" ",
+    names=["kernel", "length", "count", "microseconds"],
+)
+
+df_cpu["count"] = df_cpu["count"] ** 2
+
+df_cpu["flops"] = df_cpu["length"] ** 2 * df_cpu["count"] * 18
+
+df_cpu["gflops"] = df_cpu["flops"] / df_cpu["microseconds"] / 1000
+
+df_cpu_agg = (
+    df_cpu[(df_cpu.kernel == "softdtw") & (df_cpu.length == 100)]
+    .groupby(["kernel", "length", "count"])[["gflops", "microseconds"]]
+    .mean()
+    .reset_index()
+)
+
+df_cpu_agg.kernel = "cpu"
+
+plot_cpu = sns.lineplot(
+    data=df_cpu_agg,
+    x="count",
+    y="gflops",
+    style="kernel",
+    hue="kernel",
+    markers=True,
+    dashes=False,
+    ci=None,
+    palette=PAL,
+)
+
+plot_cpu.set_xlabel("Pairwise DTW calculations")
+plot_cpu.set_ylabel("GFLOP/s")
+plot_cpu.set_ylim(0)
+
+# plt.savefig("fig/plot_multi.png")
+plt.savefig("fig/plot_cpu.pgf")
 plt.clf()
