@@ -168,3 +168,41 @@ plot_cpu.set_ylim(0)
 # plt.savefig("fig/plot_multi.png")
 plt.savefig("fig/plot_cpu.pgf")
 plt.clf()
+
+cpu_gpu_kernels = {"softdtw": "CPU", "softdtw_cuda_naive_multi": "CUDA"}
+
+# CPU vs GPU naive
+df_cpu_gpu = pd.concat([df, df_cpu])
+df_cpu_gpu = (
+    df_cpu_gpu[
+        df_cpu_gpu.kernel.isin(cpu_gpu_kernels) & (df_cpu_gpu.length == 100)
+    ]
+    .groupby(["kernel", "length", "count"])[["gflops", "microseconds"]]
+    .mean()
+    .reset_index()
+)
+
+df_cpu_gpu.kernel = df_cpu_gpu.kernel.apply(lambda x: cpu_gpu_kernels.get(x))
+
+plot_cpu_gpu = sns.lineplot(
+    data=df_cpu_gpu,
+    x="count",
+    y="gflops",
+    style="kernel",
+    hue="kernel",
+    markers=True,
+    dashes=False,
+    ci=None,
+    palette=PAL,
+)
+
+plot_cpu_gpu.set_xlabel("Pairwise DTW calculations")
+plot_cpu_gpu.set_ylabel("GFLOP/s")
+plot_cpu_gpu.set_ylim(0)
+
+# plt.savefig("fig/plot_multi.png")
+plt.savefig("fig/plot_cpu_gpu.pgf")
+plt.clf()
+
+# Euclidean Distance kernel plot
+# TODO

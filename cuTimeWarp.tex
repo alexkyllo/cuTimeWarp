@@ -14,6 +14,7 @@
 \usepackage{parskip}
 \usepackage{epstopdf}
 \usepackage{pgf}
+\usepackage{pgfplots}
 \usepackage[sorting=none,style=ieee]{biblatex}
 \usepackage[utf8]{inputenc}\DeclareUnicodeCharacter{2212}{-}
 \DeclareUnicodeCharacter{2009}{\,}
@@ -305,6 +306,19 @@ values from the two time series within the nested loop of the DTW procedure.
 
 \subsection{Optimization Techniques}
 
+We opted to experiment with the following performance optimization techniques:
+
+\begin{enumerate}
+\item Wavefront tiling (based on PeerWave)
+\item Diagonal-major data layout
+\item Shared memory stencil
+\item Sakoe-Chiba bands
+\end{enumerate}
+
+Before delving into the performance results, we will provide a brief explanation
+of how each of these techniques is implemented and why it provides a performance
+improvement.
+
 \subsubsection{Wavefront Tiling}
 Wavefront parallelism is one of the useful methods to overcome the dependencies
 of nested loops by multiple processing units. The idea is to re-order the loop
@@ -477,6 +491,56 @@ a length 8 series with Sakoe-Chiba band radius = 1.}
 \label{sakoe_chiba}
 \end{figure}
 
+\subsection{Complexity Analysis}
+
+In order to quantify the performance of our implementations as a floating point
+operation execution rate, we needed to count the floating-point operations used
+to compute the cost matrix. Calculating a single cell of the cost matrix in
+Soft-DTW involves a softmin function of three real-valued arguments. The softmin
+function for three arguments is implemented in C++ as:
+
+\begin{verbatim}
+float softmin(float a, float b, float c, const float gamma)
+{
+    float ng = -gamma;
+    a /= ng;
+    b /= ng;
+    c /= ng;
+    float max_of = max(max(a, b), c);
+    float sum = exp(a - max_of) + exp(b - max_of) + exp(c - max_of);
+
+    return ng * (log(sum) + max_of);
+}
+\end{verbatim}
+
+This function contains 17 floating point operations:
+
+\begin{itemize}
+  \item 1 x negation
+  \item 3 x division
+  \item 2 x max
+  \item 3 x exponentiation
+  \item 3 x subtraction
+  \item 3 x addition
+  \item 1 x natural logarithm
+  \item 1 x multiplication
+\end{itemize}
+
+Additionally, the softmin of the previous 3 cell costs is added to the current
+cell cost, for a total of 18 floating point operations (FLOPs). Therefore
+Soft-DTW for a pair of time series of lengths $m$ and $n$ results in $18mn$
+FLOPs.
+
+\subsection{Test Data}
+
+For performance testing we selected datasets from the UCR Time Series Archive
+\cite{dau_ucr_2019} and the UEA Multivariate Time Series Classification Archive
+\cite{bagnall_uea_2018}.
+
+We also wrote a performance testing program that generates sets of random unit
+normal data to test the performance impact of varying time series length and
+count to many different sizes.
+
 \subsection{Test Hardware Specifications}
 \FloatBarrier
 \begin{table}[htbp]
@@ -546,84 +610,60 @@ to $2176 \times 1.71 \times 2 = 7441.92$ GFLOPS.
 The GPU device is installed on a desktop computer running Ubuntu Linux 20.04
 with CPU and memory specifications detailed in Table \ref{hostspecs}.
 
-\subsection{Complexity Analysis}
-
-Calculating a single cell of the cost matrix in Soft-DTW involves a softmin
-function of three real-valued arguments. The softmin function for three
-arguments is implemented in C++ as:
-
-\begin{verbatim}
-float softmin(float a, float b, float c, const float gamma)
-{
-    float ng = -gamma;
-    a /= ng;
-    b /= ng;
-    c /= ng;
-    float max_of = max(max(a, b), c);
-    float sum = exp(a - max_of) + exp(b - max_of) + exp(c - max_of);
-
-    return ng * (log(sum) + max_of);
-}
-\end{verbatim}
-
-This function contains 17 floating point operations:
-
-\begin{itemize}
-  \item 1 x negation
-  \item 3 x division
-  \item 2 x max
-  \item 3 x exponentiation
-  \item 3 x subtraction
-  \item 3 x addition
-  \item 1 x natural logarithm
-  \item 1 x multiplication
-\end{itemize}
-
-Additionally, the softmin of the previous 3 cell costs is added to the current
-cell cost, for a total of 18 floating point operations (FLOPs). Therefore
-Soft-DTW for a pair of time series of lengths $m$ and $n$ results in $18mn$
-FLOPs.
-
-\subsection{Test Data}
-
-For performance testing we selected datasets from the UCR Time Series Archive
-\cite{dau_ucr_2019} and the UEA Multivariate Time Series Classification Archive
-\cite{bagnall_uea_2018}.
-
-We also wrote a performance testing program that generates sets of random unit
-normal data to test the performance impact of varying time series length and
-count to many different sizes.
-
 \section{Results}
 \FloatBarrier
 
-As a baseline, we timed the naive, sequential CPU implementation of SoftDTW.
+As a baseline for performance comparison, we timed the naive, sequential CPU
+implementation of SoftDTW and found that its execution rate varied between
+0.35-0.4 GFLOPs (Figure \ref{plot_cpu}). While a multithreaded parallel CPU
+implementation could likely achieve several times this rate of execution, we
+opted not to experiment with this and instead move on to parallelizing the
+algorithm with GPU multithreading.
 
 \begin{figure}[htbp]
     \begin{center}
-        \input{fig/plot_cpu.pgf}
+        \scalebox{0.85}{\input{fig/plot_cpu.pgf}}
     \end{center}
-    \caption{Sequential CPU performance on random unit normal time series length
-      = 100}
+    \caption{CPU performance on random unit normal time series length = 100}
     \label{plot_cpu}
+\end{figure}
+
+Figure \ref{plot_cpu_gpu} shows the execution rate of the naive CUDA kernel
+vs. the CPU implementation for comparison. The CUDA kernel achieves performance
+of around 34 GFLOPs compared to the CPU's 0.36 GFLOPs, a 92x performance
+increase.
+
+\begin{figure}[htbp]
+    \begin{center}
+        \scalebox{0.85}{\input{fig/plot_cpu_gpu.pgf}}
+    \end{center}
+    \caption{CPU vs. CUDA (Naive) performance on random unit normal time series
+      length = 100}
+    \label{plot_cpu_gpu}
 \end{figure}
 
 
 \begin{figure}[htbp]
     \begin{center}
-        \input{fig/plot_multi.pgf}
+        \scalebox{0.85}{\input{fig/plot_multi.pgf}}
     \end{center}
     \caption{Kernel performance on random unit normal time series length =
       100}
     \label{plot_multi}
 \end{figure}
 
-Both the diagonal data layout and the shared memory stencil brought significant
-performance improvements over the naive kernel, as seen in Figure
-\ref{plot_multi}. While the naive kernel achieved GFLOPs in the low 30s, the
-diagonal data layout transformation increased performance into the lower 40s,
-and the shared memory implementation reached almost 70 GFLOPs, essentially
+After testing the naive kernel we experimented with CUDA performance
+optimizations. Both the diagonal data layout and the shared memory stencil
+brought significant performance improvements over the naive kernel, as seen in
+Figure \ref{plot_multi}. While the naive kernel achieved GFLOPs in the low 30s,
+the diagonal data layout transformation increased performance into the lower
+40s, and the shared memory implementation reached almost 70 GFLOPs, essentially
 double the execution rate of the naive kernel, for time series length 100.
+
+Our performance measurements for the diagonal kernel stop at a problem size of
+25000 pairwise DTW comparisons because the diagonal-major layout consumes more
+space than the row-major layout (($m+n-1) \times min(m,n) matrix$ vs. an $m \times n$
+matrix), exceeding the 8 GiB device memory capacity of the test GPU hardware.
 
 Sakoe-Chiba bands also improved performance \emph{even after} adjusting for the
 reduced number of total floating point operations; a bandwidth of 40 resulted in
@@ -632,29 +672,44 @@ bandwidth is set to 100 (Figure \ref{plot_bw}).
 
 \begin{figure}[htbp]
     \begin{center}
-        \input{fig/plot_naive_multi_bw.pgf}
+        \scalebox{0.85}{\input{fig/plot_naive_multi_bw.pgf}}
     \end{center}
     \caption{Naive kernel performance on random unit normal data by
       Sakoe-Chiba bandwidth at time series length = 100}
     \label{plot_bw}
 \end{figure}
+
+TODO Perf plots for Euclidean distance
+
 \FloatBarrier
 \section{Profiling}
 
+TODO
+
 \section{Discussion}
+
+TODO
 
 \section{Future Work}
 
-Our library provides CUDA kernels and C++ wrappers for computing pairwise
-Soft-DTW dissimilarity measures as well their gradients in parallel. Potential
-future work includes integrating this library with an optimization library that
-can iteratively minimize Soft-DTW cost to find barycenters among a set of time
-series, to assemble a nearest centroid classification system. Another area of
-potential is writing Python bindings to expose the Soft-DTW loss and gradient
-functions to deep learning frameworks such as TensorFlow or PyTorch, to enable
-the use of Soft-DTW loss as a training objective for recurrent neural networks.
-This will facilitate tasks such as classifying, predicting and generating sounds,
-gestures, and sensor data under the dynamic time warping geometry.
+Our library provides several individual CUDA kernels and C++ wrappers for
+computing pairwise Soft-DTW dissimilarity measures in parallel. The library
+could be further improved by creating additional kernels that apply the
+optimizations to the Soft-DTW gradient computation as well, and that combine the
+best-performing optimizations together. Another improvement would be a batching
+implementation that handles much larger problem sizes within limited device
+memory by launching kernels across multiple streams and transferring data for
+the next problem while the previous one is being computed, to hide latency.
+
+Other potentially valuable future work includes integrating this library with an
+optimization library that can iteratively minimize Soft-DTW cost to find
+barycenters among a set of time series, to assemble a nearest centroid
+classification system. Another area of potential is writing Python bindings to
+expose the Soft-DTW loss and gradient functions to deep learning frameworks such
+as TensorFlow or PyTorch, to enable the use of Soft-DTW loss as a training
+objective for recurrent neural networks.  This will facilitate tasks such as
+classifying, predicting and generating sounds, gestures, and sensor data under
+the dynamic time warping geometry.
 
 \printbibliography[]
 \end{document}
