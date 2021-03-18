@@ -52,8 +52,8 @@ same whether spoken quickly or slowly. Another requirement for machine learning
 tasks is that the dissimilarity measure must be differentiable so that its
 gradient can be used as to minimize it as a loss function to find the best fit
 model. Finally, the measure must be efficient to calculate, because it will be
-calculated repeatedly many times during model fitting. To this end we will
-explore GPU acceleration of Soft Dynamic Time Warping (Soft-DTW)
+calculated repeatedly many times during the model fitting process. To this end
+we will explore the GPU acceleration of Soft Dynamic Time Warping (Soft-DTW)
 \cite{cuturi_soft-dtw_2018}, a differentiable sequence dissimilarity measure, to
 enable high performance time series machine learning.
 
@@ -105,7 +105,7 @@ d(x, y) = \sqrt{\sum_{t=1}^{n}(x_t-y_t)^2}
 \begin{wrapfigure}[12]{R}{0.3\textwidth}
   \centering
   \includegraphics[height=0.25\textwidth]{img/peaks.png}
-  \caption{Euclidean vs. DTW}
+  \caption{Euclidean vs. DTW on out of phase time series \cite{rakthanmanon_addressing_2013}}
   \label{peaks}
 \end{wrapfigure}  
 
@@ -116,34 +116,22 @@ applications it is often desirable to produce a low dissimilarity for
 structurally similar time series despite variations in phase or speed, so an
 alternative method of quantifying dissimilarity is needed. This is where Dynamic
 Time Warping (DTW) comes in, providing an optimal nonlinear pairwise matching
-path (Figure \ref{peaks})\cite{rakthanmanon_addressing_2013}.
+path (Figure \ref{peaks}).
 
 
 \subsubsection{Dynamic Time Warping}
 
 Dynamic Time Warping (DTW) was devised in the 1960s as an alternative time
-series dissimilarity measure to address this shortcoming. (TODO: find a
-historical citation). DTW is a nonlinear mapping of from each point in one time
-series to the nearest point in a second time series. While DTW is technically
-not considered a ``distance'' because it does not conform to the triangle
-inequality, and therefore we refer to it as a ``dissimilarity'' instead, it can
-still be used in place of Euclidean distance or other distance measures for many
+series dissimilarity measure to address this shortcoming
+\cite{sakoe_dynamic_1978}. DTW is a nonlinear mapping from each point in one
+time series to the nearest point in a second time series; by allowing this
+nonlinearity, the algorithm is able to minimize the computed distance
+between time series that are similar in shape but misaligned in the time domain.
+While DTW is technically not considered a ``distance'' because it does not
+conform to the triangle inequality \cite{jain_semi-metrification_2018}, and
+therefore we refer to it as a ``dissimilarity'' instead, it can still be used in
+place of Euclidean distance or other distance measures for many practical
 applications of time series data.
-
-The purpose of (DTW) is to perform a transformation
-function that wrap the time to align two time series. Preferably we tend this
-alignment to be optimum and satisfy our
-requirements.\cite{deriso_general_nodate}
-
-DTW is a widely used tool employed in many areas of science, including biology,
-technology, economics, and finance. It calculates the practical distance between
-two signals typically by taking the distance between them when one is time
-warped, or it can be the minimum warping required to align signals with each
-other by applying some sort of fidelity.  Dynamic time warping can be used to
-identify hidden pattern or searching within signals databases to find the
-matching one.\cite{keogh_derivative_2001} it is utilized in machine learning
-platforms that depends on signals like clustering, regression, and
-classification.
 
 The problem can be visualized as a matrix of pairwise distances between every
 element of time series A and every element of time series B. Under this
@@ -191,7 +179,12 @@ a tunable hyperparameter in machine learning model training applications.
 
 \subsubsection{Applications}
 
-Practical applications of DTW include tasks such as:
+DTW is a widely used technique employed in many areas of science, including
+biology, technology, economics, and finance. DTW can be used to discover
+patterns in time series or search within signal databases to find the closest
+matches \cite{keogh_derivative_2001}. It is also utilized in machine learning
+applications like clustering, regression, and classification on time series
+data. Practical applications of DTW include tasks such as:
 
 \begin{itemize}
     \item Voice command recognition
@@ -199,6 +192,7 @@ Practical applications of DTW include tasks such as:
     \item Handwriting and gesture recognition
     \item Human activity recognition
     \item Heart rhythm anomaly detection
+    \item Sales or asset price pattern detection
 \end{itemize}
 
 As a differentiable time series dissimilarity measure, DTW can be applied as a
@@ -214,14 +208,16 @@ loss function or minimization objective in data modeling techniques such as:
 
 A common technique in machine learning with Soft-DTW is the computation of
 barycenters, which are centroids within the space of a set of time series. The
-differentiability of Soft-DTW allows for barycenter finding via gradient
-descent, and then new observations can be classified by finding the nearest
-barycenter. Sequence prediction and generation is also possible using
-recurrent neural networks with Soft-DTW as a loss function
-\cite{cuturi_soft-dtw_2018}.
-
-(TODO: Explain process of barycenter finding with gradient descent on softdtw
-loss)
+differentiability of Soft-DTW allows for barycenter finding via gradient descent
+or semi-Newtonian function minimization methods. First, a candidate time series
+is initialized with random points, and then, iteratively, its Soft-DTW
+dissimilarity to a set of multiple time series representing a target class is
+calculated, then the gradient of the Soft-DTW dissimilarity is taken with
+respect to the input values, and the inputs are updated by a small step size in
+the direction of the gradient, until convergence. After the best-fit barycenters
+are found, new observations can be classified by finding the nearest barycenter.
+Sequence prediction and generation is also possible using recurrent neural
+networks with Soft-DTW as a loss function \cite{cuturi_soft-dtw_2018}.
 
 Prior to computing the Soft-DTW dissimilarity between any two time series, each
 time series should be \emph{z-normalized}, that is, scaled so that its mean is
@@ -232,21 +228,23 @@ results on un-normalized data due to drift that ``may be caused by patient
 movement, dirty lead wires/electrodes, loose electrodes, and so on,'' and which
 ``does not have any medical significance.'' Z-normalization also tends to make
 the iterative process of minimizing the cost function through gradient descent
-or quasi-Newtonian methods more efficient because its hyperplane is not
-disproportionately stretched in any one dimension, so the step size in any
-direction is the same relative to the scale of that dimension. (TODO: explain
-this better, find a citation)
+more efficient because it prevents parameters with larger magnitude from
+dominating the direction of the weight update step
+\cite{jordan_normalizing_2018}. For this reason, all input data used in our
+performance experiments is z-normalized in advance.
 
 \subsubsection{Parallelizing DTW}
 
 A naive, sequential implementation of DTW would involve a nested loop to iterate
-over each row/column of the cost matrix to update its cost based on the three
-neighboring cells' costs, hence the $O(n^2)$ time complexity. But because each
-cell has a data dependency on the three cells to the top, left, and top-left,
-there is no dependency between cells that are on the same antidiagonal of
-the matrix, therefore computation of these cells can be handled by parallel
+over each row and column of the cost matrix to update each cell's cost based on
+the three neighboring cells' costs, hence the $O(n^2)$ time complexity. Because
+each cell has a data dependency on the three cells to the top, left, and
+top-left, there is no dependency between cells that are on the same antidiagonal
+of the matrix, therefore computation of these cells can be handled by parallel
 threads. One thread computes the upper-leftmost cell, then two threads compute
-the next antidiagonal, then three threads compute the next, and so on.
+the next antidiagonal, then three threads compute the next, and so on. Because
+the length of the longest antidiagonal of a matrix is $min(m,n)$ that is also
+the number of threads that can be utilized in computing parallel DTW.
 
 \subsection{Related Work}
 
@@ -380,7 +378,7 @@ Wavefront process split to three major steps:
 \end{itemize}
 
 \begin{equation} \label{dependencies}
-  D (i,j) = Soft-min
+  D (i,j) = D(i-1, j-1) + Soft-min
   \begin{cases}
         D(i-1,j) \\
         D(i,j-1)\\
@@ -436,15 +434,6 @@ these cache misses can be avoided via a stencil computation using shared memory
 in CUDA. The stencil serves as a cache for the current and previous two
 diagonals; once a diagonal is no longer in use, its elements are written back to
 the cost matrix \verb|R| in device global memory.
-
-\begin{figure}[htbp]
-\includegraphics[height=2in]{img/cost_dependencies.png}
-\centering
-\caption{Data dependency direction between cells of the cost matrix.
-Each cell's cost computation depends on the costs of the three adjacent cells
-above, to the left, and to the upper-left.}
-\label{cost_deps}
-\end{figure}
 
 \FloatBarrier
 The algorithm can be modified to use shared memory as follows:
@@ -707,10 +696,14 @@ Our library provides several individual CUDA kernels and C++ wrappers for
 computing pairwise Soft-DTW dissimilarity measures in parallel. The library
 could be further improved by creating additional kernels that apply the
 optimizations to the Soft-DTW gradient computation as well, and that combine the
-best-performing optimizations together. Another improvement would be a batching
-implementation that handles much larger problem sizes within limited device
-memory by launching kernels across multiple streams and transferring data for
-the next problem while the previous one is being computed, to hide latency.
+best-performing optimizations together. Due to time constraints we were unable
+to explore the prefix computation technique described in Xiao et al (2013)
+\cite{xiao_parallelizing_2013} and incorporating an implementation of this
+algorithm remains a significant opportunity. Another library improvement would
+be a batching implementation that handles much larger problem sizes within
+limited device memory by launching kernels across multiple streams and
+transferring data for the next problem while the previous one is being computed,
+to hide latency.
 
 Other potentially valuable future work includes integrating this library with an
 optimization library that can iteratively minimize Soft-DTW cost to find
