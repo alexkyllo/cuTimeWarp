@@ -163,10 +163,11 @@ __host__ void compare_two_sequence(std::vector<float> X , std::vector<float> Y, 
     cudaDeviceSynchronize();
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(end - start).count();
-    std::cout << "soft_dtw_tiled " << m *n  << " " << duration << std::endl;
+    std::cout << "soft_dtw_tiled " << m *n  << " " <<total_tiles_waves << " " << duration <<std::endl;
     cudaMemcpy(d, dd, m * n * sizeof(float), cudaMemcpyDeviceToHost);
 
     delete[] d;
+    
 
     cudaFree(da);
     cudaFree(db);
@@ -245,7 +246,8 @@ int main(int argc, char **argv)
             data_vec_a = fill_random(data_vec_a, i );
             data_vec_b =fill_random(data_vec_b, j );          
             compare_two_sequence(data_vec_a , data_vec_b, i, j);
-
+            data_vec_a.clear();
+            data_vec_b.clear();
           }
         return 0;
     }
