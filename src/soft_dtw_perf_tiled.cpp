@@ -43,11 +43,6 @@ __host__ void comparison(std::vector<float> X , std::vector<float> Y, int m , in
     {
         float *a = &X[i];
 
-        //for (int h=0; h <m * count ; h++)
-        // std::cout << a[h]<< std::endl;
-
-       // &X[i];
-       // std::cerr << " a done "<< std::endl;
         
         for (int j =0 ; j < count; j++)
         {
@@ -119,6 +114,67 @@ __host__ void comparison(std::vector<float> X , std::vector<float> Y, int m , in
     }
 }
 
+
+__host__ void compare_two_sequence(std::vector<float> X , std::vector<float> Y, int m , int n )
+{
+    //std::cerr << "round i =" << i << " , j = " << j << std::endl;
+    float *a = &X[0];
+    float *b = &Y[0];
+    float gamma = 0.1;
+                
+    // distance matrix
+    float *d;
+    d = (float *)malloc(m * n * sizeof(float));
+    // device arrays
+    float *da;
+    cudaMalloc(&da, m * sizeof(float));
+    cudaMemcpy(da, a, m * sizeof(float), cudaMemcpyHostToDevice);
+
+    //std::cerr << " da done "<< std::endl;
+
+    float *db;
+    cudaMalloc(&db, n * sizeof(float));
+    //std::cerr << " db done 1"<< std::endl;
+    cudaMemcpy(db, b, n * sizeof(float), cudaMemcpyHostToDevice);
+    
+    //std::cerr << " db done "<< std::endl;
+
+    float *dd;
+    cudaMalloc(&dd, m * n * sizeof(float));
+    
+
+    //Start Soft DTW for tiled multi kernel
+    //TODO: check with different tile_size and see the perfromance
+    //TODO: just need to change the tile kernel ofr shared memory size
+    // base on tile width and height defined here
+    uint tile_width = 16;
+    //uint tile_height = 16;
+    uint total_tiles_columns = (m + tile_width - 1) / tile_width;
+    uint total_tiles_rows = (n + tile_width - 1) / tile_width;
+    uint total_tiles_waves = total_tiles_columns + total_tiles_rows - 1;
+    uint min_tiles = std::min(total_tiles_columns, total_tiles_rows);
+   
+
+    // the softdtw cuda multi tiled kernel execution .....timing....
+    auto start = high_resolution_clock::now();
+    soft_dtw_tiled(da, db,dd, tile_width, total_tiles_waves,
+                        total_tiles_columns, total_tiles_rows, min_tiles,
+                        gamma);
+    cudaDeviceSynchronize();
+    auto end = high_resolution_clock::now();
+    auto duration = duration_cast<microseconds>(end - start).count();
+    std::cout << "soft_dtw_tiled " << m << " "<< n  << " " << duration << std::endl;
+    cudaMemcpy(d, dd, m * n * sizeof(float), cudaMemcpyDeviceToHost);
+
+    delete[] d;
+
+    cudaFree(da);
+    cudaFree(db);
+    cudaFree(dd);
+}
+
+
+
 /** Fill a vector with n random floats drawn from unit normal distribution.
  */
 std::vector<float> fill_random( std::vector<float> vec, uint n)
@@ -149,28 +205,44 @@ int main(int argc, char **argv)
     std::vector<float> data_vec_a;
     std::vector<float> data_vec_b;
     std::string filename = argv[1];
-    uint m = 0; // length of time series
-    uint n = 0; // number of time series
-    uint k = 0; // number of time series
+    int m = 0; // length of time series
+    int max = 0; // number of time series
+    int k = 0; // number of time series
     
     if (filename == "random")
     {
         if (argc < 4)
         {
-            std::cerr << "Usage: " << argv[0] << " random [first-length] [second-length] [count]\n";
+            std::cerr << "Usage: " << argv[0] << " random [start_length] [maximum_lenght] [interval]\n";
             return 1;
         }
         m = atol(argv[2]);
-        n = atol(argv[3]);
+        max = atol(argv[3]);
         k = atol(argv[4]);
 
-        
-        data_vec_a = fill_random(data_vec_a, m * k);
-        
+        // int i= m;
+        // int j= m;
+        // while (i <max)
+        // {
+        //     while (j <max)
+        //     {
+        //         std::cout<< " i = "<< i << " j= "<< j<<std::endl;
+        //         data_vec_a = fill_random(data_vec_a, i );
+        //         data_vec_b =fill_random(data_vec_b, j );
+        //         compare_two_sequence(data_vec_a , data_vec_b, i, j);
+        //         j= j+ k;
 
-
-        data_vec_b =fill_random(data_vec_b, n * k);       
-        comparison(data_vec_a , data_vec_b, m, n , k);
+        //     }
+        //     i= i+k;
+        // }
+        
+        for (int i =m ; i <= max ; i+=k )
+          for (int j= i; j<= max ; j+=k)
+          {
+            data_vec_a = fill_random(data_vec_a, i );
+            data_vec_b =fill_random(data_vec_b, j );
+            compare_two_sequence(data_vec_a , data_vec_b, i, j);
+          }
         return 0;
     }
 
@@ -181,39 +253,6 @@ int main(int argc, char **argv)
         std::cerr << "Unable to open file " << argv[1] << "\n";
         return 1;
     }
-
-    // std::string str_buf;
-    // std::stringstream ss;
-    // float float_buf;
-
-    // while (!input_file.eof())
-    // {
-    //     getline(input_file, str_buf);
-    //     ss.str(str_buf);
-    //     // first element per line is a class label not a data point.
-    //     bool is_data = false;
-    //     while (!ss.eof())
-    //     {
-    //         ss >> float_buf;
-    //         if (is_data)
-    //         {
-    //             data_vec.push_back(float_buf);
-    //         }
-    //         is_data = true;
-    //     }
-    //     ss.clear();
-    //     n++;
-    // }
-    // n--;
-    // m = data_vec.size() / n;
-    // // n will overcount by 1 line when we reach the end.
-    // std::cout << "Data file " << argv[1] << " contains " << n
-    //           << " time series of length " << m << "\n";
-
-    // // Get a pointer to the array data which is dimension (m x n)
-
-    // // Let's start checking the performance
-    // comparison(data_vec, m, n , k);
 
     return 0;
 }
