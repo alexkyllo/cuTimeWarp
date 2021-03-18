@@ -29,7 +29,9 @@ fmt:
 	cd src && clang-format -i *.cpp *.hpp *.cu *.cuh *.hcu
 
 ## Build binaries
-build: bin/dtw_cpu bin/soft_dtw_perf bin/soft_dtw_perf_multi bin/soft_dtw_perf_cpu
+build: bin/dtw_cpu bin/soft_dtw_perf bin/soft_dtw_perf_multi \
+bin/soft_dtw_perf_tiled \
+bin/soft_dtw_perf_cpu \
 
 bin/test_soft_dtw_cpu: test/test_soft_dtw_cpu.cpp obj/test.o src/soft_dtw_cpu.hpp
 	$(CC) $(CFLAGS) $< obj/test.o -o $@ $(LDFLAGS)
@@ -41,6 +43,9 @@ bin/soft_dtw_perf: obj/soft_dtw_perf_main.o $(CU_OBJ)
 	$(NVCC) $^ -o $@ $(CU_LDFLAGS)
 
 bin/soft_dtw_perf_multi: obj/soft_dtw_perf_multi.o $(CU_OBJ)
+	$(NVCC) $^ -o $@ $(CU_LDFLAGS)
+
+bin/soft_dtw_perf_tiled: obj/soft_dtw_perf_tiled.o $(CU_OBJ)
 	$(NVCC) $^ -o $@ $(CU_LDFLAGS)
 
 bin/soft_dtw_perf_cpu: src/soft_dtw_perf_cpu.cpp
@@ -59,6 +64,9 @@ obj/soft_dtw_perf_main.o: src/soft_dtw_perf_main.cpp
 	$(CC) -I$(CUDA_HOME)/include $(CFLAGS) -c $< -o $@
 
 obj/soft_dtw_perf_multi.o: src/soft_dtw_perf_multi.cpp
+	$(CC) -I$(CUDA_HOME)/include $(CFLAGS) -c $< -o $@
+
+obj/soft_dtw_perf_tiled.o: src/soft_dtw_perf_tiled.cpp
 	$(CC) -I$(CUDA_HOME)/include $(CFLAGS) -c $< -o $@
 
 obj/soft_dtw.o: src/soft_dtw.cu
