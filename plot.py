@@ -245,3 +245,46 @@ df_prof_sum = (
 )
 
 df_prof_sum.to_latex("fig/prof_table.tex", index=False)
+
+# ECG perf
+
+df_ecg = pd.read_csv(
+    "output/ecg.txt",
+    sep=" ",
+    names=["kernel", "length", "count", "microseconds"],
+)
+
+
+df_ecg["gflops"] = (
+    ((df_ecg["length"] ** 2) * (df_ecg["count"] ** 2) * 18)
+    / df_ecg["microseconds"]
+    / 1000
+)
+
+ecg_kernels = {
+    "convert_diagonal_multi": "convert diagonal",
+    "softdtw_cuda_diagonal_multi": "diagonal",
+    "softdtw_cuda_naive_multi": "naive",
+    "softdtw_cuda_naive_multi_bw_20": "naive bandwidth 20",
+    "softdtw_cuda_naive_multi_bw_40": "naive bandwidth 40",
+    "softdtw_cuda_naive_multi_bw_60": "naive bandwidth 60",
+    "softdtw_cuda_naive_multi_bw_80": "naive bandwidth 80",
+    "softdtw_cuda_stencil_multi": "stencil",
+    "softdtw_cuda_stencil_multi_20": "stencil bandwidth 20",
+    "softdtw_cuda_stencil_multi_40": "stencil bandwidth 40",
+    "softdtw_cuda_stencil_multi_60": "stencil bandwidth 60",
+    "softdtw_cuda_stencil_multi_80": "stencil bandwidth 80",
+    "sq_euclid_dist_multi": "squared euclidean distance",
+}
+
+df_ecg = (
+    df_ecg.groupby(["kernel"])[["microseconds", "gflops"]]
+    .mean()
+    .round()
+    .astype(int)
+    .reset_index()
+)
+
+df_ecg["kernel"] = df_ecg["kernel"].apply(lambda x: ecg_kernels[x])
+
+df_ecg.to_latex("fig/ecg_kernels.tex", index=False)

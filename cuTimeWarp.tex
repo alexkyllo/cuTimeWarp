@@ -107,7 +107,7 @@ d(x, y) = \sqrt{\sum_{t=1}^{n}(x_t-y_t)^2}
   \includegraphics[height=0.25\textwidth]{img/peaks.png}
   \caption{Euclidean vs. DTW on out of phase time series \cite{rakthanmanon_addressing_2013}}
   \label{peaks}
-\end{wrapfigure}  
+\end{wrapfigure}
 
 However, a significant drawback of Euclidean distance in time series
 applications is that two structurally similar time series will produce a large
@@ -134,7 +134,7 @@ place of Euclidean distance or other distance measures for many practical
 applications of time series data.
 
 The problem can be visualized as a matrix of pairwise distances between every
-element of time series A and every element of time series B. Under this
+element of time series $x$ and every element of time series $y$. Under this
 representation, the Euclidean distance measure translates to the shortest
 diagonal path across the matrix from one corner to the other, while DTW allows
 the path to ``wander'' from the diagonal in search of the lowest cost path
@@ -150,25 +150,25 @@ in between.
 \label{euclidean_matrix}
 \end{figure}
 
-The basic algorithm for DTW is to use Bellman’s recursion, a dynamic programming
+The basic algorithm for DTW is to use Bellman's recursion, a dynamic programming
 technique, to find the lowest-cost path diagonally across a pairwise distance
 matrix; at each step, the cost is updated to the current cell's cost plus the
 minimum of the three previous adjacent cells' costs. The computation cost for
 this approach is quadratic ($O(mn)$) for time series vectors of length m and n
 \cite{cuturi_soft-dtw_2018}. The formula for the DTW between time series x and y
-is given by equation \ref{dtw}.  (TODO: explain the algorithm in more detail and
-provide a visualization)
+is given by equation \ref{dtw}.
 
 \begin{equation} \label{dtw}
 DTW(x,y) = min_{\pi}\sqrt{\sum_{(i,j)\in\pi}d(x_{i},y_{j})^2}
 \end{equation}
 
 Where $d(x_i,y_j)^2$ is the cost function, typically pairwise squared Euclidean
-distance. The loss function for DTW is not differentiable due to the min
-operation within the formula; a small change in the input time series may result
-in zero change in the path cost. However, we can create a differentiable version
-called Soft-DTW by replacing the min function with a soft-min function
-(equation \ref{softdtw}) \cite{cuturi_soft-dtw_2018}.
+distance between an element of time series $x$ and an element of time series
+$y$. The loss function for DTW is not differentiable due to the min operation
+within the formula; a small change in the input time series may result in zero
+change in the path cost. However, we can create a differentiable version called
+Soft-DTW by replacing the min function with a soft-min function (equation
+\ref{softdtw}) \cite{cuturi_soft-dtw_2018}.
 
 \begin{equation} \label{softdtw}
 \text{soft-min}_\gamma(a_1,...,a_n) = -\gamma log\sum_{i}e^{-a_i/\gamma}
@@ -617,10 +617,11 @@ with CPU and memory specifications detailed in Table \ref{hostspecs}.
 
 As a baseline for performance comparison, we timed the naive, sequential CPU
 implementation of SoftDTW and found that its execution rate varied between
-0.35-0.4 GFLOPs (Figure \ref{plot_cpu}). While a multithreaded parallel CPU
-implementation could likely achieve several times this rate of execution, we
-opted not to experiment with this and instead move on to parallelizing the
-algorithm with GPU multithreading.
+0.35-0.4 GFLOPs (Figure \ref{plot_cpu}) on the hardware described in Table
+\ref{hostspecs}. While a multithreaded parallel CPU implementation could likely
+achieve several times this rate of execution, we opted not to experiment with
+CPU parallelism and instead move on to parallelizing the algorithm in CUDA with
+GPU multithreading.
 
 \begin{figure}[htbp]
     \begin{center}
@@ -681,17 +682,22 @@ bandwidth is set to 100 (Figure \ref{plot_bw}).
     \label{plot_bw}
 \end{figure}
 
-TODO perf plots for varying time series length and fixed count
-
-
-The tiled kernel is using global barriers to handle the dependencies. 
-There is one loop inside the kernel to manage the wave and another iteration within each tile.
-In order to test the multivariate time series, we have to add two more loops to create multi-stream and handle a bunch of time sequences. Adding this option generates an overhead on the kernel and decreases the performance significantly and we couldn't compare the result of the multivariate tiled approach with other designed kernels. The main idea behind implementing a tiled version is to compute the similarity of time series for larger sequences while other kernels are unable to process them. Figure \ref{plot_tiled} shows that, for lower length of sequences the performance is less while by increasing the size, it is improving and reaching to 120 GFLOPS.     
+The tiled kernel is using global barriers to handle the dependencies.  There is
+one loop inside the kernel to manage the wave and another iteration within each
+tile. In order to test the multivariate time series, we have to add two more
+loops to create multi-stream and handle a bunch of time sequences. Adding this
+option generates an overhead on the kernel and decreases the performance
+significantly and we couldn't compare the result of the multivariate tiled
+approach with other designed kernels. The main idea behind implementing a tiled
+version is to compute the similarity of time series for longer sequences, while
+other kernels are unable to process them. Figure \ref{plot_tiled} shows that,
+for shorter length sequences the performance is less, but by increasing the
+length, it is improving and capable of exceeding 120 GFLOPS.
 
 \begin{figure}[htbp]
 \includegraphics[height=4in]{fig/plot_tiled.png}
 \centering
-\caption{Soft DTW performance for Tiled & shared memory}
+\caption{Soft DTW performance for Tiled \& shared memory kernel}
 \label{plot_tiled}
 \end{figure}
 

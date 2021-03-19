@@ -73,6 +73,10 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     std::cout << "sq_euclid_dist_multi " << m << " " << nX << " " << duration
               << std::endl;
 
+    // now that dD is constructed we don't need dX and dY anymore
+    cudaFree(dX);
+    cudaFree(dY);
+
     // the softdtw cuda naive kernel execution .....timing....
     float *costs = new float[nX * nY]{0};
     start = high_resolution_clock::now();
@@ -194,6 +198,8 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     memset(costs, 0, nX * nY * sizeof(float));
 
     // converting D from row-major to diagonal-major format
+    // Free the row-major R we aren't using anymore
+    cudaFree(dR);
     float *dDD;
     uint nDD = std::min(m, n) * nX * nY * (m + n - 1);
     uint szDD = nDD * sizeof(float);
@@ -206,6 +212,8 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     duration = duration_cast<microseconds>(end - start).count();
     std::cout << "convert_diagonal_multi " << m << " " << nX << " " << duration
               << std::endl;
+    // Free the row-major D we aren't using anymore
+    cudaFree(dD);
 
     // transform R into diagonal-major layout
     float *dRD;
@@ -213,7 +221,6 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
     uint szRD = nRD * sizeof(float);
     cudaErrchk(cudaMalloc(&dRD, szRD));
     cudaMemset(dRD, 0, szRD);
-    // convert_diagonal_major_multi(R, RD, nX * nY, m + 2, n + 2);
 
     // the softdtw cuda stencil kernel execution .....timing....
     start = high_resolution_clock::now();
@@ -224,33 +231,9 @@ __host__ void comparison(std::vector<float> X, int time_series_len, int count)
               << duration << std::endl;
     memset(costs, 0, nX * nY * sizeof(float));
 
-    // Start Soft DTW for tiled multi kernel
-    // TODO: check with different tile_size and see the perfromance
-    // TODO: just need to change the tile kernel ofr shared memory size
-    // base on tile width and height defined here
-    uint tile_width = 16;
-    uint tile_height = 16;
-    uint total_tiles_columns = (m + tile_width - 1) / tile_width;
-    uint total_tiles_rows = (n + tile_width - 1) / tile_width;
-    uint total_tiles_waves = total_tiles_columns + total_tiles_rows - 1;
-    uint min_tiles = std::min(total_tiles_columns, total_tiles_rows);
-    // the softdtw cuda multi tiled kernel execution .....timing....
-    start = high_resolution_clock::now();
-    soft_dtw_tiled_multi(dX, dY, nX, nY, dD, tile_width, tile_height,
-                         total_tiles_waves, total_tiles_columns,
-                         total_tiles_rows, min_tiles, gamma, m, n);
-    cudaDeviceSynchronize();
-    end = high_resolution_clock::now();
-    duration = duration_cast<microseconds>(end - start).count();
-    std::cout << "soft_dtw_tiled_multi " << m << " " << nX << " " << duration
-              << std::endl;
-    memset(costs, 0, nX * nY * sizeof(float));
-
     delete[] costs;
-    cudaFree(dX);
-    cudaFree(dY);
-    cudaFree(dD);
-    cudaFree(dR);
+    cudaFree(dDD);
+    cudaFree(dRD);
 }
 
 /** Fill a vector with n random floats drawn from unit normal distribution.
@@ -335,7 +318,7 @@ int main(int argc, char **argv)
     n--;
     m = data_vec.size() / n;
     // n will overcount by 1 line when we reach the end.
-    std::cout << "Data file " << argv[1] << " contains " << n
+    std::cerr << "Data file " << argv[1] << " contains " << n
               << " time series of length " << m << "\n";
 
     // Get a pointer to the array data which is dimension (m x n)
