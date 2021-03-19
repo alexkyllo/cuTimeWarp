@@ -1,0 +1,15 @@
+\begin{table}[htbp]
+\centering
+\caption{NVIDIA NSight Compute Profiler metrics by kernel (length 1000)}
+\label{prof_table_1000}
+\begin{tabular}{lrrrrrr}
+\toprule
+    Kernel & \multicolumn{6}{l}{Metric Value} \\
+           & L1 Cache Hit & L2 Cache Hit & Mem Busy & Occupancy & Registers / Thread & SM Busy \\
+\midrule
+   1 naive &        57.07 &        96.50 &     5.51 &     100.0 &               43.0 &   24.97 \\
+2 diagonal &        92.09 &        92.38 &     4.08 &     100.0 &               43.0 &   36.02 \\
+ 3 stencil &        45.65 &        93.84 &     3.59 &     100.0 &               43.0 &   31.73 \\
+\bottomrule
+\end{tabular}
+\end{table}
