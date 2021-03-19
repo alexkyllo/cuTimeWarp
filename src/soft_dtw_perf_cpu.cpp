@@ -149,7 +149,7 @@ int main(int argc, char **argv)
     n--;
     m = data_vec.size() / n;
     // n will overcount by 1 line when we reach the end.
-    std::cout << "Data file " << argv[1] << " contains " << n
+    std::cerr << "Data file " << argv[1] << " contains " << n
               << " time series of length " << m << "\n";
 
     // Let's start checking the performance
