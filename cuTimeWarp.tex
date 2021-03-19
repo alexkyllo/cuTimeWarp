@@ -612,6 +612,43 @@ to $2176 \times 1.71 \times 2 = 7441.92$ GFLOPS.
 The GPU device is installed on a desktop computer running Ubuntu Linux 20.04
 with CPU and memory specifications detailed in Table \ref{hostspecs}.
 
+
+\begin{table}[htbp]
+  \centering
+  \caption{UWB LAB Device Hardware Specifications}
+  \label{specslab}
+  \begin{tabular}{lr}
+      \toprule
+          Property                & Value                           \\
+          \midrule
+          Model                   & GeForce GTX 745                 \\
+          Compute Capability      & 3.0                             \\
+          SM Count                & 3                               \\
+          CUDA Cores              & 384                            \\
+          CUDA Version            & 10.1                            \\
+          Driver Version          & 10.1                          \\
+          Clock Speed (MHz)       & 1032                            \\
+          Memory clock rate(MHz)  & 14                              \\
+          Memory Bandwidth (GB/s) & 2047                             \\
+          L1 Cache (KiB) (per SM) & 64                              \\
+          L2 Cache (KiB)          & 2048                             \\
+          Maximum number of resident blocks per multiprocessor &16   \\ 
+          Maximum amount of shared memory per multiprocessor(KB) & 48 \\
+          Maximum number of resident blocks per multiprocessor &16 \\
+          Maximum number of threads per multiprocessor  &2048 \\
+          Total amount of shared memory per block (B)   &49152 \\
+          \bottomrule
+  \end{tabular}
+\end{table}
+
+for our experiments we also used a laboratory machine. The device has the compute capability 
+3.0 with only 3 SM running on Centos Linux operating system.Table \ref{specslab} 
+is showing the detail of UWB device. Due to the lower performance of the machine 
+we preferred to use it for implementation of tiled and evaluating the tiled plus 
+shared memory results. Therefore within this document whenever we talk about the 
+performance of tiled kernel, we refer to this table for further analysis.  
+
+
 \section{Results}
 \FloatBarrier
 
