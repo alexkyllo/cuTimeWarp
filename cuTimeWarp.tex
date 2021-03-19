@@ -602,6 +602,41 @@ to $2176 \times 1.71 \times 2 = 7441.92$ GFLOPS.
 The GPU device is installed on a desktop computer running Ubuntu Linux 20.04
 with CPU and memory specifications detailed in Table \ref{hostspecs}.
 
+
+\begin{table}[htbp]
+  \centering
+  \caption{UWB LAB Device Hardware Specifications}
+  \label{specslab}
+  \begin{tabular}{lr}
+      \toprule
+          Property                & Value                           \\
+          \midrule
+          Model                   & GeForce GTX 745                 \\
+          Compute Capability      & 3.0                             \\
+          SM Count                & 3                               \\
+          CUDA Cores              & 384                            \\
+          CUDA Version            & 10.1                            \\
+          Driver Version          & 10.1                          \\
+          Clock Speed (MHz)       & 1032                            \\
+          Memory clock rate(MHz)  & 14                              \\
+          Memory Bandwidth (GB/s) & 2047                             \\
+          L1 Cache (KiB) (per SM) & 64                              \\
+          L2 Cache (KiB)          & 2048                             \\
+          Maximum number of resident blocks per multiprocessor &16   \\ 
+          Maximum amount of shared memory per multiprocessor(KB) & 48 \\
+          Maximum number of resident blocks per multiprocessor &16 \\
+          Maximum number of threads per multiprocessor  &2048 \\
+          Total amount of shared memory per block (B)   &49152 \\
+          \bottomrule
+  \end{tabular}
+\end{table}
+
+for our experiments we also used a laboratory machine. The device has the compute capability 
+3.0 with only 3 SM running on Centos Linux operating system.Table \ref{specslab} 
+is showing the detail of UWB device. Due to the lower performance of the machine 
+we preferred to use it for implementation of tiled and evaluating the tiled plus 
+shared memory results. Therefore within this document whenever we talk about the 
+performance of tiled kernel, we refer to this table for further analysis.  
 \subsection{Test Data}
 
 For performance testing we selected the ECG 200 dataset from the UCR Time Series
@@ -786,6 +821,20 @@ time series of length 100.
 
 TODO
 
+In order to improve performance, we convert kernels to multi-functional 
+to be able to compute the entire dataset of time series within the kernel by one call. 
+Therefore, the need for a nested loop to compare time series one by one removed, and the 
+bulk of time series replaced that. Implementing this approach was challenging and required much effort. 
+
+One of the major issues was the tiled kernel. Global barriers that we discussed in the 
+optimization section lead to nested loops for managing the dependencies during intra-tile 
+and inter-tile. The naive idea was to take the advantage of Cuda stream and run the loops 
+concurrently. Although we were succeeded to implement this method, however, it was not much 
+efficient and the performance compared to the other kernels was disappointing. This could be 
+improved in the future by changes inside the kernel to cover the multivariate features. 
+The primary strength of the tiled technique is its ability to calculate the similarity of 
+two large time series with a logical performance. 
+It has covered the limitation of other kernels for more than 1024 lengths. 
 \section{Future Work}
 
 Our library provides several individual CUDA kernels and C++ wrappers for
