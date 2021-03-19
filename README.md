@@ -14,7 +14,7 @@ This project uses a Makefile to coordinate separate compilation of CUDA kernels
 and C++ code and is tested on Ubuntu Linux. Typing `make` will list the
 available commands:
 
-``` shell
+```shell
 $ make
 
 Available rules:
@@ -31,10 +31,15 @@ test                Build and run unit tests
 
 To compile the kernels and the test programs, use the `make build` command.
 
+### Library Dependencies
+
+In addition to depending on the CUDA runtime and cuBLAS (tested with CUDA 11.2),
+the programs link to BLAS for the CPU implementations, so a version of this
+library such as (e.g. OpenBLAS) must be available on the machine.
+
 ## Running
 
 The three programs to use for running comparative performance experiments are:
-
 
 - `bin/soft_dtw_perf_cpu` for timing CPU performance
 - `bin/soft_dtw_perf_multi` for timing GPU performance
@@ -54,7 +59,7 @@ print output in four columns:
 
 Example:
 
-``` shell
+```shell
 $ ./bin/soft_dtw_perf_multi
 Usage: ./bin/soft_dtw_perf_multi [INPUT_FILENAME] | random [length] [count]
 
