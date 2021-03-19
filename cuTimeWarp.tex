@@ -46,9 +46,11 @@ applications such as recognizing sounds and gestures. Clustering or classifying
 large time series datasets is challenging partly because of the need to define a
 measure of dissimilarity between any two given time series, which is not as
 straightforward as computing distance between independent points in dimensional
-space. Furthermore, practical applications require finding common structure in
-time series despite different speeds or phases; for example, a word means the
-same whether spoken quickly or slowly. Another requirement for machine learning
+space. This is because practical applications require finding common structure
+in time series despite different speeds, phases or lengths; for example, a word
+means the same whether spoken quickly or slowly, loudly or quietly, or in a high
+vs. low voice, but such variations tend to produce large discrepancies if
+traditional distance metrics are used. Another requirement for machine learning
 tasks is that the dissimilarity measure must be differentiable so that its
 gradient can be used as to minimize it as a loss function to find the best fit
 model. Finally, the measure must be efficient to calculate, because it will be
@@ -62,10 +64,10 @@ enable high performance time series machine learning.
 \subsubsection{Time series data}
 
 Time series data generally refers to data containing quantitative measurements
-collected from the same subject or process at multiple points in time, and it
-exhibits several peculiarities in comparison to time-independent data.  Time
+collected from the same subject or process at multiple points in time and it
+exhibits several peculiarities in comparison to time-independent data. Time
 series data can exhibit autocorrelation, meaning that the value at any point in
-time can exhibit correlation to the value at a previous point in time, with some
+time is highly correlated to the value at a previous point in time, with some
 delay or \emph{lag} in between. Time series data can also exhibit
 \emph{seasonality} or cyclical patterns as well as \emph{trend} which is a
 tendency for the average value (over some rolling time window) to increase or
@@ -78,7 +80,7 @@ Time series data can be either univariate or multivariate. For example, a set of
 electrocardiogram (ECG) measurements has a single variable (heart voltage)
 collected over time, but if the dataset also included the patient's blood
 pressure and oxygen levels measured at each time point, that would constitute a
-multivariate time series, and correlations between the different variables could
+multivariate time series where correlations among the different variables could
 be studied in addition to the autocorrelation within each of the variables.
 
 \subsubsection{Time series distance and dissimilarity measures}
@@ -89,8 +91,8 @@ this allows comparison among data observations as well as quantification of
 error between observed data and the predictions of an estimator model. For
 time-independent data, multiple valid notions of distance exist; the most
 commonly used is Euclidean distance, but others such as Manhattan distance,
-cosine distance, or Mahalanobis distance are often used depending on the problem
-domain.
+cosine distance, or Mahalanobis distance are often used, depending on which is
+best suited to the problem domain.
 
 Likewise, there are multiple valid ways to compute a measure of dissimliarity
 between two sequences or time series; for real-valued time series measurements
@@ -111,36 +113,39 @@ d(x, y) = \sqrt{\sum_{t=1}^{n}(x_t-y_t)^2}
 
 However, a significant drawback of Euclidean distance in time series
 applications is that two structurally similar time series will produce a large
-distance if they are at different speeds or out of phase. In time series
+distance if they have different lengths, speeds or phases. In time series
 applications it is often desirable to produce a low dissimilarity for
-structurally similar time series despite variations in phase or speed, so an
-alternative method of quantifying dissimilarity is needed. This is where Dynamic
-Time Warping (DTW) comes in, providing an optimal nonlinear pairwise matching
-path (Figure \ref{peaks}).
-
+structurally similar time series despite these variations, so an alternative
+method of quantifying dissimilarity is needed. This is where Dynamic Time
+Warping (DTW) comes in, providing an optimal nonlinear pairwise matching path
+between the elements of two time series (Figure \ref{peaks}).
 
 \subsubsection{Dynamic Time Warping}
 
 Dynamic Time Warping (DTW) was devised in the 1960s as an alternative time
-series dissimilarity measure to address this shortcoming
-\cite{sakoe_dynamic_1978}. DTW is a nonlinear mapping from each point in one
-time series to the nearest point in a second time series; by allowing this
-nonlinearity, the algorithm is able to minimize the computed distance
-between time series that are similar in shape but misaligned in the time domain.
-While DTW is technically not considered a ``distance'' because it does not
-conform to the triangle inequality \cite{jain_semi-metrification_2018}, and
-therefore we refer to it as a ``dissimilarity'' instead, it can still be used in
-place of Euclidean distance or other distance measures for many practical
-applications of time series data.
+series dissimilarity measure to address this shortcoming, and was applied to
+spoken word recognition tasks by Sakoe and Chiba in the 1970s
+\cite{sakoe_dynamic_1978}. Whereas Euclidean distance is a linear one-to-one
+mapping, DTW is a nonlinear mapping from each point in one time series to the
+nearest point in a second time series; by allowing this nonlinearity, the
+algorithm is able to minimize the computed distance between time series that are
+similar in shape but misaligned in the time domain. While DTW is technically
+not considered a ``distance'' because it does not conform to the triangle
+inequality \cite{jain_semi-metrification_2018}, and therefore we refer to it as
+a ``dissimilarity'' instead, it can still be used in place of Euclidean distance
+or other distance measures for many practical applications of time series data.
 
-The problem can be visualized as a matrix of pairwise distances between every
-element of time series $x$ and every element of time series $y$. Under this
-representation, the Euclidean distance measure translates to the shortest
-diagonal path across the matrix from one corner to the other, while DTW allows
-the path to ``wander'' from the diagonal in search of the lowest cost path
-(Figure \ref{euclidean_matrix}), subject to the constraints that the path must
-begin at one corner and end at the opposite corner, and make monotonic progress
-in between.
+The mapping problem can be visualized as a matrix of pairwise distances between
+every element of time series $x$ and every element of time series $y$; each row
+represents an element of one sequence while each column represents an element of
+the other sequence. Under this representation, the Euclidean distance measure
+translates to the shortest diagonal path across the matrix from one corner to
+the other, which is always the leading anti-diagonal in the case of two equal
+length time series, and is ill-defined for unequal length time series. In
+contrast, DTW allows the path to ``wander'' from the diagonal in search of the
+lowest cost path (Figure \ref{euclidean_matrix}), subject to the constraints
+that the path must begin at one corner and end at the opposite corner, and make
+monotonic progress in between.
 
 \begin{figure}[htbp]
 \includegraphics[height=2in]{img/euclidean_dtw_matrix.png}
@@ -156,35 +161,38 @@ matrix; at each step, the cost is updated to the current cell's cost plus the
 minimum of the three previous adjacent cells' costs. The computation cost for
 this approach is quadratic ($O(mn)$) for time series vectors of length m and n
 \cite{cuturi_soft-dtw_2018}. The formula for the DTW between time series x and y
-is given by equation \ref{dtw}.
+is given by equation \ref{dtw}, which expresses a minimization of the root sum
+of squared differences between each pairing of $x_{i}$ and $y_{j}$.
 
 \begin{equation} \label{dtw}
 DTW(x,y) = min_{\pi}\sqrt{\sum_{(i,j)\in\pi}d(x_{i},y_{j})^2}
 \end{equation}
 
-Where $d(x_i,y_j)^2$ is the cost function, typically pairwise squared Euclidean
-distance between an element of time series $x$ and an element of time series
-$y$. The loss function for DTW is not differentiable due to the min operation
-within the formula; a small change in the input time series may result in zero
-change in the path cost. However, we can create a differentiable version called
-Soft-DTW by replacing the min function with a soft-min function (equation
-\ref{softdtw}) \cite{cuturi_soft-dtw_2018}.
+The loss function for DTW is not differentiable due to the presence of the $min$
+operation within the formula; a small change in the input time series may result
+in zero change in the path cost, resulting in flat regions in the gradient
+topology. However, Cuturi and Blondel found that we can remedy this problem and
+create a differentiable version called Soft-DTW, by replacing the min function
+with a soft-min function (equation \ref{softdtw}) \cite{cuturi_soft-dtw_2018}.
 
 \begin{equation} \label{softdtw}
 \text{soft-min}_\gamma(a_1,...,a_n) = -\gamma log\sum_{i}e^{-a_i/\gamma}
 \end{equation}
 
-Hence, Soft-DTW is parameterized by the smoothing constant gamma, which becomes
-a tunable hyperparameter in machine learning model training applications.
+Hence, Soft-DTW is parameterized by the smoothing constant gamma ($\gamma$), which
+must be greater than or equal to zero, and produces regular DTW when $\gamma = 0$ and
+greater smoothing as $\gamma$ increases. This parameter $\gamma$ becomes a tunable
+hyperparameter in machine learning model training applications.
 
 \subsubsection{Applications}
 
-DTW is a widely used technique employed in many areas of science, including
-biology, technology, economics, and finance. DTW can be used to discover
+DTW is a widely used technique employed in many areas of study, including signal
+processing, biology, economics, and finance. DTW can be used to discover
 patterns in time series or search within signal databases to find the closest
-matches \cite{keogh_derivative_2001}. It is also utilized in machine learning
-applications like clustering, regression, and classification on time series
-data. Practical applications of DTW include tasks such as:
+matches for a given pattern \cite{keogh_derivative_2001}; for example, searching
+an audio track for all instances of a given spoken word. It is also utilized in
+machine learning applications like clustering, regression, and classification on
+time series data. Practical applications of DTW include tasks such as:
 
 \begin{itemize}
     \item Voice command recognition
@@ -226,12 +234,14 @@ equal to 0 and its standard deviation is equal to 1, to remove the problem of
 \cite{rakthanmanon_addressing_2013} with an ECG classifier that yields incorrect
 results on un-normalized data due to drift that ``may be caused by patient
 movement, dirty lead wires/electrodes, loose electrodes, and so on,'' and which
-``does not have any medical significance.'' Z-normalization also tends to make
-the iterative process of minimizing the cost function through gradient descent
-more efficient because it prevents parameters with larger magnitude from
-dominating the direction of the weight update step
-\cite{jordan_normalizing_2018}. For this reason, all input data used in our
-performance experiments is z-normalized in advance.
+has no medical significance. In the case of speech, Z-normalization would
+prevent loud (high amplitude) voices from producing a large discrepancy with
+quiet (low amplitude) voices. Z-normalization also tends to make the iterative
+process of minimizing the cost function through gradient descent more efficient
+because it prevents parameters with larger magnitude from dominating the
+direction of the weight update step \cite{jordan_normalizing_2018}. For this
+reason, all input data used in our performance experiments is z-normalized in
+advance.
 
 \subsubsection{Parallelizing DTW}
 
@@ -288,12 +298,14 @@ maximum thread block size) and leaves many opportunities for further CUDA
 optimizations such as the use of shared memory
 \cite{maghoumi_pytorch-softdtw-cuda_2021}.
 
-A 2015 paper describes a tiling approach called \emph{PeerWave}, which utilizes
-direct synchronization between neighboring streaming multiprocessors (SMs) to
-handle the inter-tile data dependency without atomic operations, locks, or other
-global barriers, leading to improved load balance and scaling properties
+A 2015 paper describes a tiling approach to problems with diagonal data
+dependencies such as DTW, called \emph{PeerWave}, which utilizes direct
+synchronization between neighboring streaming multiprocessors (SMs) to handle
+the inter-tile data dependency without atomic operations, locks, or other global
+barriers, leading to improved load balance and scaling properties
 \cite{belviranli_peerwave_2015}. This tiling strategy also enables the PeerWave
-algorithm to handle longer time series than 1024.
+algorithm to handle longer time series than 1024 by dividing the work for a pair
+of time series among multiple CUDA thread blocks.
 
 In our work, we primarily focus on this general area of opportunity, optimizing
 DTW cost matrix structure and memory access patterns to increase parallelism and
@@ -317,13 +329,14 @@ complexity and can potentially even take longer than the DTW computation
 itself. For univariate time series, we could save this cost by computing the DTW
 cost matrix on the two input time series directly, computing the absolute
 distance between each pair of values from the two time series within the nested
-loop of the DTW procedure, and this would be our recommended approach for a
+loop of the DTW procedure, and only pre-compute the distance matrix for the case
+of multivariate time series, and this would be our recommended approach for a
 production-grade implementation.
 
-To verify correctness, we wrote a suite of unit tests using short example time
-series with results verified against those of Cuturi and Blondel's original
-sequential CPU implementation of Soft-DTW \cite{cuturi_soft-dtw_2018}, which is
-available on GitHub at
+To verify program correctness, we wrote a suite of unit tests using short
+example time series with results verified against those of Cuturi and Blondel's
+original sequential CPU implementation of Soft-DTW \cite{cuturi_soft-dtw_2018},
+which is available on GitHub at
 \href{https://github.com/mblondel/soft-dtw}{github.com/mblondel/soft-dtw}.
 
 To test performance, we developed small C++ command-line programs to run
@@ -401,7 +414,7 @@ softdtw_cuda_stencil_multi_20 100 100 30992
 convert_diagonal_multi 100 100 87427
 softdtw_cuda_diagonal_multi 100 100 43893
 \end{verbatim}
-
+\newpage
 \subsection{Optimization Techniques}
 
 We opted to experiment with the following performance optimization techniques:
@@ -418,27 +431,28 @@ of how each of these techniques is implemented and why it provides a performance
 improvement.
 
 \subsubsection{Wavefront Tiling}
-Wavefront parallelism is one of the useful methods to overcome the dependencies
-of nested loops by multiple processing units. The idea is to re-order the loop
-iterations in such a way that form diagonal wave and each wave can be computed
-in parallel. Barriers will be utilized to control the data dependencies among
-consecutive waves. Elements inside the wave grouped together using tiled
-technique to enhance data locality and performance. This methodology presents a
-second degree of parallelism where tiles can be computed in parallel by
-separating with a global variable.
+Wavefront parallelism is one of the most useful methods to overcome the
+dependencies of nested loops by multiple processing units. The idea is to
+re-order the loop iterations in such a way that they form a diagonal wave and
+each wave can be computed in parallel. Barriers will be utilized to control the
+data dependencies among consecutive waves. Elements inside the wave are grouped
+together using tiled technique to enhance data locality and performance. This
+methodology presents a second degree of parallelism where tiles can be computed
+in parallel through a signal variable.
 
-GPU and specifically CUDA can accelerate the process of wavefront. Each tile
-assigns to a block to be process in parallel by SM. On the other hand, the
-iteration along diagonals within a tile are also pluralized. In order to enforce
-the dependencies, the global barriers used among the tiles and within every
-tiles \cite{belviranli_peerwave_2015}.
+GPU and specifically CUDA can accelerate the process of wavefront
+parallelism. Each tile assigns to a block to be process in parallel by an SM,
+relying on block-SM affinity. Meanwhile, the iteration along diagonals within a
+tile are also parallelized. In order to enforce the dependencies, barrier
+synchronization is used among the tiles and among the threads within each tile
+\cite{belviranli_peerwave_2015}.
 
-In our Soft DTW implementation, we utilized the wavefront technique to manage
+In our Soft-DTW implementation, we utilized the wavefront technique to manage
 the dependencies of neighboring cells for computing the minimum warp path. In
-our algorithm this value depends on the minimum cost of the upper, left and
-upper-left diagonal cell cost. Figure \ref{DTW_dependency} show this
-dependencies clearly.Each D(i,j) depends on the up, left and up-left neighbor
-cost.
+the algorithm, each path cost value depends on the minimum cost of the upper,
+left and upper-left diagonal cell's cost. Figure \ref{DTW_dependency}
+illustrates this dependency structure. Each $D_{i,j}$ depends on the upper,
+left, and upper-left neighbor's cost.
 
 \begin{figure}[htbp]
 \includegraphics[height=2in]{img/tiling_dependencies.png}
@@ -447,23 +461,23 @@ cost.
 \label{DTW_dependency}
 \end{figure}
 
-Wavefront process split to three major steps:
+The wavefront process is split into three major steps:
 
 \begin{itemize}
-  \item Populating the dependencies managing by loop. In this step, we keep the
-    global variable WaveId to sperate the process of waves. Wavelength is
-    increasing one by one on each loop iterations until reaching the total
-    number of tiles. The primary kernel softdtw global tiled called with the
-    wavelength number of blocks and thread size of tile width.
-  \item In this kernel, the row and column index for each tile is calculating
-    and passing as a global variable to the corresponding kernel for the tiles’
+  \item Populating the dependencies in a loop. In this step, we keep the global
+    variable WaveId to seperate the processing of waves. The wave length
+    increases one by one on each loop iteration until reaching the total number
+    of tiles. The primary kernel, \verb|softdtw_global_tiled| is called with the
+    wave length, number of blocks, and tile width in number of threads per block.
+  \item In this kernel, the row and column index for each tile is calculated and
+    passed as a global variable to the corresponding kernel for the tiles’
     computation.
   \item The third step is the main kernel to process inter-tiles in
-    parallel. Shared memory employed to keep the tile within the cache and
+    parallel. Shared memory is employed to keep the tile within the cache and
     improve the overall performance. As we mentioned earlier, we need to
-    calculate the soft-min for the dependent cells. Therefore, the soft-min
-    calculated for the up, left and diagonal upper left index.(equation
-    \ref{dependencies})
+    calculate the soft-min for the dependent cells. Therefore, the soft-min is
+    calculated for the upper, left and diagonal upper-left indices at this
+    stage. (equation \ref{dependencies})
 \end{itemize}
 
 \begin{equation} \label{dependencies}
@@ -474,19 +488,24 @@ Wavefront process split to three major steps:
         D(i-1,j-1)
   \end{cases}
 \end{equation}
-Drawbacks: Due to the usage of global barriers, there would be lower utilization
-for the GPU.  Fewer threads would be available at the beginning and at the end
-of each tiles process.  Also, less tiles are accessible toward the beginning and
-end of wave iterations.  Therefore, device SM remain idle during the initiation
-and end of the process.
+
+A drawback is that due to the usage of barrier synchronization, there would be
+lower GPU utilization. Few threads are active at the beginning and at the end of
+processing each tile, because the antidiagonals are shorter. Also, fewer tiles
+are accessible toward the beginning and end of wave iterations. Therefore, a
+large portion of the device SMs remain idle during the initiation and end of the
+process. The overall benefit of the wavefront tiling strategy is that it
+addresses the problem of long time series by subdividing the problem among
+multiple thread blocks, and also improves cache efficiency with shared memory.
 
 \subsubsection{Diagonal-major layout}
 
-Because the data dependency structure of the DTW algorithm results in elements
-of the distance and cost matrices on the same antidiagonal being processed in
-parallel, storing these matrices in row-major or column major order will cause a
-performance impact from cache misses and non-coalesced accesses to global
-memory.
+Another important optimization that we explored was using a diagonal-major array
+layout for the cost matrix. Because the data dependency structure of the DTW
+algorithm results in elements of the distance and cost matrices on the same
+antidiagonal being processed in parallel, storing these matrices in row-major or
+column major order will cause a performance impact from cache misses and
+non-coalesced accesses to global memory.
 
 If the data is first rearranged into an antidiagonal-major layout, then at each
 iteration of the wavefront loop, processor threads will make coalesced accesses
@@ -508,24 +527,27 @@ resulting in coalesced accesses and fewer cache misses.
 
 \subsubsection{Shared memory stencil computation}
 
-As the program iterates diagonally across the distance matrix to find the
-optimal warping path, each cell in the path utilizes the previously computed
-results of three previous neighboring cells; if the iteration is visualized as
-proceeding from the upper left to the lower right corner of the matrix, the cost
-value in each cell depends on the (soft) minimum of the costs in the cell above,
-the cell to the left, and the cell to the diagonal upper-left, which were
-computed in the previous two iterations (Figure \ref{DTW_dependency}). If the
-cost matrix \verb|R| resides in global memory, then non-contiguous accesses to
-\verb|R[i-1][j]|, \verb|R[i][j-1]| and \verb|R[i-1][j-1]| will result in cache
-misses, incurring a significant performance cost. Since each element of \verb|R|
-will be referenced up to three times in the computation of dependent cells,
-these cache misses can be avoided via a stencil computation using shared memory
-in CUDA. The stencil serves as a cache for the current and previous two
-diagonals; once a diagonal is no longer in use, its elements are written back to
-the cost matrix \verb|R| in device global memory.
+We also explored the use of shared memory as a ``stencil'' for memoizing
+previously computed costs to be reused in subsequent computations, before
+writing them back to the cost matrix array. As the program iterates diagonally
+across the distance matrix to find the optimal warping path, each cell in the
+path utilizes the previously computed results of three previous neighboring
+cells; if the iteration is visualized as proceeding from the upper left to the
+lower right corner of the matrix, the cost value in each cell depends on the
+(soft) minimum of the costs in the cell above, the cell to the left, and the
+cell to the diagonal upper-left, which were computed in the previous two
+iterations (Figure \ref{DTW_dependency}). If the cost matrix \verb|R| resides in
+global memory, then non-contiguous accesses to \verb|R[i-1][j]|,
+\verb|R[i][j-1]| and \verb|R[i-1][j-1]| will result in cache misses, incurring a
+significant performance cost. Since each element of \verb|R| will be referenced
+up to three times in the computation of dependent cells, these cache misses can
+be avoided via a stencil computation using shared memory in CUDA. The stencil
+serves as a cache for the current and previous two diagonals; once a diagonal is
+no longer in use, its elements are written back to the cost matrix \verb|R| in
+device global memory.
 
-\FloatBarrier
-The algorithm can be modified to use shared memory as follows:
+\FloatBarrier The algorithm can be modified to use shared memory according to
+the following pseudocode:
 
 \begin{verbatim}
 D is a squared euclidean distance matrix of two time series
@@ -538,6 +560,11 @@ for each anti-diagonal of R starting from R[0, 0]
         write the cost back to the stencil
         copy the cost in R[i-1][j-1] from the stencil back to global memory
 \end{verbatim}
+
+A modulo operation is utilized to keep track of the rotation of which section
+of the shared memory array represents the current, previous, and previous-1
+diagonal, so that each data element is written to shared memory only once.
+
 \FloatBarrier
 
 \subsubsection{Sakoe-Chiba bands}
@@ -718,12 +745,16 @@ with CPU and memory specifications detailed in Table \ref{hostspecs}.
   \end{tabular}
 \end{table}
 
-for our experiments we also used a laboratory machine. The device has the compute capability
-3.0 with only 3 SM running on Centos Linux operating system.Table \ref{specslab}
-is showing the detail of UWB device. Due to the lower performance of the machine
-we preferred to use it for implementation of tiled and evaluating the tiled plus
-shared memory results. Therefore within this document whenever we talk about the
-performance of tiled kernel, we refer to this table for further analysis.
+In our experiments we also used a laboratory machine. The device has the compute
+capability 3.0 with only 3 SM running on Centos Linux operating system. Table
+\ref{specslab} is showing the detail of the UWB lab device. Due to the lower
+performance of the machine we preferred to use it for evaluating the performance
+results of the wavefront tiled kernel implementation, which is already not
+comparable to the other kernels as it is optimized for very long time series
+rather than large batches of short time series. Therefore within this document
+whenever we talk about the performance of tiled kernel, we refer to this table
+for hardware specifications.
+
 \subsection{Test Data}
 
 For performance testing we selected the ECG 200 dataset from the UCR Time Series
@@ -767,7 +798,7 @@ algorithm in CUDA with GPU multithreading.
 Figure \ref{plot_cpu_gpu} shows the execution rate of the naive CUDA kernel
 vs. the CPU implementation for comparison. The CUDA kernel achieves performance
 of around 34 GFLOPs compared to the CPU's 0.36 GFLOPs, a 92x performance
-increase.
+increase over naive sequential processing.
 
 \begin{figure}[htbp]
     \begin{center}
@@ -799,16 +830,18 @@ increase.
 
 
 After testing the naive kernel we experimented with CUDA performance
-optimizations. Both the diagonal data layout and the shared memory stencil
-brought significant performance improvements over the naive kernel, as seen in
-Figure \ref{plot_multi}. While the naive kernel achieved GFLOPs in the low 30s,
-the diagonal data layout transformation increased performance into the lower
-40s, and the shared memory implementation reached almost 70 GFLOPs, essentially
-double the execution rate of the naive kernel, for time series length 100. When
-the time series length is increased to 1024, the stencil and diagonal kernels
-continue to perform at a similar rate, while the naive kernel's performance
-falls to 20 GFLOPs or less. As we show in the Profiling section, this is due to
-the cost matrix no longer fitting in L1 cache.
+optimizations. Both the diagonal data layout kernel and the shared memory
+stencil kernel brought significant performance improvements over the naive
+kernel, as seen in Figure \ref{plot_multi}. While the naive kernel achieved
+GFLOPs in the low 30s, the diagonal data layout transformation increased
+performance into the lower 40s, and the shared memory implementation reached
+almost 70 GFLOPs, essentially double the execution rate of the naive kernel, for
+time series length 100. When the time series length is increased to 1024, the
+stencil and diagonal kernels continue to perform at a similar rate, while the
+naive kernel's performance falls to 20 GFLOPs or less, so the value of these
+optimizations grows with the problem size. As we show in the Profiling section,
+this drop in performance for the naive kernel is due to the cost matrix no
+longer fitting in L1 cache.
 
 Our performance measurements stop at a problem size of 40000 pairwise DTW
 comparisons because the entire problem is processed in a single 3D tensor of
@@ -843,8 +876,8 @@ below 40 GFLOPS and the others fell to just 20 GFLOPs or less (Figure
 \ref{plot_bw_1024}). This suggests, intuitively, that a narrower bandwidth has a
 larger positive performance impact as the input time series length increases.
 This is also probably related to cache size limitations; as the matrix size
-increases, the maximum bandwidth that allows the needed data to fit in L1 cache,
-shrinks.
+increases, this shrinks the maximum bandwidth that allows the needed data to fit
+in L1 cache.
 
 \begin{figure}[htbp]
     \begin{center}
@@ -869,14 +902,14 @@ series, we had to add two more nested loops to launch the kernel across multiple
 CUDA streams. This generated a high kernel launch overhead, decreasing the
 performance significantly and preventing us from comparing it with the other
 kernels, which are written to process multiple smaller distance matrices at
-once. So the main idea behind implementing a tiled version is to compute the
+once. So the main utility of implementing a tiled version is to compute the
 similarity of time series for much longer sequences that the other kernels are
 unable to process. Figure \ref{plot_tiled} shows that, for shorter length
 sequences the performance is low, but by increasing the length, it is improving
 and capable of exceeding 120 GFLOPS, a far higher execution rate than the other
 kernels achieved on large sets of smaller time series pairs. Therefore, we
 suggest that it would be appropriate for a general-purpose DTW library to select
-this tiling approach when the input time series are very long.
+this tiling approach only when the input time series are very long.
 
 \begin{figure}[htbp]
 \includegraphics[height=4in]{fig/plot_tiled.png}
@@ -948,10 +981,10 @@ occupancy limits were not an issue, and neither was register pressure.
 \section{Discussion}
 
 In order to improve performance and make the best use of the GPU device
-resources, we converted our kernels to multi-functional to be able to compute
-the entire dataset of multiple time series within the kernel by one call.
-Therefore, the need for a nested loop to compare time series one by one was
-removed, and replaced by the ability to process a large batch of time series in
+resources, we converted our kernels to to be able to compute the entire dataset
+of multiple time series within the kernel in one kernel launch. Therefore, the
+need for a nested loop to compare time series one by one was removed, and
+replaced by the ability to process a large batch of time series in
 bulk. Implementing this approach was technically challenging and required much
 effort.
 
@@ -977,7 +1010,9 @@ the naive kernel.
 
 The shared memory stencil kernel proved slightly less difficult to implement and
 yielded the most significant performance gains for Soft-DTW on time series
-smaller than 1024 in length.
+smaller than 1024 in length, by ensuring that each element of the cost matrix is
+read from and written to device global memory only once. This proved to be a
+very successful optimization, based on our performance testing results.
 
 Sakoe-Chiba bands yielded performance gains as expected, but primarily by
 shrinking the problem size itself, rather than by improving memory efficiency.
@@ -996,17 +1031,19 @@ optimizations to the Soft-DTW gradient computation as well, and that combine the
 best-performing optimizations together. Due to time constraints we were unable
 to explore the prefix computation technique described in Xiao et al (2013)
 \cite{xiao_parallelizing_2013} and incorporating an implementation of this
-algorithm remains a significant opportunity. Another library improvement would
-be a batching implementation that handles much larger problem sizes within
-limited device memory by launching kernels across multiple streams and
-transferring data for the next problem while the previous one is being computed,
-to hide latency.
+algorithm remains a significant opportunity as it promises to break apart the
+fundamental diagonal dependency structure of the problem. Another library
+improvement would be a batching implementation that handles much larger problem
+sizes within limited device memory by launching kernels across multiple streams
+and transferring data for the next problem while the previous one is being
+computed, to hide latency.
 
 Other potentially valuable future work includes integrating this library with an
 optimization library that can iteratively minimize Soft-DTW cost to find
 barycenters among a set of time series, to assemble a nearest centroid
-classification system. We attempted to include this capability but were unable
-to complete it satisfactorily within the project timeframe, as selecting,
+classification system. We attempted to include this capability and set out with
+ambitions of assembling an end-to-end machine learning system, but were unable
+to complete it satisfactorily within the project timeframe because selecting,
 evaluating and integrating a C++ iterative optimization library is a significant
 amount of work and was tangential to our core goal of optimizing Soft-DTW.
 

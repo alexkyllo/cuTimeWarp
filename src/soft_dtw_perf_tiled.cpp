@@ -4,10 +4,10 @@
 #include <cuda_runtime.h>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <random>
 #include <sstream>
 #include <vector>
-#include <iterator>
 
 using namespace std::chrono;
 typedef unsigned int uint;
@@ -36,21 +36,21 @@ inline void GPUAssert(cudaError_t code, const char *file, int line,
  *  @param time_series_lenght The length of each series in X
  *  @param count The number of time series in Dataset
  */
-__host__ void comparison(std::vector<float> X , std::vector<float> Y, int m , int n , int count)
+__host__ void comparison(std::vector<float> X, std::vector<float> Y, int m,
+                         int n, int count)
 {
-    //const int k = 1;
+    // const int k = 1;
     for (int i = 0; i < count; i++)
     {
         float *a = &X[i];
 
-        
-        for (int j =0 ; j < count; j++)
+        for (int j = 0; j < count; j++)
         {
-            //std::cerr << "round i =" << i << " , j = " << j << std::endl;
+            // std::cerr << "round i =" << i << " , j = " << j << std::endl;
 
             float gamma = 0.1;
-            float *b = &Y[j];         
-            //std::cerr << " b done "<< std::endl;
+            float *b = &Y[j];
+            // std::cerr << " b done "<< std::endl;
             // distance matrix
             float *d;
             d = (float *)malloc(m * n * sizeof(float));
@@ -59,48 +59,46 @@ __host__ void comparison(std::vector<float> X , std::vector<float> Y, int m , in
             cudaMalloc(&da, m * sizeof(float));
             cudaMemcpy(da, a, m * sizeof(float), cudaMemcpyHostToDevice);
 
-            //std::cerr << " da done "<< std::endl;
+            // std::cerr << " da done "<< std::endl;
 
             float *db;
             cudaMalloc(&db, n * sizeof(float));
-            //std::cerr << " db done 1"<< std::endl;
+            // std::cerr << " db done 1"<< std::endl;
             cudaMemcpy(db, b, n * sizeof(float), cudaMemcpyHostToDevice);
-            
-            //std::cerr << " db done "<< std::endl;
+
+            // std::cerr << " db done "<< std::endl;
 
             float *dd;
             cudaMalloc(&dd, m * n * sizeof(float));
-            
-            //std::cerr << " dd done "<< std::endl;
+
+            // std::cerr << " dd done "<< std::endl;
 
             // TODO: //need to check again
             // initializing distance matrix with 0
-            //for (int i = 0; i < m * n; i++)
-             //   d[i] = 0.0f;
+            // for (int i = 0; i < m * n; i++)
+            //   d[i] = 0.0f;
 
-
-            //Start Soft DTW for tiled multi kernel
-            //TODO: check with different tile_size and see the perfromance
-            //TODO: just need to change the tile kernel ofr shared memory size
+            // Start Soft DTW for tiled multi kernel
+            // TODO: check with different tile_size and see the perfromance
+            // TODO: just need to change the tile kernel ofr shared memory size
             // base on tile width and height defined here
             uint tile_width = 16;
-            //uint tile_height = 16;
+            // uint tile_height = 16;
             uint total_tiles_columns = (m + tile_width - 1) / tile_width;
             uint total_tiles_rows = (n + tile_width - 1) / tile_width;
             uint total_tiles_waves = total_tiles_columns + total_tiles_rows - 1;
             uint min_tiles = std::min(total_tiles_columns, total_tiles_rows);
 
-           
-
             // the softdtw cuda multi tiled kernel execution .....timing....
             auto start = high_resolution_clock::now();
-            soft_dtw_tiled(da, db,dd, tile_width, total_tiles_waves,
-                                total_tiles_columns, total_tiles_rows, min_tiles,
-                                gamma);
+            soft_dtw_tiled(da, db, dd, tile_width, total_tiles_waves,
+                           total_tiles_columns, total_tiles_rows, min_tiles,
+                           gamma);
             cudaDeviceSynchronize();
             auto end = high_resolution_clock::now();
             auto duration = duration_cast<microseconds>(end - start).count();
-            std::cout << "soft_dtw_tiled m =" << m << " n =" << n  << " duration =" << duration << std::endl;
+            std::cout << "soft_dtw_tiled m =" << m << " n =" << n
+                      << " duration =" << duration << std::endl;
             cudaMemcpy(d, dd, m * n * sizeof(float), cudaMemcpyDeviceToHost);
 
             delete[] d;
@@ -108,20 +106,18 @@ __host__ void comparison(std::vector<float> X , std::vector<float> Y, int m , in
             cudaFree(da);
             cudaFree(db);
             cudaFree(dd);
-
-
         }
     }
 }
 
-
-__host__ void compare_two_sequence(std::vector<float> X , std::vector<float> Y, int m , int n )
+__host__ void compare_two_sequence(std::vector<float> X, std::vector<float> Y,
+                                   int m, int n)
 {
-    //std::cerr << "round i =" << i << " , j = " << j << std::endl;
+    // std::cerr << "round i =" << i << " , j = " << j << std::endl;
     float *a = &X[0];
     float *b = &Y[0];
     float gamma = 0.1;
-                
+
     // distance matrix
     float *d;
     d = (float *)malloc(m * n * sizeof(float));
@@ -130,55 +126,50 @@ __host__ void compare_two_sequence(std::vector<float> X , std::vector<float> Y, 
     cudaMalloc(&da, m * sizeof(float));
     cudaMemcpy(da, a, m * sizeof(float), cudaMemcpyHostToDevice);
 
-    //std::cerr << " da done "<< std::endl;
+    // std::cerr << " da done "<< std::endl;
 
     float *db;
     cudaMalloc(&db, n * sizeof(float));
-    //std::cerr << " db done 1"<< std::endl;
+    // std::cerr << " db done 1"<< std::endl;
     cudaMemcpy(db, b, n * sizeof(float), cudaMemcpyHostToDevice);
-    
-    //std::cerr << " db done "<< std::endl;
+
+    // std::cerr << " db done "<< std::endl;
 
     float *dd;
     cudaMalloc(&dd, m * n * sizeof(float));
-    
 
-    //Start Soft DTW for tiled multi kernel
-    //TODO: check with different tile_size and see the perfromance
-    //TODO: just need to change the tile kernel ofr shared memory size
+    // Start Soft DTW for tiled multi kernel
+    // TODO: check with different tile_size and see the perfromance
+    // TODO: just need to change the tile kernel ofr shared memory size
     // base on tile width and height defined here
     uint tile_width = 16;
-    //uint tile_height = 16;
+    // uint tile_height = 16;
     uint total_tiles_columns = (m + tile_width - 1) / tile_width;
     uint total_tiles_rows = (n + tile_width - 1) / tile_width;
     uint total_tiles_waves = total_tiles_columns + total_tiles_rows - 1;
     uint min_tiles = std::min(total_tiles_columns, total_tiles_rows);
-   
 
     // the softdtw cuda multi tiled kernel execution .....timing....
     auto start = high_resolution_clock::now();
-    soft_dtw_tiled(da, db,dd, tile_width, total_tiles_waves,
-                        total_tiles_columns, total_tiles_rows, min_tiles,
-                        gamma);
+    soft_dtw_tiled(da, db, dd, tile_width, total_tiles_waves,
+                   total_tiles_columns, total_tiles_rows, min_tiles, gamma);
     cudaDeviceSynchronize();
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<microseconds>(end - start).count();
-    std::cout << "soft_dtw_tiled " << m *n  << " " <<total_tiles_waves << " " << duration <<std::endl;
+    std::cout << "soft_dtw_tiled " << m * n << " " << total_tiles_waves << " "
+              << duration << std::endl;
     cudaMemcpy(d, dd, m * n * sizeof(float), cudaMemcpyDeviceToHost);
 
     delete[] d;
-    
 
     cudaFree(da);
     cudaFree(db);
     cudaFree(dd);
 }
 
-
-
 /** Fill a vector with n random floats drawn f unit normal distribution.
  */
-std::vector<float> fill_random( std::vector<float> vec, uint n)
+std::vector<float> fill_random(std::vector<float> vec, uint n)
 {
     std::default_random_engine gen;
     std::normal_distribution<float> dist(0.0, 1.0);
@@ -206,15 +197,16 @@ int main(int argc, char **argv)
     std::vector<float> data_vec_a;
     std::vector<float> data_vec_b;
     std::string filename = argv[1];
-    int m = 0; // length of time series
+    int m = 0;   // length of time series
     int max = 0; // number of time series
-    int k = 0; // number of time series
-    
+    int k = 0;   // number of time series
+
     if (filename == "random")
     {
         if (argc < 4)
         {
-            std::cerr << "Usage: " << argv[0] << " random [start_length] [maximum_lenght] [interval]\n";
+            std::cerr << "Usage: " << argv[0]
+                      << " random [start_length] [maximum_lenght] [interval]\n";
             return 1;
         }
         m = atol(argv[2]);
@@ -236,19 +228,19 @@ int main(int argc, char **argv)
         //     }
         //     i= i+k;
         // }
-        
-        for (int i =m ; i <= max ; i+=k )
-          for (int j= i; j<= max ; j+=k)
-          {
-            //int i =1000;
-            //int j =1000;
-        
-            data_vec_a = fill_random(data_vec_a, i );
-            data_vec_b =fill_random(data_vec_b, j );          
-            compare_two_sequence(data_vec_a , data_vec_b, i, j);
-            data_vec_a.clear();
-            data_vec_b.clear();
-          }
+
+        for (int i = m; i <= max; i += k)
+            for (int j = i; j <= max; j += k)
+            {
+                // int i =1000;
+                // int j =1000;
+
+                data_vec_a = fill_random(data_vec_a, i);
+                data_vec_b = fill_random(data_vec_b, j);
+                compare_two_sequence(data_vec_a, data_vec_b, i, j);
+                data_vec_a.clear();
+                data_vec_b.clear();
+            }
         return 0;
     }
 
