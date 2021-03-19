@@ -344,7 +344,7 @@ GPU and specifically CUDA can accelerate the process of wavefront. Each tile
 assigns to a block to be process in parallel by SM. On the other hand, the
 iteration along diagonals within a tile are also pluralized. In order to enforce
 the dependencies, the global barriers used among the tiles and within every
-tiles.\cite{belviranli_peerwave_2015}
+tiles \cite{belviranli_peerwave_2015}.
 
 In our Soft DTW implementation, we utilized the wavefront technique to manage
 the dependencies of neighboring cells for computing the minimum warp path. In
@@ -356,7 +356,7 @@ cost.
 \begin{figure}[htbp]
 \includegraphics[height=2in]{img/tiling_dependencies.png}
 \centering
-\caption{computation dependencies for DTW.}
+\caption{computation dependencies for DTW \cite{belviranli_peerwave_2015}.}
 \label{DTW_dependency}
 \end{figure}
 
@@ -682,6 +682,19 @@ bandwidth is set to 100 (Figure \ref{plot_bw}).
 \end{figure}
 
 TODO perf plots for varying time series length and fixed count
+
+
+The tiled kernel is using global barriers to handle the dependencies. 
+There is one loop inside the kernel to manage the wave and another iteration within each tile.
+In order to test the multivariate time series, we have to add two more loops to create multi-stream and handle a bunch of time sequences. Adding this option generates an overhead on the kernel and decreases the performance significantly and we couldn't compare the result of the multivariate tiled approach with other designed kernels. The main idea behind implementing a tiled version is to compute the similarity of time series for larger sequences while other kernels are unable to process them. Figure \ref{plot_tiled} shows that, for lower length of sequences the performance is less while by increasing the size, it is improving and reaching to 120 GFLOPS.     
+
+\begin{figure}[htbp]
+\includegraphics[height=4in]{fig/plot_tiled.png}
+\centering
+\caption{Soft DTW performance for Tiled & shared memory}
+\label{plot_tiled}
+\end{figure}
+
 
 \FloatBarrier
 \section{Profiling}
