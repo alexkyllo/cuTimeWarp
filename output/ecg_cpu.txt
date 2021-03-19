@@ -1,0 +1,6 @@
+sq_euclidean_distance 96 200 1369267
+softdtw 96 200 18289596
+sq_euclidean_distance 96 200 1384302
+softdtw 96 200 18198551
+sq_euclidean_distance 96 200 1370338
+softdtw 96 200 18026929

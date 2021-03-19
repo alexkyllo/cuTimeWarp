@@ -254,6 +254,14 @@ df_ecg = pd.read_csv(
     names=["kernel", "length", "count", "microseconds"],
 )
 
+df_ecg_cpu = pd.read_csv(
+    "output/ecg_cpu.txt",
+    sep=" ",
+    names=["kernel", "length", "count", "microseconds"],
+)
+
+df_ecg = pd.concat([df_ecg, df_ecg_cpu])
+
 
 df_ecg["gflops"] = (
     ((df_ecg["length"] ** 2) * (df_ecg["count"] ** 2) * 18)
@@ -264,7 +272,7 @@ df_ecg["gflops"] = (
 ecg_kernels = {
     "convert_diagonal_multi": "convert diagonal",
     "softdtw_cuda_diagonal_multi": "diagonal",
-    "softdtw_cuda_naive_multi": "naive",
+    "softdtw_cuda_naive_multi": "naive (CUDA)",
     "softdtw_cuda_naive_multi_bw_20": "naive bandwidth 20",
     "softdtw_cuda_naive_multi_bw_40": "naive bandwidth 40",
     "softdtw_cuda_naive_multi_bw_60": "naive bandwidth 60",
@@ -274,14 +282,15 @@ ecg_kernels = {
     "softdtw_cuda_stencil_multi_40": "stencil bandwidth 40",
     "softdtw_cuda_stencil_multi_60": "stencil bandwidth 60",
     "softdtw_cuda_stencil_multi_80": "stencil bandwidth 80",
-    "sq_euclid_dist_multi": "squared euclidean distance",
+    "sq_euclid_dist_multi": "squared euclidean distance (CUDA)",
+    "sq_euclidean_distance": "squared euclidean distance (CPU)",
+    "softdtw": "naive (CPU)",
 }
 
 df_ecg = (
     df_ecg.groupby(["kernel"])[["microseconds", "gflops"]]
     .mean()
-    .round()
-    .astype(int)
+    .round(2)
     .reset_index()
 )
 
