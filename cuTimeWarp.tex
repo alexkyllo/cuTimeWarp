@@ -303,7 +303,89 @@ minimize memory latency in the computation of the warping path matrix.
 
 To evaluate various performance optimizations on the Soft-DTW computation, we
 implemented a C++ and CUDA library called cuTimeWarp, which includes functions
-for computing the SoftDTW on CPU and GPU.
+for computing the SoftDTW on CPU and GPU. Our library is public on GitHub at:
+\href{https://github.com/alexkyllo/cutimewarp}.
+
+To verify correctness, we wrote a suite of unit tests using short example time
+series with results verified against those of Cuturi and Blondel's original
+sequential CPU implementation of Soft-DTW \cite{cuturi_soft-dtw_2018}, which is
+available on GitHub at \href{https://github.com/mblondel/soft-dtw}.
+
+To test performance, we developed small C++ command-line programs to run
+Soft-DTW on either a space-delimited input data file or random unit normal data
+of a specified length and count (by specifying the word ``random'' instead of a
+filename).
+
+The programs utilize separate compilation; a Makefile is included and
+\verb|make build| will compile the library and all of the programs.
+
+Their output contains four columns of data, separated by spaces, one line per
+kernel:
+
+\begin{enumerate}
+  \item Kernel function name
+  \item The input time series length (number of columns per row)
+  \item The input time series count (number of rows)
+  \item The execution time in microseconds
+\end{enumerate}
+
+Example usage of the CPU Soft-DTW program \verb|soft_dtw_perf_cpu|:
+
+\begin{verbatim}
+$ ./bin/soft_dtw_perf_cpu
+./bin/soft_dtw_perf_cpu
+Usage: ./bin/soft_dtw_perf_cpu [INPUT_FILENAME] | random [length] [count]
+
+$ ./bin/soft_dtw_perf_cpu ./data/ECG200/ECG200_ALL.txt
+Data file ./data/ECG200/ECG200_ALL.txt contains 200 time series of length 96
+sq_euclidean_distance 96 200 1375707
+softdtw 96 200 18064611
+
+$ ./bin/soft_dtw_perf_cpu random 100 100
+sq_euclidean_distance 100 100 373003
+softdtw 100 100 4960461
+
+\end{verbatim}
+
+Example usage of the GPU Soft-DTW program \verb|soft_dtw_perf_multi|:
+
+\begin{verbatim}
+$ ./bin/soft_dtw_perf_multi
+Usage: ./bin/soft_dtw_perf_multi [INPUT_FILENAME] | random [length] [count]
+
+$  ./bin/soft_dtw_perf_multi ./data/ECG200/ECG200_ALL.txt
+Data file ./data/ECG200/ECG200_ALL.txt contains 200 time series of length 96
+sq_euclid_dist_multi 96 200 515037
+softdtw_cuda_naive_multi 96 200 264987
+softdtw_cuda_naive_multi_bw_80 96 200 235089
+softdtw_cuda_naive_multi_bw_60 96 200 168621
+softdtw_cuda_naive_multi_bw_40 96 200 83501
+softdtw_cuda_naive_multi_bw_20 96 200 51338
+softdtw_cuda_stencil_multi 96 200 100990
+softdtw_cuda_stencil_multi_80 96 200 100408
+softdtw_cuda_stencil_multi_60 96 200 100844
+softdtw_cuda_stencil_multi_40 96 200 101215
+softdtw_cuda_stencil_multi_40 96 200 100436
+softdtw_cuda_stencil_multi_20 96 200 100647
+convert_diagonal_multi 96 200 332664
+softdtw_cuda_diagonal_multi 96 200 149158
+
+$ ./bin/soft_dtw_perf_multi random 100 100
+sq_euclid_dist_multi 100 100 335883
+softdtw_cuda_naive_multi 100 100 61576
+softdtw_cuda_naive_multi_bw_80 100 100 52272
+softdtw_cuda_naive_multi_bw_60 100 100 32211
+softdtw_cuda_naive_multi_bw_40 100 100 18919
+softdtw_cuda_naive_multi_bw_20 100 100 18725
+softdtw_cuda_stencil_multi 100 100 26558
+softdtw_cuda_stencil_multi_80 100 100 25803
+softdtw_cuda_stencil_multi_60 100 100 31000
+softdtw_cuda_stencil_multi_40 100 100 26120
+softdtw_cuda_stencil_multi_40 100 100 25804
+softdtw_cuda_stencil_multi_20 100 100 30992
+convert_diagonal_multi 100 100 87427
+softdtw_cuda_diagonal_multi 100 100 43893
+\end{verbatim}
 
 Given a set of many multivariate time series of the same length and number of
 variables, we can compute the Soft-DTW distance between every time series and
@@ -622,7 +704,7 @@ with CPU and memory specifications detailed in Table \ref{hostspecs}.
           Memory Bandwidth (GB/s) & 2047                             \\
           L1 Cache (KiB) (per SM) & 64                              \\
           L2 Cache (KiB)          & 2048                             \\
-          Maximum number of resident blocks per multiprocessor &16   \\ 
+          Maximum number of resident blocks per multiprocessor &16   \\
           Maximum amount of shared memory per multiprocessor(KB) & 48 \\
           Maximum number of resident blocks per multiprocessor &16 \\
           Maximum number of threads per multiprocessor  &2048 \\
@@ -631,12 +713,12 @@ with CPU and memory specifications detailed in Table \ref{hostspecs}.
   \end{tabular}
 \end{table}
 
-for our experiments we also used a laboratory machine. The device has the compute capability 
-3.0 with only 3 SM running on Centos Linux operating system.Table \ref{specslab} 
-is showing the detail of UWB device. Due to the lower performance of the machine 
-we preferred to use it for implementation of tiled and evaluating the tiled plus 
-shared memory results. Therefore within this document whenever we talk about the 
-performance of tiled kernel, we refer to this table for further analysis.  
+for our experiments we also used a laboratory machine. The device has the compute capability
+3.0 with only 3 SM running on Centos Linux operating system.Table \ref{specslab}
+is showing the detail of UWB device. Due to the lower performance of the machine
+we preferred to use it for implementation of tiled and evaluating the tiled plus
+shared memory results. Therefore within this document whenever we talk about the
+performance of tiled kernel, we refer to this table for further analysis.
 \subsection{Test Data}
 
 For performance testing we selected the ECG 200 dataset from the UCR Time Series
@@ -821,20 +903,20 @@ time series of length 100.
 
 TODO
 
-In order to improve performance, we convert kernels to multi-functional 
-to be able to compute the entire dataset of time series within the kernel by one call. 
-Therefore, the need for a nested loop to compare time series one by one removed, and the 
-bulk of time series replaced that. Implementing this approach was challenging and required much effort. 
+In order to improve performance, we convert kernels to multi-functional
+to be able to compute the entire dataset of time series within the kernel by one call.
+Therefore, the need for a nested loop to compare time series one by one removed, and the
+bulk of time series replaced that. Implementing this approach was challenging and required much effort.
 
-One of the major issues was the tiled kernel. Global barriers that we discussed in the 
-optimization section lead to nested loops for managing the dependencies during intra-tile 
-and inter-tile. The naive idea was to take the advantage of Cuda stream and run the loops 
-concurrently. Although we were succeeded to implement this method, however, it was not much 
-efficient and the performance compared to the other kernels was disappointing. This could be 
-improved in the future by changes inside the kernel to cover the multivariate features. 
-The primary strength of the tiled technique is its ability to calculate the similarity of 
-two large time series with a logical performance. 
-It has covered the limitation of other kernels for more than 1024 lengths. 
+One of the major issues was the tiled kernel. Global barriers that we discussed in the
+optimization section lead to nested loops for managing the dependencies during intra-tile
+and inter-tile. The naive idea was to take the advantage of Cuda stream and run the loops
+concurrently. Although we were succeeded to implement this method, however, it was not much
+efficient and the performance compared to the other kernels was disappointing. This could be
+improved in the future by changes inside the kernel to cover the multivariate features.
+The primary strength of the tiled technique is its ability to calculate the similarity of
+two large time series with a logical performance.
+It has covered the limitation of other kernels for more than 1024 lengths.
 \section{Future Work}
 
 Our library provides several individual CUDA kernels and C++ wrappers for
