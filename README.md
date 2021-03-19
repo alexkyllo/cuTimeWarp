@@ -31,6 +31,8 @@ test                Build and run unit tests
 
 To compile the kernels and the test programs, use the `make build` command.
 
+All C++ / CUDA source code is found in the src/ folder.
+
 ### Library Dependencies
 
 In addition to depending on the CUDA runtime and cuBLAS (tested with CUDA 11.2),
