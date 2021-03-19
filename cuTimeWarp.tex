@@ -304,12 +304,27 @@ minimize memory latency in the computation of the warping path matrix.
 To evaluate various performance optimizations on the Soft-DTW computation, we
 implemented a C++ and CUDA library called cuTimeWarp, which includes functions
 for computing the SoftDTW on CPU and GPU. Our library is public on GitHub at:
-\href{https://github.com/alexkyllo/cutimewarp}.
+\href{https://github.com/alexkyllo/cutimewarp}{github.com/alexkyllo/cutimewarp}.
+
+We defined the task as computing all Soft-DTW discrepancies among a batch of
+time series. Given a set of many univariate or multivariate time series of the
+same length and number of variables, we can compute the Soft-DTW distance
+between every time series and every other time series in the set by computing,
+in parallel for each pair, a pairwise squared Euclidian matrix, then applying
+the Soft-DTW calculation on the resulting array of distance matrices. This
+pairwise squared Euclidean distance computation, however, also has an $O(n^2)$
+complexity and can potentially even take longer than the DTW computation
+itself. For univariate time series, we could save this cost by computing the DTW
+cost matrix on the two input time series directly, computing the absolute
+distance between each pair of values from the two time series within the nested
+loop of the DTW procedure, and this would be our recommended approach for a
+production-grade implementation.
 
 To verify correctness, we wrote a suite of unit tests using short example time
 series with results verified against those of Cuturi and Blondel's original
 sequential CPU implementation of Soft-DTW \cite{cuturi_soft-dtw_2018}, which is
-available on GitHub at \href{https://github.com/mblondel/soft-dtw}.
+available on GitHub at
+\href{https://github.com/mblondel/soft-dtw}{github.com/mblondel/soft-dtw}.
 
 To test performance, we developed small C++ command-line programs to run
 Soft-DTW on either a space-delimited input data file or random unit normal data
@@ -386,16 +401,6 @@ softdtw_cuda_stencil_multi_20 100 100 30992
 convert_diagonal_multi 100 100 87427
 softdtw_cuda_diagonal_multi 100 100 43893
 \end{verbatim}
-
-Given a set of many multivariate time series of the same length and number of
-variables, we can compute the Soft-DTW distance between every time series and
-every other time series in the set by computing, in parallel for each pair, a
-pairwise squared Euclidian matrix, then applying the Soft-DTW calculation on the
-distance matrix. This computation, however, also has an $O(n^2)$ complexity and
-can potentially even take longer than the DTW computation itself. For univariate
-time series, we can save this cost by computing the DTW cost matrix on the two
-input time series directly, computing the absolute distance between each pair of
-values from the two time series within the nested loop of the DTW procedure.
 
 \subsection{Optimization Techniques}
 
@@ -734,10 +739,13 @@ impact of varying time series length and count to many different sizes.
 As a baseline for performance comparison, we timed the naive, sequential CPU
 implementation of SoftDTW and found that its execution rate varied between
 0.35-0.4 GFLOPs (Figure \ref{plot_cpu}) on the hardware described in Table
-\ref{hostspecs}, for random unit normal data. While a multithreaded parallel CPU
-implementation could likely achieve several times this rate of execution, we
-opted not to experiment with CPU parallelism and instead move on to
-parallelizing the algorithm in CUDA with GPU multithreading.
+\ref{hostspecs}, for random unit normal time series of length 100. Figure
+\ref{plot_cpu_1024} shows the same for time series of length 1024, with almost
+identical performance results. While a multithreaded parallel CPU implementation
+could likely achieve several times this rate of execution, depending on the
+number of available cores, we opted not to experiment with CPU parallelism and
+instead move on to the focus of the project which was parallelizing the
+algorithm in CUDA with GPU multithreading.
 
 \begin{figure}[htbp]
     \begin{center}
@@ -746,6 +754,15 @@ parallelizing the algorithm in CUDA with GPU multithreading.
     \caption{CPU performance on random unit normal time series length = 100}
     \label{plot_cpu}
 \end{figure}
+
+\begin{figure}[htbp]
+    \begin{center}
+        \scalebox{0.85}{\input{fig/plot_cpu_1024.pgf}}
+    \end{center}
+    \caption{CPU performance on random unit normal time series length = 1024}
+    \label{plot_cpu_1024}
+\end{figure}
+
 
 Figure \ref{plot_cpu_gpu} shows the execution rate of the naive CUDA kernel
 vs. the CPU implementation for comparison. The CUDA kernel achieves performance
@@ -787,9 +804,13 @@ brought significant performance improvements over the naive kernel, as seen in
 Figure \ref{plot_multi}. While the naive kernel achieved GFLOPs in the low 30s,
 the diagonal data layout transformation increased performance into the lower
 40s, and the shared memory implementation reached almost 70 GFLOPs, essentially
-double the execution rate of the naive kernel, for time series length 100.
+double the execution rate of the naive kernel, for time series length 100. When
+the time series length is increased to 1024, the stencil and diagonal kernels
+continue to perform at a similar rate, while the naive kernel's performance
+falls to 20 GFLOPs or less. As we show in the Profiling section, this is due to
+the cost matrix no longer fitting in L1 cache.
 
-Our performance measurements for stop at a problem size of 40000 pairwise DTW
+Our performance measurements stop at a problem size of 40000 pairwise DTW
 comparisons because the entire problem is processed in a single 3D tensor of
 pairwise distance matrices that is transferred to the device once, to avoid
 mixing data transfer performance with computation performance. The
@@ -821,6 +842,9 @@ performed the best, exceeding 50 GFLOPs, while the 40\% bandwidth kernel fell
 below 40 GFLOPS and the others fell to just 20 GFLOPs or less (Figure
 \ref{plot_bw_1024}). This suggests, intuitively, that a narrower bandwidth has a
 larger positive performance impact as the input time series length increases.
+This is also probably related to cache size limitations; as the matrix size
+increases, the maximum bandwidth that allows the needed data to fit in L1 cache,
+shrinks.
 
 \begin{figure}[htbp]
     \begin{center}
@@ -891,15 +915,30 @@ performance at 69.24, with the naive CUDA kernel with Sakoe-Chiba band set to
 \section{Profiling}
 
 We profiled our kernels with NVIDIA NSight Compute to understand how cache hit
-rates, registers per thread, and occupancy may be related to performance.
+rates, registers per thread, and occupancy may be related to performance. We
+profiled the naive, diagonal and stencil kernel, without adjusting bandwidth, to
+make a fair comparison.
 
 Table \ref{prof_table} shows profiler metrics by kernel when run on two pairs of
 time series of length 100, while Table \ref{prof_table_1000} shows results for
 two pairs of time series of length 1000 each. When the matrix is small enough to
 fit in L1 cache, the naive kernel has the highest L1 cache hit rate. As the time
 series length increases, the L1 cache hit rate falls for the naive and stencil
-kernels, but not for the diagonal kernel, which validates our hypothesis that
-diagonal data layout would improve cache efficiency.
+kernels, but not for the diagonal kernel, which also has the highest SM busy
+rate, supporting our hypothesis that diagonal data layout would improve cache
+efficiency and memory throughput via coalesced memory access.
+
+The shared memory stencil kernel exhibits low L1 cache hit rate at matrix size
+1000 because it utilizes shared memory instead, as a programmer-controlled
+cache, allowing it to achieve even higher performance than the diagonal
+kernel. In contrast, the naive kernel's performance suffers dramatically when
+the cost matrix is too large to fit in L1 cache, as evidenced by the drop in L1
+hit rate and corresponding drop in performance.
+
+All three kernels used 43 registers per thread, so there is no difference to be
+discerned from that metric. At matrix size 1000 squared (and therefore 1000
+threads) the warp occupancy for our kernels is at 100\% on the test device, so
+occupancy limits were not an issue, and neither was register pressure.
 
 \input{fig/prof_table.tex}
 
@@ -933,11 +972,20 @@ Another deceptively difficult aspect of the project was implementing the
 diagonal-major layout kernel. Correctly transforming the distance matrix into
 the diagonal-major layout and then iterating over it with correct indexing logic
 required long sessions of thinking, trial-and-error, and unit testing. This
-effort was rewarded by a modest but noticeable performance gain.
+effort was rewarded by a relatively modest but noticeable performance gain over
+the naive kernel.
 
 The shared memory stencil kernel proved slightly less difficult to implement and
 yielded the most significant performance gains for Soft-DTW on time series
 smaller than 1024 in length.
+
+Sakoe-Chiba bands yielded performance gains as expected, but primarily by
+shrinking the problem size itself, rather than by improving memory efficiency.
+Given the afore-cited practical importance of Sakoe-Chiba bands in avoiding
+pathological warping paths, and the fact that it is generally not necessary to
+consider every possible warping path in real-world applications, this feature
+should be combined with other optimizations as part of a dynamic time warping
+library for general-purpose use.
 
 \section{Future Work}
 

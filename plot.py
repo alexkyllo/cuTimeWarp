@@ -261,12 +261,6 @@ plot_cpu_gpu(
     "output/random.txt",
     "fig/plot_cpu_gpu.pgf",
 )
-plot_cpu_gpu(
-    1024,
-    "output/random_1024.txt",
-    "output/random_1024.txt",
-    "fig/plot_cpu_gpu.pgf",
-)
 
 # Profiling data
 
