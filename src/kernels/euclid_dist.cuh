@@ -1,3 +1,8 @@
+/** Kernels for use in computing squared euclidean distance matrix
+ * @file euclid_dist.cuh
+ * @author Alex Kyllo
+ * @date 2021-02
+ */
 #pragma once
 #include <cublas_v2.h>
 typedef unsigned int uint;

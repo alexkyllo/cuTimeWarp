@@ -1,3 +1,9 @@
+/** Shared memory stencil Soft-DTW kernels
+ *  @file soft_dtw_stencil.cu
+ *  @author Alex Kyllo
+ *  @date 2021-03-13
+ */
+
 #include "helper_functions.cuh"
 #include "soft_dtw_stencil.cuh"
 

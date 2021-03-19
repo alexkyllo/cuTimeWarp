@@ -1,5 +1,7 @@
 /** Helper functions shared across CUDA kernels
  *  @file helper_functions.cu
+ *  @author Alex Kyllo
+ *  @date 2021-03
  */
 #include "helper_functions.cuh"
 

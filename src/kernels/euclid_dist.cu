@@ -1,3 +1,8 @@
+/** Kernels for use in computing squared euclidean distance matrix
+ * @file euclid_dist.cu
+ * @author Alex Kyllo
+ * @date 2021-02
+ */
 #include "euclid_dist.cuh"
 
 /** CUDA kernel to compute the squared euclidean norm of matrix X

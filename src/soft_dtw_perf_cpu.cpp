@@ -1,3 +1,8 @@
+/** Performance testing program for single-threaded CPU Soft-DTW
+ * @file soft_dtw_perf_cpu.cpp
+ * @author Alex Kyllo
+ * @date 2021-03-18
+ */
 #include "soft_dtw_cpu.hpp"
 #include <chrono> // timing
 #include <cstring>

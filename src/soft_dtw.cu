@@ -1,5 +1,7 @@
-/** CUDA implementation of Soft DTW
+/** CUDA implementation of Soft DTW. Host programs for calling the CUDA kernels.
  *  @file soft_dtw.cu
+ *  @author Alex Kyllo and Afrooz Rahmati
+ *  @date 2021-03
  */
 #include "kernels/euclid_dist.cuh"
 #include "kernels/helper_functions.cuh"

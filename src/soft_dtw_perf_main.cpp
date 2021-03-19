@@ -1,5 +1,7 @@
 /** Main file for running performance experiments on test data
  *  @file soft_dtw_perf_main.cpp
+ *  @author Afrooz Rahmati
+ *  @date 2021-03-13
  */
 
 #include "soft_dtw.cuh" // includes host wrappers for the CUDA kernels

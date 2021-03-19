@@ -1,7 +1,7 @@
 /** Naive CPU implmentation of SoftDTW as a baseline and reference.
  * @file soft_dtw_cpu.hpp
  * @author Alex Kyllo
- * @date 2020-02-13
+ * @date 2021-02-13
  */
 #ifndef SOFT_DTW_CPU_H
 #define SOFT_DTW_CPU_H

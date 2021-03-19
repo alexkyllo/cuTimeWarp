@@ -1,3 +1,8 @@
+/** Performance testing program for tiled CUDA Soft-DTW
+ * @file soft_dtw_perf_tiled.cpp
+ * @author Afrooz Rahmati
+ * @date 2021-03-17
+ */
 #include "soft_dtw.cuh"
 #include <chrono> // timing
 #include <cstring>

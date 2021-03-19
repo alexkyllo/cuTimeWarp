@@ -1,3 +1,9 @@
+/** Shared memory stencil Soft-DTW kernels
+ *  @file soft_dtw_stencil.cuh
+ *  @author Alex Kyllo
+ *  @date 2021-03-13
+ */
+
 #pragma once
 
 /** Kernel function for computing Soft DTW on pairwise Euclidean

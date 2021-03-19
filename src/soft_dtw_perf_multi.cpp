@@ -1,3 +1,8 @@
+/** Performance testing program for multi-block CUDA Soft-DTW kernels
+ * @file soft_dtw_perf_multi.cpp
+ * @author Alex Kyllo
+ * @date 2021-03-17
+ */
 #include "soft_dtw.cuh"
 #include <chrono> // timing
 #include <cstring>

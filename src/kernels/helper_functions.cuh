@@ -1,3 +1,8 @@
+/** Helper functions shared across CUDA kernels
+ *  @file helper_functions.cuh
+ *  @author Alex Kyllo
+ *  @date 2021-03
+ */
 #pragma once
 #ifndef __CUDACC__
 #define __device__

@@ -1,3 +1,9 @@
+/** Naive Soft-DTW kernel for sets of multiple time series
+ *  @file soft_dtw_naive_multi.cu
+ *  @author Alex Kyllo
+ *  @date 2021-03
+ */
+
 #include "helper_functions.cuh"
 #include "soft_dtw_naive_multi.cuh"
 #include <stdio.h>
@@ -56,5 +62,3 @@ __global__ void softdtw_naive_kernel_multi(float *D, float *R, float *cost,
         cost[bx] = R[bD2 + m * (n + 2) + n];
     }
 }
-
-// TODO: write a backward gradient kernel for multi time series

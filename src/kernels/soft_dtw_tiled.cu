@@ -1,3 +1,8 @@
+/** Wavefront Tiled implementation of Soft-DTW
+ * @file soft_dtw_tiled.cu
+ * @author Afrooz Rahmati
+ * @date 2021-03
+ */
 #include "helper_functions.cuh"
 #include "soft_dtw_tiled.cuh"
 

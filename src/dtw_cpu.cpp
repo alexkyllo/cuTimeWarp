@@ -1,7 +1,7 @@
 /** Naive CPU implmentation of DTW as a reference.
- * @file timewarp.cpp
+ * @file dtw_cpu.cpp
  * @author Alex Kyllo
- * @date 2020-02-12
+ * @date 2021-02-12
  */
 #include <iostream>
 #include <limits>

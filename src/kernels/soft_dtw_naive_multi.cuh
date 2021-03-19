@@ -1,3 +1,9 @@
+/** Naive Soft-DTW kernel for sets of multiple time series
+ *  @file soft_dtw_naive_multi.cuh
+ *  @author Alex Kyllo
+ *  @date 2021-03
+ */
+
 #pragma once
 /** Kernel function for computing "naive" Soft DTW on pairwise Euclidean
  * distance matrix for multivariate time series with CUDA.

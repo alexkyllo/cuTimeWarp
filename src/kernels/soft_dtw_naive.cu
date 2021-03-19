@@ -1,3 +1,9 @@
+/** Naive Soft-DTW kernel for one pair of time series
+ *  @file soft_dtw_naive.cu
+ *  @author Alex Kyllo
+ *  @date 2021-03
+ */
+
 #include "helper_functions.cuh"
 #include "soft_dtw_naive.cuh"
 
