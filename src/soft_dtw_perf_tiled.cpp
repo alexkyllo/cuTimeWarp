@@ -208,10 +208,10 @@ int main(int argc, char **argv)
 
     if (filename == "random")
     {
-        if (argc < 4)
+        if (argc < 5)
         {
             std::cerr << "Usage: " << argv[0]
-                      << " random [start_length] [maximum_lenght] [interval]\n";
+                      << " random [start_length] [maximum_length] [interval]\n";
             return 1;
         }
         m = atol(argv[2]);
