@@ -425,10 +425,10 @@ As the program iterates diagonally across the distance matrix to find the
 optimal warping path, each cell in the path utilizes the previously computed
 results of three previous neighboring cells; if the iteration is visualized as
 proceeding from the upper left to the lower right corner of the matrix, the cost
-value in each cell depends on the (soft) minimum of the costs in the cell
-above, the cell to the left, and the cell to the diagonal upper-left, which were
-computed in the previous two iterations (Figure \ref{cost_deps}). If the cost
-matrix \verb|R| resides in global memory, then non-contiguous accesses to
+value in each cell depends on the (soft) minimum of the costs in the cell above,
+the cell to the left, and the cell to the diagonal upper-left, which were
+computed in the previous two iterations (Figure \ref{DTW_dependency}). If the
+cost matrix \verb|R| resides in global memory, then non-contiguous accesses to
 \verb|R[i-1][j]|, \verb|R[i][j-1]| and \verb|R[i-1][j-1]| will result in cache
 misses, incurring a significant performance cost. Since each element of \verb|R|
 will be referenced up to three times in the computation of dependent cells,
@@ -617,10 +617,10 @@ impact of varying time series length and count to many different sizes.
 As a baseline for performance comparison, we timed the naive, sequential CPU
 implementation of SoftDTW and found that its execution rate varied between
 0.35-0.4 GFLOPs (Figure \ref{plot_cpu}) on the hardware described in Table
-\ref{hostspecs}. While a multithreaded parallel CPU implementation could likely
-achieve several times this rate of execution, we opted not to experiment with
-CPU parallelism and instead move on to parallelizing the algorithm in CUDA with
-GPU multithreading.
+\ref{hostspecs}, for random unit normal data. While a multithreaded parallel CPU
+implementation could likely achieve several times this rate of execution, we
+opted not to experiment with CPU parallelism and instead move on to
+parallelizing the algorithm in CUDA with GPU multithreading.
 
 \begin{figure}[htbp]
     \begin{center}
@@ -654,6 +654,16 @@ increase.
     \label{plot_multi}
 \end{figure}
 
+\begin{figure}[htbp]
+    \begin{center}
+        \scalebox{0.85}{\input{fig/plot_multi_1024.pgf}}
+    \end{center}
+    \caption{Kernel performance on random unit normal time series length =
+      1024}
+    \label{plot_multi_1024}
+\end{figure}
+
+
 After testing the naive kernel we experimented with CUDA performance
 optimizations. Both the diagonal data layout and the shared memory stencil
 brought significant performance improvements over the naive kernel, as seen in
@@ -662,15 +672,22 @@ the diagonal data layout transformation increased performance into the lower
 40s, and the shared memory implementation reached almost 70 GFLOPs, essentially
 double the execution rate of the naive kernel, for time series length 100.
 
-Our performance measurements for the diagonal kernel stop at a problem size of
-25000 pairwise DTW comparisons because the diagonal-major layout consumes more
-space than the row-major layout (($m+n-1) \times min(m,n)$ matrix vs. an $m \times n$
-matrix), exceeding the 8 GiB device memory capacity of the test GPU hardware.
+Our performance measurements for stop at a problem size of 40000 pairwise DTW
+comparisons because the entire problem is processed in a single 3D tensor of
+pairwise distance matrices that is transferred to the device once, to avoid
+mixing data transfer performance with computation performance. The
+diagonal-major layout consumes more space than the row-major layout (($m+n-1) \times
+min(m,n)$ matrix vs. an $m \times n$ matrix), so the diagonal-major kernel is the
+first to exceed the 8 GiB device memory capacity of the test GPU hardware. A
+potential improvement for future work would be a program to batch the input data
+and launch the kernels on multiple streams to avoid exceeding device memory
+limits and hide the latency associated with multiple transfers.
 
 Sakoe-Chiba bands also improved performance \emph{even after} adjusting for the
-reduced number of total floating point operations; a bandwidth of 40 resulted in
-the highest execution rate, exceeding 60 GFLOPs, compared to low-30s when the
-bandwidth is set to 100 (Figure \ref{plot_bw}).
+reduced number of total floating point operations; for input time series of
+length 100, a bandwidth of 40\% of the matrix size resulted in the highest
+execution rate, exceeding 60 GFLOPs, compared to low-30s when the bandwidth is
+set to 100 (Figure \ref{plot_bw}).
 
 \begin{figure}[htbp]
     \begin{center}
@@ -681,33 +698,90 @@ bandwidth is set to 100 (Figure \ref{plot_bw}).
     \label{plot_bw}
 \end{figure}
 
-The tiled kernel is using global barriers to handle the dependencies.  There is
-one loop inside the kernel to manage the wave and another iteration within each
-tile. In order to test the multivariate time series, we have to add two more
-loops to create multi-stream and handle a bunch of time sequences. Adding this
-option generates an overhead on the kernel and decreases the performance
-significantly and we couldn't compare the result of the multivariate tiled
-approach with other designed kernels. The main idea behind implementing a tiled
-version is to compute the similarity of time series for longer sequences, while
-other kernels are unable to process them. Figure \ref{plot_tiled} shows that,
-for shorter length sequences the performance is less, but by increasing the
-length, it is improving and capable of exceeding 120 GFLOPS.
+However, when the input time series length was increased to 1024, the picture
+changed; the kernel with Sakoe-Chiba bandwidth equal to 20\% of the matrix size
+performed the best, exceeding 50 GFLOPs, while the 40\% bandwidth kernel fell
+below 40 GFLOPS and the others fell to just 20 GFLOPs or less (Figure
+\ref{plot_bw_1024}). This suggests, intuitively, that a narrower bandwidth has a
+larger positive performance impact as the input time series length increases.
+
+\begin{figure}[htbp]
+    \begin{center}
+        \scalebox{0.85}{\input{fig/plot_naive_multi_bw_1024.pgf}}
+    \end{center}
+    \caption{Naive kernel performance on random unit normal data by
+      Sakoe-Chiba bandwidth at time series length = 1024}
+    \label{plot_bw_1024}
+\end{figure}
+
+The final optimization we implemented and tested was the PeerWave style tiled
+kernel as described in \cite{belviranli_peerwave_2015}. As our other kernels are
+limited to time series of max length 1024 because they handle distance matrix
+per CUDA thread block, this kernel gave us the ability to test calculation of
+very long time series.
+
+The tiled kernel uses global barriers to handle dependencies across rows or
+``waves'' of tiles, with each row signaling to its ``peer'' in the next row when
+its work is completed. There is one loop inside the kernel to manage the wave
+and another iteration within each tile. In order to test on large sets of time
+series, we had to add two more nested loops to launch the kernel across multiple
+CUDA streams. This generated a high kernel launch overhead, decreasing the
+performance significantly and preventing us from comparing it with the other
+kernels, which are written to process multiple smaller distance matrices at
+once. So the main idea behind implementing a tiled version is to compute the
+similarity of time series for much longer sequences that the other kernels are
+unable to process. Figure \ref{plot_tiled} shows that, for shorter length
+sequences the performance is low, but by increasing the length, it is improving
+and capable of exceeding 120 GFLOPS, a far higher execution rate than the other
+kernels achieved on large sets of smaller time series pairs. Therefore, we
+suggest that it would be appropriate for a general-purpose DTW library to select
+this tiling approach when the input time series are very long.
 
 \begin{figure}[htbp]
 \includegraphics[height=4in]{fig/plot_tiled.png}
 \centering
-\caption{Soft DTW performance for Tiled \& shared memory kernel}
+\caption{Soft DTW performance for tiled \& shared memory kernel on random unit
+  normal time series of varying lengths}
 \label{plot_tiled}
 \end{figure}
 
+We additionally tested our kernel optimizations on the ECG200 dataset, which is
+a curated dataset of 200 time series of real heart rhythms of length 96, so
+pairwise comparison of every time series to every other time series results in
+$96^2 \times 200^2$ SoftDTW cost cell computations. Table \ref{ecg_table} shows
+performance on this dataset by kernel. The kernels named ``squared euclidean
+distance'' convey the time and GFLOPS performance needed to produce the distance
+matrix from the original input time series, before the Soft-DTW algorithm
+iterates over it to find the lowest-cost path. While we wrote all of our kernels
+to handle preprocessed squared Euclidean distance matrices, which imparts the
+ability to handle multivariate time series in addition to univariate, the
+overhead of computing this distance matrix suggests that it would be more time
+and memory efficient, in the case of univariate time series, to compute the DTW
+cost matrix on the input time series directly.
+
+The kernel named ``convert to diagonal'' is indicating the
+computation for converting the squared euclidean distance matrix from row-major
+to diagonal-major layout; this process takes more than twice as long as the
+``diagonal`` kernel does, suggesting that constructing the cost matrix in
+diagonal-major format in the first place could produce a performance improvement
+in the end-to-end process. The shared memory stencil kernel produced the best
+performance at 69.24, with the naive CUDA kernel with Sakoe-Chiba band set to
+40\% of the matrix size performing next best on the ECG200 dataset.
+
+\input{fig/ecg_kernels.tex}
 
 \FloatBarrier
 \section{Profiling}
 
-TODO
+We profiled our kernels with NVIDIA NSight Compute to understand how cache hit
+rates, registers per thread, and occupancy may be related to performance.
+
+Table \ref{prof_table} shows profiler metrics by kernel when run on two pairs of
+time series of length 100.
 
 \input{fig/prof_table.tex}
 
+\FloatBarrier
 \section{Discussion}
 
 TODO
@@ -730,11 +804,19 @@ to hide latency.
 Other potentially valuable future work includes integrating this library with an
 optimization library that can iteratively minimize Soft-DTW cost to find
 barycenters among a set of time series, to assemble a nearest centroid
-classification system. Another area of potential is writing Python bindings to
-expose the Soft-DTW loss and gradient functions to deep learning frameworks such
-as TensorFlow or PyTorch, to enable the use of Soft-DTW loss as a training
-objective for recurrent neural networks. This will facilitate tasks such as
-classifying, predicting and generating sounds, gestures, and sensor data with
+classification system. We attempted to include this capability but were unable
+to complete it satisfactorily within the project timeframe, as selecting,
+evaluating and integrating a C++ iterative optimization library is a significant
+amount of work and was tangential to our core goal of optimizing Soft-DTW.
+
+Another area of potential is writing Python bindings to expose the Soft-DTW loss
+and gradient functions to popular deep learning frameworks such as TensorFlow or
+PyTorch, to enable the use of Soft-DTW loss as a training objective for
+recurrent neural networks. Cuturi and Blondel demonstrated that Soft-DTW can
+yield superior performance to Euclidean loss on multi-step ahead time series
+prediction with recurrent neural networks \cite{cuturi_soft-dtw_2018}, so this
+making this widely available could facilitate better performance at tasks such
+as classifying, predicting and generating sounds, gestures, and sensor data with
 machine learning and neural networks, under the dynamic time warping geometry.
 
 \printbibliography[]

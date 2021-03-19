@@ -106,9 +106,10 @@ int main(int argc, char **argv)
         }
         m = atol(argv[2]);
         n = atol(argv[3]);
-        if (m < 2 || n < 2)
+        if (m < 2 || n < 1)
         {
-            std::cerr << "Input time series must have length at least 2.\n";
+            std::cerr << "Input time series must have length at least 2 and "
+                         "count at least 1.\n";
             return 1;
         }
         fill_random(data_vec, m * n);

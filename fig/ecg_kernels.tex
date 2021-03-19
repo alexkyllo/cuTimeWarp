@@ -1,19 +1,22 @@
+\begin{table}
+\centering
+\caption{Performance by kernel on the ECG200 dataset.}
+\label{ecg_table}
 \begin{tabular}{lrr}
 \toprule
-                    kernel &  microseconds &  gflops \\
+                           kernel &  microseconds &  gflops \\
 \midrule
-          convert diagonal &        327153 &      20 \\
-                  diagonal &        148618 &      45 \\
-                     naive &        263765 &      25 \\
-        naive bandwidth 20 &         45785 &     145 \\
-        naive bandwidth 40 &         78164 &      85 \\
-        naive bandwidth 60 &        165441 &      40 \\
-        naive bandwidth 80 &        232499 &      29 \\
-                   stencil &         95834 &      69 \\
-      stencil bandwidth 20 &         95085 &      70 \\
-      stencil bandwidth 40 &         95547 &      69 \\
-      stencil bandwidth 60 &         95532 &      69 \\
-      stencil bandwidth 80 &         95313 &      70 \\
-squared euclidean distance &        507924 &      13 \\
+                      naive (CPU) &   18171692.00 &    0.37 \\
+ squared euclidean distance (CPU) &    1374635.67 &    4.83 \\
+squared euclidean distance (CUDA) &     507924.33 &   13.07 \\
+              convert to diagonal &     327152.67 &   20.28 \\
+                     naive (CUDA) &     263765.00 &   25.16 \\
+               naive bandwidth 80 &     232498.67 &   27.46 \\
+               naive bandwidth 60 &     165440.67 &   33.85 \\
+                         diagonal &     148617.67 &   44.65 \\
+               naive bandwidth 20 &      45784.67 &   53.34 \\
+               naive bandwidth 40 &      78164.33 &   54.84 \\
+                          stencil &      95833.67 &   69.24 \\
 \bottomrule
 \end{tabular}
+\end{table}
